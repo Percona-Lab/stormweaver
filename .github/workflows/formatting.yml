@@ -1,0 +1,21 @@
+name: Formatting Checks
+on: [push, pull_request]
+
+jobs:
+  formattng-check:
+    name: Formatting check
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Clang format
+      uses: jidicula/clang-format-action@v4.15.0
+      with:
+        clang-format-version: '18'
+        check-path: '.'
+    - name: Stylua
+      uses: JohnnyMorganz/stylua-action@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        version: latest 
+        args: --check scripts scenarios tests
+  

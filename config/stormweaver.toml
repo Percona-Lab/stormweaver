@@ -1,0 +1,6 @@
+
+[default]
+pgroot = "" # path to the postgres installation
+datadir_root = "datadirs"
+port_start = 15432
+port_end = 15531

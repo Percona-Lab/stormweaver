@@ -1,0 +1,25 @@
+site_name: StormWeaver Documentation
+theme:
+  name: material
+  features:
+    - content.code.copy
+    - content.code.annotate
+nav:
+  - Getting started: index.md
+  - Building from source: building.md
+  - Scripting architecture: scripting-architecture.md
+  - Randomized testing concepts: randomized-testing-concepts.md
+  - Scripting examples: scripting-examples.md
+  - Config parameters: config-parameters.md
+  - Lua C++ API reference: lua-cpp-reference.md
+  - Code architecture: code-architecture.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences

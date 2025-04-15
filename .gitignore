@@ -1,0 +1,9 @@
+.DS_Store
+/CMakeCache.txt
+/CMakeFiles
+/build/
+/CMakeUserPresets.json
+/.vscode
+/bin/
+/logs/
+/datadirs/
