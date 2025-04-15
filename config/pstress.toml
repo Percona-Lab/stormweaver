@@ -1,0 +1,6 @@
+
+[default]
+pgroot = "/home/dutow/work/pg17inst/"
+datadir_pattern = ""
+port_start = 15432
+port_end = 15531

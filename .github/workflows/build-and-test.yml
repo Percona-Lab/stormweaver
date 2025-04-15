@@ -1,0 +1,117 @@
+name: Build and test
+on: 
+  workflow_call:
+    inputs:
+      build_type:
+        required: true
+        type: string
+      ubuntu_version:
+        required: true
+        type: string
+      compiler:
+        required: true
+        type: string
+env:
+  CC: ${{ inputs.compiler }}
+  CXX: ${{ inputs.compiler == 'clang' && 'clang++' || 'g++' }}
+      
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-${{ inputs.ubuntu_version }}.04
+    steps:
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+          sudo apt-get install -y python3-full pipx cmake ninja-build
+          pipx ensurepath
+          sudo pipx install conan
+
+      - name: Setup conan
+        run: |
+          conan profile detect
+          sed -i 's/gnu../20/g' /home/runner/.conan2/profiles/default 
+          echo "[tool_requires]" >> /home/runner/.conan2/profiles/default
+          echo "!cmake/*: cmake/[>=3 <4]" >> /home/runner/.conan2/profiles/default
+          cat /home/runner/.conan2/profiles/default
+
+      - name: Clone repository
+        uses: actions/checkout@master
+        with:
+          path: 'src/stormweaver'
+          submodules: recursive
+
+      - name: Install/build dependencies
+        run: |
+          conan install . --build=missing --settings=build_type=${{ inputs.build_type }}
+        working-directory: src/stormweaver
+
+
+      - name: Build stormweaver
+        run: |
+          conan build . --settings=build_type=${{ inputs.build_type }}
+        working-directory: src/stormweaver
+
+      - name: Run CTest
+        run: |
+          ctest -VV --output-junit test-reports/ctest.xml --output-on-failure
+        working-directory: src/stormweaver/build/${{ inputs.build_type }}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tests_${{ inputs.build_type }}_${{inputs.ubuntu_version }}+${{ inputs.compiler }}
+          path: src/stormweaver/build/${{ inputs.build_type }}/test-reports/
+
+      - name: Create release directory
+        run: |
+          mkdir release
+          cp -r src/stormweaver/bin release/
+          cp -r src/stormweaver/stormweaver release/
+
+      - name: Create tgz
+        run: |
+          export GLIBC_VER=`ldd --version | head -n 1 | cut -d " " -f 5 | tr "." "_"`
+          mkdir tars
+          cd release && sudo tar -czvf ../tars/stormweaver_${{ inputs.build_type }}_${{ inputs.compiler }}_glibc$GLIBC_VER.tar.gz .
+
+      - name: Upload tgz
+        uses: actions/upload-artifact@v4
+        with:
+          name: release_${{ inputs.build_type }}_${{inputs.ubuntu_version }}_${{ inputs.compiler }}
+          path: tars
+
+  test:
+    name: Test release tarball (disabled, todo)
+    runs-on: ubuntu-${{ inputs.ubuntu_version }}.04
+    needs: build
+    steps:
+
+      - name: Create directory
+        run: |
+          mkdir stormweaver
+
+      - name: Get artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release_${{ inputs.build_type }}_${{inputs.ubuntu_version }}_${{ inputs.compiler }}
+          path: stormweaver/
+
+      - name: Setup MySQL
+        run: |
+          sudo apt install mysql-server
+          sudo systemctl start mysql.service
+          mysql -u root -proot -e "CREATE DATABASE test";
+
+      - name: Extract artifact
+        run: |
+          tar -xf *.tar.gz
+        working-directory: stormweaver
+
+      - name: Run quick stormweaver test
+        run: |
+          #bin/stormweaver --flavor mysql --tables 30 --logdir=$PWD/log --records 200 --threads 10 --seconds 20 --insert-row 100 --update-with-cond 50 --no-delete --log-failed-queries --log-all-queries --no-encryption --address 127.0.0.1 --password root
+        working-directory: stormweaver
