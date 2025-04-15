@@ -1,0 +1,13 @@
+site_name: StormWeaver Documentation
+theme:
+  name: material
+nav:
+  - Getting started: index.md
+  - Building from source: building.md
+  - Scripting architecture: scripting-architecture.md
+  - Config parameters: config-parameters.md
+  - Lua reference: lua-reference.md
+  - Code architecture: code-architecture.md
+
+markdown_extensions:
+  - admonition

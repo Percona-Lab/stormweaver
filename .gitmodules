@@ -1,0 +1,6 @@
+[submodule "_3p-lua/inspect"]
+	path = _3p-lua/inspect
+	url = https://github.com/kikito/inspect.lua
+[submodule "_3p-lua/toml"]
+	path = _3p-lua/toml
+	url = https://github.com/LebJe/toml.lua.git
