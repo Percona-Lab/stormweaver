@@ -14,13 +14,13 @@ function conn_settings(sqlconn)
 	sqlconn:execute_query("SET default_table_access_method=tde_heap;")
 end
 
-function main()
-	confdir = getenv("SWCONF", "config/")
-	conffile = toml.decodeFromFile(confdir .. "/stormweaver.toml")
+function main(argv)
+	args = argparser:parse(argv)
+	conffile = parse_config(args)
 	pgconfig = PgConf.new(conffile["default"])
 
 	pgm = PgManager.new(pgconfig)
-	pgm:setupAndStartPrimary()
+	pgm:setupAndStartPrimary(conn_settings)
 	pgm.primaryNode:init(setup_tables)
 
 	pg1 = pgm:get(1)

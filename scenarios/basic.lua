@@ -28,7 +28,7 @@ function conn_settings(sqlconn)
 end
 
 -- main function executed directly by stormweaver
-function main()
+function main(argv)
 	-- Actions (mostly sql statements) are kept in action registries.
 	-- There an be multiple of them, this just takes a reference to the default registry to a variable
 	-- nodes/workers (later) also copy the registry, so modifications of the default registry won't affect
@@ -38,14 +38,16 @@ function main()
 	-- We can add custom SQL statements to registries, this example vacuums a single table
 	default_ref:makeCustomTableSqlAction("vacuum_full_table", "VACUUM FULL {table};", 2)
 
+	-- argparser is based on lua argparse, additional args can be added to it
+	args = argparser:parse(argv)
 	-- Loads the configuration file, and creates a postgres configuration manager based on it
-	confdir = getenv("SWCONF", "config/")
-	conffile = toml.decodeFromFile(confdir .. "/stormweaver.toml")
+	conffile = parse_config(args)
+
 	pgconfig = PgConf.new(conffile["default"])
 
 	-- The PgManager class has helpers for setting up and managing a replication chain
 	pgm = PgManager.new(pgconfig)
-	pgm:setupAndStartPrimary()
+	pgm:setupAndStartPrimary(conn_settings)
 
 	-- Modifies the default registry again, but the node already copied the default registry above
 	-- this doesn't affect the existing node

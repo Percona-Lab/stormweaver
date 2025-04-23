@@ -34,10 +34,7 @@ To run it, execute the following command:
 
 ```bash
 cd stormweaver
-# PGROOT is only needed when testing a specific PostgreSQL installation,
-# otherwise uses binaries available in $PATH
-export PGROOT="/path/to/the/pg/folder/"
-bin/stormweaver scenarios/example.lua
+bin/stormweaver scenarios/example.lua [-c config/stormweaver.toml] [-i /path/to/the/pg/folder/] [scenario specific arguments...]
 ```
 
 This script will:

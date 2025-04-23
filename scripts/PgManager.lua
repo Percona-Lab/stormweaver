@@ -45,7 +45,7 @@ function module:connect(index, user, db, conn_callback)
 	})
 end
 
-function module:setupAndStartPrimary()
+function module:setupAndStartPrimary(connectionCallback)
 	if primary_setup == true then
 		error("setupPrimary called multiple times")
 	end
@@ -77,7 +77,7 @@ function module:setupAndStartPrimary()
 	self:createdb("stormweaver")
 	self:createuser("stormweaver", { "-s" })
 
-	self.primaryNode = self:connect(1, "stormweaver", "stormweaver", conn_settings)
+	self.primaryNode = self:connect(1, "stormweaver", "stormweaver", connectionCallback)
 	self.primaryNode:init(function(worker)
 		worker:sql_connection():execute_query("CREATE USER repuser replication; SELECT pg_reload_conf();")
 	end)
@@ -85,9 +85,9 @@ function module:setupAndStartPrimary()
 	return primaryIdx
 end
 
-function module:setupAndStartAReplica()
+function module:setupAndStartAReplica(connectionCallback)
 	if self.primaryReplNode == nil then
-		self.primaryReplNode = self:connect(1, "repuser", "stormweaver", conn_settings)
+		self.primaryReplNode = self:connect(1, "repuser", "stormweaver", connectionCallback)
 	end
 
 	replicaId = tostring(self.nextReplica)

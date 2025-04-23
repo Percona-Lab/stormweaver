@@ -1,5 +1,6 @@
 
 INSTALL(FILES _3p-lua/inspect/inspect.lua DESTINATION scripts_3p)
+INSTALL(FILES _3p-lua/argparse/src/argparse.lua DESTINATION scripts_3p)
 
 SET(TOML_LUA_SOURCES
 _3p-lua/toml/src/toml.cpp
