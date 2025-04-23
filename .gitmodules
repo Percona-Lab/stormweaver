@@ -4,3 +4,6 @@
 [submodule "_3p-lua/toml"]
 	path = _3p-lua/toml
 	url = https://github.com/LebJe/toml.lua.git
+[submodule "_3p-lua/argparse"]
+	path = _3p-lua/argparse
+	url = https://github.com/mpeterv/argparse

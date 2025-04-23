@@ -1,5 +1,47 @@
 # Scripting examples
 
+## Minimal scenario
+
+```lua
+require("common")
+
+function setup_tables(worker)
+	worker:create_random_tables(5)
+	worker:generate_initial_data()
+end
+
+function main(argv)
+	args = argparser:parse(argv)
+	conffile = parse_config(args)
+	pgconfig = PgConf.new(conffile["default"])
+
+	pgm = PgManager.new(pgconfig)
+	pgm:setupAndStartPrimary()
+	pgm.primaryNode:init(setup_tables)
+
+	pg1 = pgm:get(1)
+
+	t1 = pgm.primaryNode:initRandomWorkload({ run_seconds = 20, worker_count = 5 })
+	t1:run()
+	t1:wait_completion()
+end
+```
+
+## Custom arguments
+
+A complete documentation for `argparse` is available at [https://argparse.readthedocs.io/](https://argparse.readthedocs.io/)
+
+```lua
+
+-- could also be in main
+argparser:option("-f --foo", "A sample option.", "bar")
+
+function main(argv)
+	args = argparser:parse(argv)
+    info("Foo: " .. inspect(args["foo"]))
+end
+```
+
 ## Simple postgres manager
 
 It is easy and simple to setup (replicated) PostgreSQL using `PgManager`:
@@ -47,7 +89,7 @@ function bg_thread()
     end
 end
 
-function main()
+function main(argv)
 
     info("Starting background thread...")
 

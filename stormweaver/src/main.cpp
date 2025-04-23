@@ -1,4 +1,5 @@
 
+#include <span>
 #include <spdlog/spdlog.h>
 
 #include "scripting/luactx.hpp"
@@ -18,6 +19,8 @@ int main(int argc, char **argv) {
 
   ctx.loadScript(argv[1]);
 
+  const std::span remaining_args(argv + 1, argc - 1);
+
   auto &lua = ctx.ctx();
 
   // run main function
@@ -26,7 +29,7 @@ int main(int argc, char **argv) {
 
   if (script_main.valid()) {
     spdlog::info("Starting lua main");
-    sol::protected_function_result main_result = script_main();
+    sol::protected_function_result main_result = script_main(remaining_args);
     if (!main_result.valid()) {
       sol::error err = main_result;
       spdlog::error("Scenario script main function failed: {}", err.what());

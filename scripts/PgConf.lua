@@ -14,11 +14,7 @@ function module:nextPort()
 end
 
 function module:pgroot()
-	conf_value = self.config["pgroot"]
-	if conf_value == nil then
-		conf_value = ""
-	end
-	return getenv("PGROOT", self.config["pgroot"])
+	return self.config["pgroot"]
 end
 
 function module:datadirPath(datadir)

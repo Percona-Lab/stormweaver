@@ -49,16 +49,16 @@ function setupAdditionalActions()
 	--defaultActionRegistry():makeCustomSqlAction("as2", "ALTER SYSTEM SET pg_tde.wal_encrypt = off;", 10)
 end
 
-function main()
+function main(argv)
 	setupAdditionalActions()
 
-	confdir = getenv("SWCONF", "config/")
-	conffile = toml.decodeFromFile(confdir .. "/stormweaver.toml")
+	args = argparser:parse(argv)
+	conffile = parse_config(args)
 	pgconfig = PgConf.new(conffile["default"])
 
 	pgm = PgManager.new(pgconfig)
-	pgm:setupAndStartPrimary()
-	pgm:setupAndStartAReplica()
+	pgm:setupAndStartPrimary(conn_settings)
+	pgm:setupAndStartAReplica(conn_settings)
 
 	pgm.primaryNode:init(setup_tables)
 

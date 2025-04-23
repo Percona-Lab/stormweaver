@@ -2,6 +2,8 @@
 -- for example, debug(inspect(variablename))
 inspect = require("inspect")
 
+require("argparser")
+
 -- not required: module automatically injected by C++ code
 -- toml = require 'toml'
 

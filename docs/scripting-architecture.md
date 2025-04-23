@@ -20,13 +20,20 @@ Lua scripts are stored in two directories:
 Additional, several 3rd party lua libraries are also included and are usable by scripts/scenarios.
 These are the following:
 
+* [argparse](https://github.com/mpeterv/argparse) for command line arguments
 * [inspect.lua](https://github.com/kikito/inspect.lua) for dumping lua objects
 * [toml.lua](https://github.com/LebJe/toml.lua) for dealing with config file
 
 ## C++ binding
 
 Stormweaver includes several classes/functions implemented in C++, which are usable in lua scripts.
-The complete list of these functions is available in the [Lua reference](lua-reference.md).
+The complete list of these functions is available in the [Lua C++ reference](lua-cpp-reference.md).
+
+## Scenario configuration
+
+The `argparse` library is included, and the C++ runner forwards all arguments to the script, including the scenario filename.
+
+The lua helpers already create a default parser using the global variable `argparser`, which includes handling the common arguments, so scenarios only have to set up additional scenario specific arguments.
 
 ## Multi-threaded structure
 
