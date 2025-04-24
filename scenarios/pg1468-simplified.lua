@@ -20,7 +20,7 @@ function main(argv)
 	pgconfig = PgConf.new(conffile["default"])
 
 	pgm = PgManager.new(pgconfig)
-	pgm:setupAndStartPrimary(conn_settings)
+	pgm:setupAndStartPrimary(conn_settings, { shared_preload_libraries = "pg_tde" })
 	pgm.primaryNode:init(setup_tables)
 
 	pg1 = pgm:get(1)

@@ -13,11 +13,11 @@ on:
         type: string
 env:
   CC: ${{ inputs.compiler }}
-  CXX: ${{ inputs.compiler == 'clang' && 'clang++' || 'g++' }}
+  CXX: ${{ inputs.compiler == 'clang-19' && 'clang++-19' || 'g++' }}
       
 jobs:
   build:
-    name: Build
+    name: Build and test
     runs-on: ubuntu-${{ inputs.ubuntu_version }}.04
     steps:
 
@@ -28,6 +28,8 @@ jobs:
           sudo apt-get install -y python3-full pipx cmake ninja-build
           pipx ensurepath
           sudo pipx install conan
+          sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+          sudo apt install clang-tools-19
 
       - name: Setup conan
         run: |
@@ -53,6 +55,10 @@ jobs:
         run: |
           conan build . --settings=build_type=${{ inputs.build_type }}
         working-directory: src/stormweaver
+
+      - name: Install PostgreSQL
+        run: |
+          sudo apt install postgresql
 
       - name: Run CTest
         run: |
@@ -84,34 +90,11 @@ jobs:
           name: release_${{ inputs.build_type }}_${{inputs.ubuntu_version }}_${{ inputs.compiler }}
           path: tars
 
-  test:
-    name: Test release tarball (disabled, todo)
-    runs-on: ubuntu-${{ inputs.ubuntu_version }}.04
-    needs: build
-    steps:
-
-      - name: Create directory
-        run: |
-          mkdir stormweaver
-
-      - name: Get artifact
-        uses: actions/download-artifact@v4
+      - name: Report on test fail
+        uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
         with:
-          name: release_${{ inputs.build_type }}_${{inputs.ubuntu_version }}_${{ inputs.compiler }}
-          path: stormweaver/
-
-      - name: Setup MySQL
-        run: |
-          sudo apt install mysql-server
-          sudo systemctl start mysql.service
-          mysql -u root -proot -e "CREATE DATABASE test";
-
-      - name: Extract artifact
-        run: |
-          tar -xf *.tar.gz
-        working-directory: stormweaver
-
-      - name: Run quick stormweaver test
-        run: |
-          #bin/stormweaver --flavor mysql --tables 30 --logdir=$PWD/log --records 200 --threads 10 --seconds 20 --insert-row 100 --update-with-cond 50 --no-delete --log-failed-queries --log-all-queries --no-encryption --address 127.0.0.1 --password root
-        working-directory: stormweaver
+          name: testlog_${{ inputs.build_type }}_${{inputs.ubuntu_version }}_${{ inputs.compiler }}
+          path: |
+            src/stormweaver/logs/
+          retention-days: 3

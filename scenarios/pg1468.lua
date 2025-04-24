@@ -50,6 +50,14 @@ function setupAdditionalActions()
 end
 
 function main(argv)
+	-- tde setup: off / unencrypted default tables / on
+	--
+	-- replication options:
+	-- * tde setup before / after replica start
+	-- * killing or restarting or both primary
+	-- * killing or restarting or both replica(s)
+	-- * how many replicas?
+	-- * what type of queries to run?
 	setupAdditionalActions()
 
 	args = argparser:parse(argv)
@@ -57,8 +65,8 @@ function main(argv)
 	pgconfig = PgConf.new(conffile["default"])
 
 	pgm = PgManager.new(pgconfig)
-	pgm:setupAndStartPrimary(conn_settings)
-	pgm:setupAndStartAReplica(conn_settings)
+	pgm:setupAndStartPrimary(conn_settings, { shared_preload_libraries = "pg_tde" })
+	pgm:setupAndStartAReplica(conn_settings, { shared_preload_libraries = "pg_tde" })
 
 	pgm.primaryNode:init(setup_tables)
 

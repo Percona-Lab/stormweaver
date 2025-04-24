@@ -175,7 +175,15 @@ end
 Copies the directory recursively
 
 ```lua
-fs.delete_directory('from', 'to')
+fs.copy_directory('from', 'to')
+```
+
+### create_directory
+
+Creates a new directory recursively
+
+```lua
+fs.create_directory('path/to/the/new/dir')
 ```
 
 ### delete_directory

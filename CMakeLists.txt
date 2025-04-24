@@ -65,4 +65,4 @@ INCLUDE(LuaModules)
 
 add_subdirectory(libstormweaver)
 add_subdirectory(stormweaver)
-
+add_subdirectory(tests)
