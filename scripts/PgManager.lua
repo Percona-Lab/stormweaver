@@ -45,7 +45,7 @@ function module:connect(index, user, db, conn_callback)
 	})
 end
 
-function module:setupAndStartPrimary(connectionCallback)
+function module:setupAndStartPrimary(connectionCallback, extra_args)
 	if primary_setup == true then
 		error("setupPrimary called multiple times")
 	end
@@ -55,15 +55,19 @@ function module:setupAndStartPrimary(connectionCallback)
 	primary_datadir = pgconfig:useDatadir("datadir_pr")
 	primary = initPostgresDatadir(installdir, primary_datadir)
 
-	-- TODO: make configurable
+	fs.create_directory(primary_datadir .. "/sock/")
+
+	if extra_args ~= nil then
+		primary:add_config(extra_args)
+	end
 	primary:add_config({
-		shared_preload_libraries = "pg_tde",
 		port = tostring(primary_port),
 		listen_addresses = "'*'",
 		logging_collector = "on",
 		log_directory = "'logs'",
 		log_filename = "'server.log'",
 		log_min_messages = "'info'",
+		unix_socket_directories = "sock",
 	})
 
 	primary:add_hba("host", "replication", "repuser", "127.0.0.1/32", "trust")
@@ -85,7 +89,7 @@ function module:setupAndStartPrimary(connectionCallback)
 	return primaryIdx
 end
 
-function module:setupAndStartAReplica(connectionCallback)
+function module:setupAndStartAReplica(connectionCallback, extra_args)
 	if self.primaryReplNode == nil then
 		self.primaryReplNode = self:connect(1, "repuser", "stormweaver", connectionCallback)
 	end
@@ -110,14 +114,19 @@ function module:setupAndStartAReplica(connectionCallback)
 	table.insert(self.servers, pgRep)
 	replicaIdx = #self.servers
 
+	fs.create_directory(replica_datadir .. "/sock/")
+
+	if extra_args ~= nil then
+		primary:add_config(extra_args)
+	end
 	pgRep:add_config({
-		shared_preload_libraries = "pg_tde",
 		port = tostring(replica_port),
 		listen_addresses = "'*'",
 		logging_collector = "on",
 		log_directory = "'logs'",
 		log_filename = "'server.log'",
 		log_min_messages = "'info'",
+		unix_socket_directories = replica_datadir .. "/sock/",
 	})
 
 	if not pgRep:start() then

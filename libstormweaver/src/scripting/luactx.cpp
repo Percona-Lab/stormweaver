@@ -219,6 +219,9 @@ LuaContext::LuaContext(std::shared_ptr<spdlog::logger> logger)
   fs_usertype["delete_directory"] = [](std::string const &dir) {
     return std::filesystem::remove_all(dir);
   };
+  fs_usertype["create_directory"] = [](std::string const &path) {
+    return std::filesystem::create_directories(path);
+  };
 }
 
 sol::state &LuaContext::ctx() { return luaState; }

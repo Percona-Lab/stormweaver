@@ -47,7 +47,7 @@ function main(argv)
 
 	-- The PgManager class has helpers for setting up and managing a replication chain
 	pgm = PgManager.new(pgconfig)
-	pgm:setupAndStartPrimary(conn_settings)
+	pgm:setupAndStartPrimary(conn_setting, { shared_preload_libraries = "pg_tde" })
 
 	-- Modifies the default registry again, but the node already copied the default registry above
 	-- this doesn't affect the existing node

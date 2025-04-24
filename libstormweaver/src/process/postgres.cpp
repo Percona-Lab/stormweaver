@@ -168,7 +168,7 @@ bool Postgres::is_running() {
 bool Postgres::is_ready() {
   return BackgroundProcess::runAndWait(
              logger, fmt::format("{}/bin/pg_isready", installDir.string()),
-             {"-p", port}) == 0;
+             {"-h", "127.0.0.1", "-p", port}) == 0;
 }
 
 bool Postgres::wait_ready(std::size_t maxWaitTime) {
@@ -195,12 +195,14 @@ void Postgres::add_hba(std::string const &host, std::string const &database,
 bool Postgres::createdb(std::string const &name) {
   return BackgroundProcess::runAndWait(
              logger, fmt::format("{}/bin/createdb", installDir.string()),
-             {"-p", port, name}) == 0;
+             {"-h", "127.0.0.1", "-p", port, name}) == 0;
 }
 
 bool Postgres::createuser(std::string const &name, args_t args) {
   args.push_back("-p");
   args.push_back(port);
+  args.push_back("-h");
+  args.push_back("127.0.0.1");
   args.push_back(name);
   return BackgroundProcess::runAndWait(
              logger, fmt::format("{}/bin/createuser", installDir.string()),
@@ -210,7 +212,7 @@ bool Postgres::createuser(std::string const &name, args_t args) {
 bool Postgres::dropdb(std::string const &name) {
   return BackgroundProcess::runAndWait(
              logger, fmt::format("{}/bin/dropdb", installDir.string()),
-             {"-p", port, name}) == 0;
+             {"-h", "127.0.0.1", "-p", port, name}) == 0;
 }
 
 Postgres::~Postgres() { stop(10); }

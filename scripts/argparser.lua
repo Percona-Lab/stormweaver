@@ -8,6 +8,17 @@ argparser:option(
 	"PostgreSQL installation directory (if specified, overrides configuration value for default server)",
 	""
 )
+argparser:option("--include", "Extends the lua package path with the specified directories", ""):count("*")
+
+function parse_args(argv)
+	args = argparser:parse(argv)
+
+	for k, v in pairs(args["include"]) do
+		package.path = v .. "/?.lua;" .. package.path
+	end
+
+	return args
+end
 
 function parse_config(args)
 	conffile = toml.decodeFromFile(args["config"])

@@ -15,6 +15,11 @@ Lua scripts are stored in two directories:
 * `scenarios` is intended for specific test scenarios
 * `scripts` is intended for helper functions/classes usable by multiple scenarios
 
+These directories are added to the search path at two locations:
+
+* Relative to the executable (which is `bin/stormweaver`, the directories have to be in the same folder as `bin`)
+* Relative to the current working directory
+
 ## 3rd party libraries
 
 Additional, several 3rd party lua libraries are also included and are usable by scripts/scenarios.
