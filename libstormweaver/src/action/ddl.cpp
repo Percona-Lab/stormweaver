@@ -145,6 +145,9 @@ AlterTable::AlterTable(DdlConfig const &config,
 
 void AlterTable::execute(Metadata &metaCtx, ps_random &rand,
                          sql_variant::LoggedSQL *connection) const {
+  if (metaCtx.size() == 0)
+    return;
+
   auto idx = rand.random_number(std::size_t(0), metaCtx.size() - 1);
 
   metaCtx.alterTable(idx, [&](Metadata::Reservation &res) {
@@ -160,55 +163,78 @@ void AlterTable::execute(Metadata &metaCtx, ps_random &rand,
 
     std::vector<std::string> alterSubcommands;
 
+    std::vector<std::size_t> availableColumns(table->columns.size());
+    std::vector<std::size_t> droppedColumns;
+    std::iota(availableColumns.begin(), availableColumns.end(), 0);
+
     std::vector<Column> newColumns;
 
     bool changingAm = false;
 
     for (std::size_t idx = 0; idx < howManySubcommands; ++idx) {
-      const auto cmdIndex =
-          rand.random_number(std::size_t(0), commands.size() - 1);
+      bool addedSubcommand = false;
 
-      switch (commands[cmdIndex]) {
-      case AlterSubcommand::addColumn: {
-        const auto column = randomColumn(rand);
-        alterSubcommands.emplace_back(
-            fmt::format("ADD COLUMN {}", columnDefinition(column)));
-        // we can't accidentally modify / drop new columns in the same statement
-        newColumns.push_back(column);
-        break;
-      }
-      case AlterSubcommand::dropColumn: {
-        if (table->columns.size() < 3)
-          continue;
-        const auto columnIndex =
-            rand.random_number(std::size_t(1), table->columns.size() - 1);
-        alterSubcommands.emplace_back(
-            fmt::format("DROP COLUMN {}", table->columns[columnIndex].name));
-        table->columns.erase(table->columns.begin() + columnIndex);
-        break;
-      }
-      case AlterSubcommand::changeColumn: {
-        // very simple implementation, we only do numeric -> string
-        for (auto const &col : table->columns) {
-          if (col.type == metadata::ColumnType::INT ||
-              col.type == metadata::ColumnType::REAL) {
-            alterSubcommands.emplace_back(
-                fmt::format("ALTER COLUMN {} TYPE VARCHAR(32)", col.name));
-            break;
-          }
-        }
-        break;
-      }
-      case AlterSubcommand::changeAccessMethod: {
-        if (changingAm)
+      while (!addedSubcommand) {
+        const auto cmdIndex =
+            rand.random_number(std::size_t(0), commands.size() - 1);
+
+        switch (commands[cmdIndex]) {
+        case AlterSubcommand::addColumn: {
+          const auto column = randomColumn(rand);
+          alterSubcommands.emplace_back(
+              fmt::format("ADD COLUMN {}", columnDefinition(column)));
+          // we can't accidentally modify / drop new columns in the same
+          // statement
+          newColumns.push_back(column);
+          addedSubcommand = true;
           break;
-        const auto amIndex = rand.random_number(
-            std::size_t(0), config.access_methods.size() - 1);
-        alterSubcommands.emplace_back(fmt::format(
-            "SET ACCESS METHOD {}", config.access_methods[amIndex]));
-        changingAm = true;
+        }
+        case AlterSubcommand::dropColumn: {
+          if (table->columns.size() - droppedColumns.size() < 3 ||
+              availableColumns.size() < 1)
+            continue;
+          const auto columnIndexIndex =
+              rand.random_number(std::size_t(0), availableColumns.size() - 1);
+          const auto columnIndex = availableColumns[columnIndexIndex];
+          alterSubcommands.emplace_back(
+              fmt::format("DROP COLUMN {}", table->columns[columnIndex].name));
+          droppedColumns.push_back(columnIndex);
+          availableColumns.erase(availableColumns.begin() + columnIndexIndex);
+          addedSubcommand = true;
+          break;
+        }
+        case AlterSubcommand::changeColumn: {
+          // very simple implementation, we only do numeric -> string
+          for (std::size_t idx = 0; idx < availableColumns.size(); ++idx) {
+            auto &col = table->columns[availableColumns[idx]];
+            if (col.type == metadata::ColumnType::INT ||
+                col.type == metadata::ColumnType::REAL) {
+              alterSubcommands.emplace_back(
+                  fmt::format("ALTER COLUMN {} TYPE VARCHAR(32)", col.name));
+              availableColumns.erase(availableColumns.begin() + idx);
+              addedSubcommand = true;
+              break;
+            }
+          }
+          break;
+        }
+        case AlterSubcommand::changeAccessMethod: {
+          if (changingAm)
+            break;
+          const auto amIndex = rand.random_number(
+              std::size_t(0), config.access_methods.size() - 1);
+          alterSubcommands.emplace_back(fmt::format(
+              "SET ACCESS METHOD {}", config.access_methods[amIndex]));
+          changingAm = true;
+          addedSubcommand = true;
+        }
+        }
       }
-      }
+    }
+
+    std::sort(droppedColumns.begin(), droppedColumns.end(), std::greater<>());
+    for (auto const &columnIndex : droppedColumns) {
+      table->columns.erase(table->columns.begin() + columnIndex);
     }
 
     table->columns.insert(table->columns.end(), newColumns.begin(),
