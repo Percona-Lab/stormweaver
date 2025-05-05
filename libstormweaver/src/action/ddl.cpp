@@ -249,3 +249,30 @@ void AlterTable::execute(Metadata &metaCtx, ps_random &rand,
     res.complete();
   });
 }
+
+RenameTable::RenameTable(DdlConfig const &config) : config(config) {}
+
+void RenameTable::execute(Metadata &metaCtx, ps_random &rand,
+                          sql_variant::LoggedSQL *connection) const {
+  if (metaCtx.size() == 0) {
+    return;
+  }
+
+  auto idx = rand.random_number(std::size_t(0), metaCtx.size() - 1);
+
+  metaCtx.alterTable(idx, [&](Metadata::Reservation &res) {
+    if (!res.open())
+      return;
+
+    const std::string oldName = res.table()->name;
+    res.table()->name =
+        fmt::format("foo{}", rand.random_number(1, 1000000)); // name;
+
+    connection
+        ->executeQuery(fmt::format("ALTER TABLE {} RENAME TO {};", oldName,
+                                   res.table()->name))
+        .maybeThrow();
+
+    res.complete();
+  });
+}
