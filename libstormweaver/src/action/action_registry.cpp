@@ -29,6 +29,12 @@ ActionFactory alterTable{"alter_table",
                          },
                          100};
 
+ActionFactory renameTable{"rename_table",
+                          [](AllConfig const &config) {
+                            return std::make_unique<RenameTable>(config.ddl);
+                          },
+                          100};
+
 ActionFactory insertSomeData{"insert_some_data",
                              [](AllConfig const &config) {
                                return std::make_unique<InsertData>(config.dml,
@@ -54,6 +60,7 @@ ActionRegistry initializeDefaultRegisty() {
   ar.insert(createNormalTable);
   ar.insert(dropTable);
   ar.insert(alterTable);
+  ar.insert(renameTable);
   ar.insert(insertSomeData);
   ar.insert(deleteSomeData);
   ar.insert(updateOneRow);

@@ -58,4 +58,15 @@ private:
   BitFlags<AlterSubcommand> possibleCommands;
 };
 
+class RenameTable : public Action {
+public:
+  RenameTable(DdlConfig const &config);
+
+  void execute(metadata::Metadata &metaCtx, ps_random &rand,
+               sql_variant::LoggedSQL *connection) const override;
+
+private:
+  DdlConfig config;
+};
+
 }; // namespace action

@@ -34,6 +34,13 @@ TEST_CASE_PERSISTENT_FIXTURE(Fixture, "DDLs work") {
     }
   }
 
+  SECTION("tables can be renamed") {
+    for (int i = 0; i < 100; ++i) {
+      action::RenameTable rt(config);
+      REQUIRE_NOTHROW(rt.execute(metaCtx, rand, sqlConnection.get()));
+    }
+  }
+
   SECTION("tables can be dropped") {
     for (int i = 0; i < 100; ++i) {
       action::DropTable dt(config);
