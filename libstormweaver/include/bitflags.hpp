@@ -49,9 +49,15 @@ public:
     return (flags_ & ToUnderlying(v)) == ToUnderlying(v);
   }
   // Sets a single flag value.
-  constexpr void Set(T v) { flags_ |= ToUnderlying(v); }
+  constexpr BitFlags &Set(T v) {
+    flags_ |= ToUnderlying(v);
+    return *this;
+  }
   // Unsets a single flag value.
-  constexpr void Unset(T v) { flags_ &= ~ToUnderlying(v); }
+  constexpr BitFlags &Unset(T v) {
+    flags_ &= ~ToUnderlying(v);
+    return *this;
+  }
   // Clears all flag values.
   constexpr void Clear() { flags_ = static_cast<UnderlyingT>(0); }
 

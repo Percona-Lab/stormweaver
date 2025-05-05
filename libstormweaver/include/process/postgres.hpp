@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <spdlog/spdlog.h>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -26,6 +27,7 @@ public:
   ~Postgres();
 
   void add_config(params_t additionalConfig);
+  void add_config(std::string_view name, std::string_view value);
 
   void add_hba(std::string const &host, std::string const &database,
                std::string const &user, std::string const &address,

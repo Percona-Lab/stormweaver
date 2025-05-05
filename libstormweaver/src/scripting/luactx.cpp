@@ -147,7 +147,9 @@ LuaContext::LuaContext(std::shared_ptr<spdlog::logger> logger)
   postgres_usertype["serverPort"] = &process::Postgres::serverPort;
   postgres_usertype["is_ready"] = &process::Postgres::is_ready;
   postgres_usertype["wait_ready"] = &process::Postgres::wait_ready;
-  postgres_usertype["add_config"] = &process::Postgres::add_config;
+  postgres_usertype["add_config"] =
+      static_cast<void (process::Postgres::*)(process::Postgres::params_t)>(
+          &process::Postgres::add_config);
   postgres_usertype["add_hba"] = &process::Postgres::add_hba;
 
   auto bg_t = luaState.new_usertype<BackgroundThread>("BackgroundThread",
