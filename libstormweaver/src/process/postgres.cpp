@@ -150,6 +150,15 @@ Postgres::Postgres(std::string const &logname, std::string const &installDir,
   }
 }
 
+void Postgres::add_config(std::string_view name, std::string_view value) {
+  std::ofstream stream(fmt::format("{}/postgresql.conf", dataDir.string()),
+                       std::ios_base::app);
+  stream << fmt::format("{} = {}", name, value) << std::endl;
+  if (name == "port") {
+    port = value;
+  }
+}
+
 void Postgres::add_config(params_t additionalConfig) {
   std::ofstream stream(fmt::format("{}/postgresql.conf", dataDir.string()),
                        std::ios_base::app);
