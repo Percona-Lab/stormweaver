@@ -66,7 +66,6 @@ struct ServerParams {
   std::string username;
   std::string password;
 
-  std::uint64_t maxpacket;
   std::uint16_t port;
 };
 
