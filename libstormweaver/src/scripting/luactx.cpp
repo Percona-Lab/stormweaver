@@ -21,7 +21,7 @@ inline std::unique_ptr<Node> setup_node_pg(sol::table const &table) {
   spdlog::info("Setting up PG node on host: '{}', port: {}", host, port);
 
   return std::make_unique<Node>(SqlFactory(
-      sql_variant::ServerParams{database, host, "", user, password, 0, port},
+      sql_variant::ServerParams{database, host, "", user, password, port},
       [on_connect_lua](sql_variant::LoggedSQL const &sql) {
         if (on_connect_lua.valid()) {
           sol::protected_function_result result = on_connect_lua(&sql);
