@@ -35,6 +35,18 @@ ActionFactory renameTable{"rename_table",
                           },
                           100};
 
+ActionFactory createIndex{"create_index",
+                          [](AllConfig const &config) {
+                            return std::make_unique<CreateIndex>(config.ddl);
+                          },
+                          100};
+
+ActionFactory dropIndex{"drop_index",
+                        [](AllConfig const &config) {
+                          return std::make_unique<DropIndex>(config.ddl);
+                        },
+                        100};
+
 ActionFactory insertSomeData{"insert_some_data",
                              [](AllConfig const &config) {
                                return std::make_unique<InsertData>(config.dml,
@@ -61,6 +73,8 @@ ActionRegistry initializeDefaultRegisty() {
   ar.insert(dropTable);
   ar.insert(alterTable);
   ar.insert(renameTable);
+  ar.insert(createIndex);
+  ar.insert(dropIndex);
   ar.insert(insertSomeData);
   ar.insert(deleteSomeData);
   ar.insert(updateOneRow);
