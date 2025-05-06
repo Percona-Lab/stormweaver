@@ -41,6 +41,20 @@ TEST_CASE_PERSISTENT_FIXTURE(Fixture, "DDLs work") {
     }
   }
 
+  SECTION("indexes can be created") {
+    for (int i = 0; i < 1000; ++i) {
+      action::CreateIndex rt(config);
+      REQUIRE_NOTHROW(rt.execute(metaCtx, rand, sqlConnection.get()));
+    }
+  }
+
+  SECTION("indexes can be dropped") {
+    for (int i = 0; i < 100; ++i) {
+      action::DropIndex rt(config);
+      REQUIRE_NOTHROW(rt.execute(metaCtx, rand, sqlConnection.get()));
+    }
+  }
+
   SECTION("tables can be dropped") {
     for (int i = 0; i < 100; ++i) {
       action::DropTable dt(config);

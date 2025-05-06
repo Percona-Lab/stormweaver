@@ -77,7 +77,8 @@ void CreateTable::execute(Metadata &metaCtx, ps_random &rand,
 
     auto table = res.table();
 
-    table->name = fmt::format("foo{}", rand.random_number(1, 1000000)); // name;
+    table->name =
+        fmt::format("foo{}", rand.random_number(1, 100000000)); // name;
 
     const size_t column_count =
         rand.random_number<std::size_t>(2, config.max_column_count);
@@ -275,4 +276,106 @@ void RenameTable::execute(Metadata &metaCtx, ps_random &rand,
 
     res.complete();
   });
+}
+
+CreateIndex::CreateIndex(DdlConfig const &config) : config(config) {}
+
+void CreateIndex::execute(Metadata &metaCtx, ps_random &rand,
+                          sql_variant::LoggedSQL *connection) const {
+  // TODO: support partial / functional indexes, and the missing parameters,
+  // like null distinct
+  if (metaCtx.size() == 0) {
+    return;
+  }
+
+  auto idx = rand.random_number(std::size_t(0), metaCtx.size() - 1);
+
+  metaCtx.alterTable(idx, [&](Metadata::Reservation &res) {
+    if (!res.open())
+      return;
+
+    metadata::Index newIndex;
+    newIndex.name =
+        fmt::format("idx{}", rand.random_number(1, 100000000)); // name;
+
+    std::vector<std::size_t> availableColumns(res.table()->columns.size());
+    rand.shuffle(availableColumns);
+
+    const auto columnCount = rand.random_number(
+        std::size_t(1), std::min<std::size_t>(availableColumns.size() - 1, 32));
+
+    std::vector<std::string> indexColumns;
+    for (std::size_t i = 0; i < columnCount; ++i) {
+      const std::string columnName =
+          res.table()->columns[availableColumns[i]].name;
+      const bool ascending = rand.random_bool();
+      indexColumns.emplace_back(
+          fmt::format("{} {}", columnName, ascending ? "ASC" : "DESC"));
+      newIndex.fields.emplace_back(metadata::IndexColumn{
+          columnName, ascending ? metadata::IndexOrdering::asc
+                                : metadata::IndexOrdering::desc});
+    }
+
+    newIndex.unique = rand.random_bool();
+    const std::string_view unique = newIndex.unique ? "UNIQUE" : "";
+    const std::string_view concurrently =
+        rand.random_bool() ? "CONCURRENTLY" : "";
+    const std::string_view only = rand.random_bool() ? "ONLY" : "";
+
+    res.table()->indexes.push_back(newIndex);
+
+    connection
+        ->executeQuery(fmt::format("CREATE {} INDEX {} {} ON {} {} ({});",
+                                   unique, concurrently, newIndex.name, only,
+                                   res.table()->name,
+                                   boost::algorithm::join(indexColumns, ", ")))
+        .maybeThrow();
+
+    res.complete();
+  });
+}
+
+DropIndex::DropIndex(DdlConfig const &config) : config(config) {}
+
+void DropIndex::execute(Metadata &metaCtx, ps_random &rand,
+                        sql_variant::LoggedSQL *connection) const {
+  if (metaCtx.size() < 1) {
+    // log error and skip
+    return;
+  }
+
+  for (int remaingTries = 10; remaingTries > 0; remaingTries--) {
+    auto idx = rand.random_number(std::size_t(0), metaCtx.size() - 1);
+
+    auto table = metaCtx[idx];
+
+    if (table == nullptr || table->indexes.empty())
+      continue;
+
+    if (metaCtx.alterTable(idx, [&](Metadata::Reservation &res) {
+          if (!res.open())
+            return false;
+
+          auto &indexes = res.table()->indexes;
+
+          if (indexes.empty())
+            return false;
+
+          auto indexIdx =
+              rand.random_number(std::size_t(0), indexes.size() - 1);
+
+          connection
+              ->executeQuery(
+                  fmt::format("DROP INDEX {};", indexes[indexIdx].name))
+              .maybeThrow();
+
+          indexes.erase(indexes.begin() + indexIdx);
+
+          res.complete();
+
+          return true;
+        })) {
+      break;
+    }
+  }
 }
