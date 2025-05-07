@@ -223,16 +223,16 @@ enum class IndexOrdering { default_, asc, desc };
 
 struct IndexColumn {
   std::string column_name; // column + ordering or func(columns...)
-
-  IndexOrdering getOrdering();
-  bool isFunctionIndex();
+  IndexOrdering ordering;
 };
 
 struct Index {
   // TODO: support postgres functional indexes?
   std::string name;
 
-  boost::container::small_vector<std::string,
+  bool unique;
+
+  boost::container::small_vector<IndexColumn,
                                  limits::optimized_index_column_count>
       fields;
 };

@@ -1,4 +1,5 @@
 
+#include <algorithm>
 #include <random>
 #include <string>
 
@@ -22,6 +23,12 @@ public:
   template <typename T> T random_number() {
     return random_number<T>(std::numeric_limits<T>::min(),
                             std::numeric_limits<T>::max());
+  }
+
+  bool random_bool() { return random_number<bool>(0, 1); }
+
+  template <typename T> void shuffle(T &container) {
+    std::ranges::shuffle(container, rng);
   }
 
 private:
