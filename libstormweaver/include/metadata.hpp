@@ -215,8 +215,6 @@ struct Column {
   bool nullable = false;
   bool primary_key = false;
   bool auto_increment = false;
-  // Perona Server for MySQL specific
-  bool compressed = false; // percona type compressed
 };
 
 enum class IndexOrdering { default_, asc, desc };
@@ -242,16 +240,12 @@ struct Table {
   enum class Type { normal, partitioned, temporary };
 
   std::string name;
-  std::string engine;           // or access method
-  std::string mysql_row_format; // mysql specific
+  std::string engine; // or access method
   std::string tablespace;
 
   // number of partitions
   // other partition information
 
-  int mysql_key_block_size = 0; // mysql specific, TODO why is this an int?
-
-  bool mysql_compression; // mysql specific
   bool encryption;
 
   boost::container::small_vector<Column, limits::optimized_column_count>
