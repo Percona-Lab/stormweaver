@@ -116,8 +116,14 @@ QueryResult PostgreSQL::executeQuery(std::string const &query) const {
     result.errorInfo.errorCode = e.sqlstate();
     result.errorInfo.errorMessage = e.what();
     result.errorInfo.errorStatus = SqlStatus::error;
+  } catch (pqxx::broken_connection const &e) {
+    const auto end = std::chrono::high_resolution_clock::now();
+    result.executionTime = end - result.executedAt;
+
+    result.errorInfo.errorCode = "0";
+    result.errorInfo.errorMessage = e.what();
+    result.errorInfo.errorStatus = SqlStatus::serverGone;
   }
-  // TODO: how to check for crashes?
 
   return result;
 }

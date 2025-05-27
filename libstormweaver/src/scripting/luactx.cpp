@@ -9,7 +9,8 @@
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
 
-inline std::unique_ptr<Node> setup_node_pg(LuaContext& parentCtx, sol::table const &table) {
+inline std::unique_ptr<Node> setup_node_pg(LuaContext &parentCtx,
+                                           sol::table const &table) {
   const std::string host = table.get_or("host", std::string("localhost"));
   const std::uint16_t port = table.get_or("port", 5432);
   const std::string user = table.get_or("user", std::string("postgres"));
@@ -27,8 +28,11 @@ inline std::unique_ptr<Node> setup_node_pg(LuaContext& parentCtx, sol::table con
 
   spdlog::info("Setting up PG node on host: '{}', port: {}", host, port);
 
-  return std::make_unique<Node>(SqlFactory(
-      sql_variant::ServerParams{database, host, "", user, password, port}, callback), parentCtx);
+  return std::make_unique<Node>(
+      SqlFactory(
+          sql_variant::ServerParams{database, host, "", user, password, port},
+          callback),
+      parentCtx);
 }
 
 inline void node_init(Node &self, sol::protected_function init_callback) {
@@ -43,13 +47,8 @@ inline void node_init(Node &self, sol::protected_function init_callback) {
   }
 }
 
-inline auto init_random_workload(Node &self, sol::table const &table) {
-  const std::uint16_t repeat_times = table.get_or("repeat_times", 1);
-  const std::uint16_t run_seconds = table.get_or("run_seconds", 10);
-  const std::uint16_t worker_count = table.get_or("worker_count", 5);
-
-  return self.init_random_workload(
-      WorkloadParams{run_seconds, repeat_times, worker_count});
+inline auto init_random_workload(Node &self, WorkloadParams wp) {
+  return self.init_random_workload(wp);
 }
 
 extern "C" {
@@ -148,6 +147,17 @@ LuaContext::LuaContext(std::shared_ptr<spdlog::logger> logger)
           &process::Postgres::add_config);
   postgres_usertype["add_hba"] = &process::Postgres::add_hba;
 
+  auto workload_params_usertype = luaState.new_usertype<WorkloadParams>(
+      "WorkloadParams", sol::constructors<WorkloadParams()>());
+
+  workload_params_usertype["duration_in_seconds"] =
+      &WorkloadParams::duration_in_seconds;
+  workload_params_usertype["repeat_times"] = &WorkloadParams::repeat_times;
+  workload_params_usertype["number_of_workers"] =
+      &WorkloadParams::number_of_workers;
+  workload_params_usertype["max_reconnect_attempts"] =
+      &WorkloadParams::max_reconnect_attempts;
+
   auto bg_t = luaState.new_usertype<BackgroundThread>("BackgroundThread",
                                                       sol::no_constructor);
   bg_t["run"] = [this](std::string const &logName, std::string const &fname) {
@@ -203,7 +213,9 @@ LuaContext::LuaContext(std::shared_ptr<spdlog::logger> logger)
     return default_value;
   };
 
-  luaState["setup_node_pg"] = [this](sol::table const &table) { return setup_node_pg(*this, table); };
+  luaState["setup_node_pg"] = [this](sol::table const &table) {
+    return setup_node_pg(*this, table);
+  };
 
   auto fs_usertype = luaState.new_usertype<Fs>("fs", sol::no_constructor);
   fs_usertype["is_directory"] = [](std::string const &path) {
@@ -261,7 +273,8 @@ std::unique_ptr<LuaContext> LuaContext::dup() const {
   return newCtx;
 }
 
-std::unique_ptr<LuaContext> LuaContext::dup(std::shared_ptr<spdlog::logger> newLogger) const {
+std::unique_ptr<LuaContext>
+LuaContext::dup(std::shared_ptr<spdlog::logger> newLogger) const {
   std::unique_ptr<LuaContext> newCtx = std::make_unique<LuaContext>(newLogger);
   for (auto const &f : loadedFiles) {
     if (!newCtx->loadScript(f)) {
@@ -277,7 +290,7 @@ BackgroundThread::BackgroundThread(LuaContext const &originalCtx,
     : luaCtx(originalCtx.dup(newLogger)), thd([this, func]() {
         luaCtx->addFunction("receive", [&]() { return toThread.receive(); });
         luaCtx->addFunction("receiveIfAny",
-                           [&]() { return toThread.receiveIfAny(); });
+                            [&]() { return toThread.receiveIfAny(); });
         luaCtx->run(func);
       }) {}
 
