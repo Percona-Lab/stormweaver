@@ -9,30 +9,26 @@
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
 
-inline std::unique_ptr<Node> setup_node_pg(sol::table const &table) {
+inline std::unique_ptr<Node> setup_node_pg(LuaContext& parentCtx, sol::table const &table) {
   const std::string host = table.get_or("host", std::string("localhost"));
   const std::uint16_t port = table.get_or("port", 5432);
   const std::string user = table.get_or("user", std::string("postgres"));
   const std::string password = table.get_or("password", std::string(""));
   const std::string database =
       table.get_or("database", std::string("stormweaver"));
-  auto on_connect_lua = table.get<sol::protected_function>("on_connect");
+  auto on_connect_lua = table.get<sol::function>("on_connect");
+
+  SqlFactory::on_connect_t callback;
+
+  if (on_connect_lua.valid()) {
+    const auto bytecode = on_connect_lua.dump();
+    callback = SqlFactory::on_connect_t(bytecode);
+  }
 
   spdlog::info("Setting up PG node on host: '{}', port: {}", host, port);
 
   return std::make_unique<Node>(SqlFactory(
-      sql_variant::ServerParams{database, host, "", user, password, port},
-      [on_connect_lua](sql_variant::LoggedSQL const &sql) {
-        if (on_connect_lua.valid()) {
-          sol::protected_function_result result = on_connect_lua(&sql);
-          if (!result.valid()) {
-            sol::error err = result;
-            spdlog::error("On_connect lua callback failed: {}", err.what());
-          }
-        } else {
-          spdlog::debug("No on connect callback defined");
-        }
-      }));
+      sql_variant::ServerParams{database, host, "", user, password, port}, callback), parentCtx);
 }
 
 inline void node_init(Node &self, sol::protected_function init_callback) {
@@ -207,7 +203,7 @@ LuaContext::LuaContext(std::shared_ptr<spdlog::logger> logger)
     return default_value;
   };
 
-  luaState["setup_node_pg"] = setup_node_pg;
+  luaState["setup_node_pg"] = [this](sol::table const &table) { return setup_node_pg(*this, table); };
 
   auto fs_usertype = luaState.new_usertype<Fs>("fs", sol::no_constructor);
   fs_usertype["is_directory"] = [](std::string const &path) {
@@ -233,18 +229,6 @@ sol::bytecode LuaContext::dump(std::string const &name) const {
   return target.dump();
 }
 
-bool LuaContext::run(sol::bytecode const &bytecode) {
-  sol::protected_function_result result =
-      luaState.safe_script(bytecode.as_string_view());
-  if (!result.valid()) {
-    sol::error err = result;
-    spdlog::error("Failed to ru bytecode: {}", err.what());
-    return false;
-  }
-
-  return true;
-}
-
 bool LuaContext::loadScript(std::filesystem::path file) {
   auto script = luaState.load_file(file);
 
@@ -267,10 +251,20 @@ bool LuaContext::loadScript(std::filesystem::path file) {
   return true;
 }
 
-LuaContext LuaContext::dup(std::shared_ptr<spdlog::logger> newLogger) const {
-  LuaContext newCtx(newLogger);
+std::unique_ptr<LuaContext> LuaContext::dup() const {
+  std::unique_ptr<LuaContext> newCtx = std::make_unique<LuaContext>(logger);
   for (auto const &f : loadedFiles) {
-    if (!newCtx.loadScript(f)) {
+    if (!newCtx->loadScript(f)) {
+      throw std::runtime_error("Failed to process for dup");
+    }
+  }
+  return newCtx;
+}
+
+std::unique_ptr<LuaContext> LuaContext::dup(std::shared_ptr<spdlog::logger> newLogger) const {
+  std::unique_ptr<LuaContext> newCtx = std::make_unique<LuaContext>(newLogger);
+  for (auto const &f : loadedFiles) {
+    if (!newCtx->loadScript(f)) {
       throw std::runtime_error("Failed to process for dup");
     }
   }
@@ -281,10 +275,10 @@ BackgroundThread::BackgroundThread(LuaContext const &originalCtx,
                                    std::shared_ptr<spdlog::logger> newLogger,
                                    sol::bytecode const &func)
     : luaCtx(originalCtx.dup(newLogger)), thd([this, func]() {
-        luaCtx.addFunction("receive", [&]() { return toThread.receive(); });
-        luaCtx.addFunction("receiveIfAny",
+        luaCtx->addFunction("receive", [&]() { return toThread.receive(); });
+        luaCtx->addFunction("receiveIfAny",
                            [&]() { return toThread.receiveIfAny(); });
-        luaCtx.run(func);
+        luaCtx->run(func);
       }) {}
 
 BackgroundThread::~BackgroundThread() { join(); }

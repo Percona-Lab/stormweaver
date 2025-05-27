@@ -8,9 +8,9 @@
 #include "sql_variant/generic.hpp"
 #include "sql_variant/postgresql.hpp"
 
-Worker::Worker(std::string const &name, logged_sql_ptr sql_conn,
+Worker::Worker(std::string const &name, sql_connector_t const& sql_connector,
                action::AllConfig config, metadata_ptr metadata)
-    : name(name), sql_conn(std::move(sql_conn)), config(config),
+    : name(name), sql_connector(sql_connector), sql_conn(sql_connector()), config(config),
       metadata(metadata),
       logger(spdlog::get(fmt::format("worker-{}", name)) != nullptr
                  ? spdlog::get(fmt::format("worker-{}", name))
@@ -20,7 +20,7 @@ Worker::Worker(std::string const &name, logged_sql_ptr sql_conn,
 
 Worker::~Worker() {}
 
-void Worker::reconnect() { sql_conn->reconnect(); }
+void Worker::reconnect() { sql_conn = sql_connector(); }
 
 void Worker::create_random_tables(std::size_t count) {
   for (std::size_t i = 0; i < count; ++i) {
@@ -45,11 +45,11 @@ sql_variant::LoggedSQL *Worker::sql_connection() const {
   return sql_conn.get();
 }
 
-RandomWorker::RandomWorker(std::string const &name, logged_sql_ptr sql_conn,
+RandomWorker::RandomWorker(std::string const &name, Worker::sql_connector_t const& sql_connector,
                            action::AllConfig const &config,
                            metadata_ptr metadata,
-                           action::ActionRegistry const &actions)
-    : Worker(name, std::move(sql_conn), config, metadata), actions(actions) {}
+                           action::ActionRegistry const &actions, std::unique_ptr<LuaContext> luaCtx)
+    : Worker(name, sql_connector, config, metadata), actions(actions), luaCtx(std::move(luaCtx)) {}
 
 RandomWorker::~RandomWorker() { join(); }
 
@@ -96,7 +96,7 @@ action::ActionRegistry &RandomWorker::possibleActions() { return actions; }
 
 Workload::Workload(WorkloadParams const &params, SqlFactory const &sql_factory,
                    action::AllConfig const &default_config,
-                   metadata_ptr metadata, action::ActionRegistry const &actions)
+                   metadata_ptr metadata, action::ActionRegistry const &actions, LuaContext const& topCtx)
     : duration_in_seconds(params.duration_in_seconds),
       repeat_times(params.repeat_times), actions(actions) {
 
@@ -105,8 +105,10 @@ Workload::Workload(WorkloadParams const &params, SqlFactory const &sql_factory,
 
   for (std::size_t idx = 0; idx < params.number_of_workers; ++idx) {
     auto name = fmt::format("Worker {}", idx + 1);
-    workers.emplace_back(name, sql_factory.connect(name), default_config,
-                         metadata, actions);
+    auto ctx = topCtx.dup();
+    auto& ref = *ctx.get();
+    workers.emplace_back(name, [name, &ref, &sql_factory]() { return sql_factory.connect(name, ref); }, default_config,
+                         metadata, actions, std::move(ctx));
   }
 }
 
@@ -142,27 +144,27 @@ SqlFactory::SqlFactory(sql_variant::ServerParams const &sql_params,
                        on_connect_t connection_callback)
     : sql_params(sql_params), connection_callback(connection_callback) {}
 
-Node::Node(SqlFactory const &sql_factory)
-    : sql_factory(sql_factory), metadata(new metadata::Metadata()) {}
+Node::Node(SqlFactory const &sql_factory, LuaContext& topCtx)
+    : sql_factory(sql_factory), metadata(new metadata::Metadata()), topCtx(topCtx) {}
 
 std::unique_ptr<Worker> Node::make_worker(std::string const &name) {
-  return std::make_unique<Worker>(name, sql_factory.connect(name),
+  return std::make_unique<Worker>(name, [&]() { return sql_factory.connect(name, topCtx); },
                                   default_config, metadata);
 }
 
 std::shared_ptr<Workload>
 Node::init_random_workload(WorkloadParams const &params) {
   return std::make_shared<Workload>(params, sql_factory, default_config,
-                                    metadata, actions);
+                                    metadata, actions, topCtx);
 }
 
 std::unique_ptr<sql_variant::LoggedSQL>
-SqlFactory::connect(std::string const &connection_name) const {
-  auto conn = std::make_unique<sql_variant::LoggedSQL>(
+SqlFactory::connect(std::string const &connection_name, LuaContext& luaCtx) const {
+   auto conn = std::make_unique<sql_variant::LoggedSQL>(
       std::make_unique<sql_variant::PostgreSQL>(sql_params), connection_name);
 
   if (connection_callback) {
-    connection_callback(*conn.get());
+    connection_callback(luaCtx, conn.get());
   }
 
   return conn;

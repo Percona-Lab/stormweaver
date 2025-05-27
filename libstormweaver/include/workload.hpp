@@ -6,6 +6,7 @@
 #include "action/action_registry.hpp"
 #include "metadata.hpp"
 #include "sql_variant/generic.hpp"
+#include "scripting/luactx.hpp"
 
 using logged_sql_ptr = std::unique_ptr<sql_variant::LoggedSQL>;
 
@@ -19,7 +20,9 @@ struct WorkloadParams {
 
 class Worker {
 public:
-  Worker(std::string const &name, logged_sql_ptr sql_conn,
+  using sql_connector_t = std::function<std::unique_ptr<sql_variant::LoggedSQL>()>;
+
+  Worker(std::string const &name, sql_connector_t const& sql_connector,
          action::AllConfig config, metadata_ptr metadata);
 
   Worker(Worker &&) = default;
@@ -36,6 +39,7 @@ public:
 
 protected:
   std::string name;
+  sql_connector_t sql_connector;
   logged_sql_ptr sql_conn;
   action::AllConfig config;
   metadata_ptr metadata;
@@ -45,9 +49,9 @@ protected:
 
 class RandomWorker : public Worker {
 public:
-  RandomWorker(std::string const &name, logged_sql_ptr sql_conn,
+  RandomWorker(std::string const &name, Worker::sql_connector_t const& sql_connector,
                action::AllConfig const &config, metadata_ptr metadata,
-               action::ActionRegistry const &actions);
+               action::ActionRegistry const &actions, std::unique_ptr<LuaContext> luaCtx);
 
   RandomWorker(RandomWorker &&) = default;
 
@@ -64,17 +68,18 @@ protected:
   std::thread thread;
   std::size_t successfulActions = 0;
   std::size_t failedActions = 0;
+  std::unique_ptr<LuaContext> luaCtx;
 };
 
 class SqlFactory {
 public:
-  using on_connect_t = std::function<void(sql_variant::LoggedSQL const &)>;
+  using on_connect_t = LuaCallback<void(sql_variant::LoggedSQL*)>;
 
   SqlFactory(sql_variant::ServerParams const &sql_params,
              on_connect_t connection_callback);
 
   std::unique_ptr<sql_variant::LoggedSQL>
-  connect(std::string const &connection_name) const;
+  connect(std::string const &connection_name, LuaContext& luaCtx) const;
 
   sql_variant::ServerParams const &params() const;
 
@@ -88,7 +93,7 @@ class Workload {
 public:
   Workload(WorkloadParams const &params, SqlFactory const &sql_factory,
            action::AllConfig const &default_config, metadata_ptr metadata,
-           action::ActionRegistry const &actions);
+           action::ActionRegistry const &actions, LuaContext const& topCtx);
 
   void run();
 
@@ -110,7 +115,7 @@ private:
 
 class Node {
 public:
-  Node(SqlFactory const &sql_factory);
+  Node(SqlFactory const &sql_factory, LuaContext& topCtx);
 
   std::shared_ptr<Workload> init_random_workload(WorkloadParams const &wp);
 
@@ -126,4 +131,5 @@ private:
   action::AllConfig default_config;
   metadata_ptr metadata;
   action::ActionRegistry actions = action::default_registy();
+  LuaContext& topCtx;
 };

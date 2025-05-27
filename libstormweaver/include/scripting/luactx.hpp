@@ -13,17 +13,22 @@
 
 class LuaContext {
 public:
-  LuaContext(std::shared_ptr<spdlog::logger> logger);
+  explicit LuaContext(std::shared_ptr<spdlog::logger> logger);
 
   sol::state &ctx();
 
   sol::bytecode dump(std::string const &name) const;
 
-  bool run(sol::bytecode const &bytecode);
+  template<typename... Args>
+  auto run(sol::bytecode const &bytecode, Args&&... args) {
+    sol::load_result l = luaState.load(bytecode.as_string_view());
+    return l(std::forward<Args>(args)...);
+  }
 
   bool loadScript(std::filesystem::path file);
 
-  LuaContext dup(std::shared_ptr<spdlog::logger> newLogger) const;
+  std::unique_ptr<LuaContext> dup() const;
+  std::unique_ptr<LuaContext> dup(std::shared_ptr<spdlog::logger> newLogger) const;
 
   template <typename T> void addFunction(std::string const &name, T const &t) {
     luaState[name] = t;
@@ -33,6 +38,26 @@ private:
   std::shared_ptr<spdlog::logger> logger;
   sol::state luaState;
   std::vector<std::filesystem::path> loadedFiles;
+};
+
+template <typename T>
+class LuaCallback;
+template< class R, class... Args >
+class LuaCallback<R(Args...)> {
+public:
+  LuaCallback() : code(std::nullopt) {}
+  explicit LuaCallback(sol::bytecode code) : code(code) {}
+
+  auto operator()(LuaContext& ctx, Args&&... args) const {
+    return ctx.run(*code, std::forward<Args>(args)...);
+  }
+
+  explicit operator bool() const {
+    return code.has_value();
+  }
+  
+private:
+  std::optional<sol::bytecode> code;
 };
 
 class CommQueue {
@@ -62,7 +87,7 @@ public:
   CommQueue &fromQueue();
 
 private:
-  LuaContext luaCtx;
+  std::unique_ptr<LuaContext> luaCtx;
   std::thread thd;
   CommQueue toThread;
   CommQueue fromThread;
