@@ -16,7 +16,10 @@ function main(argv)
 
 	pgm.primaryNode:init(db_setup)
 
-	t1 = pgm.primaryNode:initRandomWorkload({ run_seconds = 10, worker_count = 2 })
+	params = WorkloadParams.new()
+	params.duration_in_seconds = 10
+	params.number_of_workers = 2
+	t1 = pgm.primaryNode:initRandomWorkload(params)
 
 	t1:run()
 	t1:wait_completion()

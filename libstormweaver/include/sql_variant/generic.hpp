@@ -71,17 +71,21 @@ struct ServerParams {
 
 struct QueryResult;
 
+enum class SqlStatus { success, error, serverGone };
+
 class SqlException : public std::exception {
 public:
-  SqlException(std::string const &message) : message(message) {}
+  SqlException(std::string const &message, SqlStatus status = SqlStatus::error)
+      : message(message), status(status) {}
 
   const char *what() const noexcept override { return message.c_str(); }
 
+  bool serverGone() const { return status == SqlStatus::serverGone; }
+
 private:
   std::string message;
+  SqlStatus status;
 };
-
-enum class SqlStatus { success, error, serverGone };
 
 struct ErrorInfo {
   std::string errorCode;
@@ -122,7 +126,8 @@ struct QueryResult {
     if (!success()) {
       throw SqlException(fmt::format("Error while executing query: {} {}",
                                      errorInfo.errorCode,
-                                     errorInfo.errorMessage));
+                                     errorInfo.errorMessage),
+                         errorInfo.errorStatus);
     }
   }
 };

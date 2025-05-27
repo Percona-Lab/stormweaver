@@ -25,7 +25,10 @@ function main(argv)
 
 	pg1 = pgm:get(1)
 
-	t1 = pgm.primaryNode:initRandomWorkload({ run_seconds = 20, worker_count = 5 })
+	params = WorkloadParams.new()
+	params.duration_in_seconds = 20
+	params.number_of_workers = 5
+	t1 = pgm.primaryNode:initRandomWorkload(params)
 	for workloadIdx = 1, 50 do
 		t1:run()
 

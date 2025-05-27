@@ -63,7 +63,10 @@ function main(argv)
 	-- creates a workload
 	-- similarly this copies the registry from the node to the workers,
 	-- later modifications to the node won't be effective
-	t1 = pgm.primaryNode:initRandomWorkload({ run_seconds = 10, worker_count = 5 })
+	params = WorkloadParams.new()
+	params.duration_in_seconds = 10
+	params.number_of_workers = 5
+	t1 = pgm.primaryNode:initRandomWorkload(params)
 
 	-- this modifies the second worker to use the latest version of the default registry
 	-- effect: worker 2 will run truncate, but not reindex
@@ -88,10 +91,8 @@ function main(argv)
 		-- wait for the tests to complete
 		t1:wait_completion()
 
-		-- restart the server (TODO: kill9 not yet implemented)
+		-- restart the server, workers will automatically reconnect
 		pgm:get(1):restart(10)
-
-		t1:reconnect_workers()
 	end
 
 	pg:stop(10)
