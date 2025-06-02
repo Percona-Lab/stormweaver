@@ -19,7 +19,7 @@ Metadata::Reservation::Reservation(Metadata *storage, Metadata::table_t table,
 
 Metadata::Reservation::~Reservation() {
   if (open()) {
-    complete();
+    cancel();
   }
 }
 

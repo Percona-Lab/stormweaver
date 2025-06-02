@@ -261,7 +261,7 @@ TEST_CASE("Tables can be deleted in metadata", "[metadata]") {
 
   SECTION("A single table can be dropped in the middle") {
 
-    meta.dropTable(1);
+    meta.dropTable(1).complete();
 
     REQUIRE(meta.size() == 3);
     REQUIRE(meta[0]->name == "foo");
@@ -276,7 +276,7 @@ TEST_CASE("Tables can be deleted in metadata", "[metadata]") {
 
     insert4tables(meta);
 
-    meta.dropTable(0);
+    meta.dropTable(0).complete();
 
     REQUIRE(meta.size() == 3);
     // REQUIRE(meta[0]->name == "foo");
@@ -291,7 +291,7 @@ TEST_CASE("Tables can be deleted in metadata", "[metadata]") {
 
     insert4tables(meta);
 
-    meta.dropTable(3);
+    meta.dropTable(3).complete();
 
     REQUIRE(meta.size() == 3);
     REQUIRE(meta[0]->name == "foo");
