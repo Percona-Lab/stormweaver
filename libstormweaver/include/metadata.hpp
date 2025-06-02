@@ -214,6 +214,7 @@ struct Column {
 
   bool nullable = false;
   bool primary_key = false;
+  bool partition_key = false;
   bool auto_increment = false;
 };
 
@@ -235,6 +236,18 @@ struct Index {
       fields;
 };
 
+struct RangePartition {
+  std::size_t rangebase; // [ rangebase * rangeSize, (rangebase+1) * rangeSize)
+  // TODO: add partition specific indexes?
+  // boost::container::small_vector<Index, limits::optimized_index_count>
+  // indexes;
+};
+
+struct RangePartitioning {
+  std::size_t rangeSize;
+  std::vector<RangePartition> ranges;
+};
+
 struct Table {
 
   enum class Type { normal, partitioned, temporary };
@@ -243,10 +256,7 @@ struct Table {
   std::string engine; // or access method
   std::string tablespace;
 
-  // number of partitions
-  // other partition information
-
-  bool encryption;
+  std::optional<RangePartitioning> partitioning;
 
   boost::container::small_vector<Column, limits::optimized_column_count>
       columns;

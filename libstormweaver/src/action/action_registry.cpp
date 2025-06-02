@@ -16,6 +16,14 @@ ActionFactory createNormalTable{"create_normal_table",
                                 },
                                 100};
 
+ActionFactory createPartitionedTable{"create_partitioned_table",
+                                     [](AllConfig const &config) {
+                                       return std::make_unique<CreateTable>(
+                                           config.ddl,
+                                           metadata::Table::Type::partitioned);
+                                     },
+                                     100};
+
 ActionFactory dropTable{"drop_table",
                         [](AllConfig const &config) {
                           return std::make_unique<DropTable>(config.ddl);
@@ -47,6 +55,20 @@ ActionFactory dropIndex{"drop_index",
                         },
                         100};
 
+ActionFactory createPartition{"create_partition",
+                              [](AllConfig const &config) {
+                                return std::make_unique<CreatePartition>(
+                                    config.ddl);
+                              },
+                              100};
+
+ActionFactory dropPartition{"drop_partition",
+                            [](AllConfig const &config) {
+                              return std::make_unique<DropPartition>(
+                                  config.ddl);
+                            },
+                            100};
+
 ActionFactory insertSomeData{"insert_some_data",
                              [](AllConfig const &config) {
                                return std::make_unique<InsertData>(config.dml,
@@ -70,11 +92,14 @@ ActionRegistry initializeDefaultRegisty() {
   ActionRegistry ar;
 
   ar.insert(createNormalTable);
+  ar.insert(createPartitionedTable);
   ar.insert(dropTable);
   ar.insert(alterTable);
   ar.insert(renameTable);
   ar.insert(createIndex);
   ar.insert(dropIndex);
+  ar.insert(createPartition);
+  ar.insert(dropPartition);
   ar.insert(insertSomeData);
   ar.insert(deleteSomeData);
   ar.insert(updateOneRow);

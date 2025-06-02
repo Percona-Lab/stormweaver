@@ -83,12 +83,28 @@ void CreateTable::execute(Metadata &metaCtx, ps_random &rand,
     const size_t column_count =
         rand.random_number<std::size_t>(2, config.max_column_count);
 
-    for (size_t idx = 0; idx < column_count; ++idx) {
-      table->columns.push_back(randomColumn(rand, idx == 0));
+    const bool partitioned = type == Table::Type::partitioned;
+
+    if (partitioned) {
+      table->partitioning = RangePartitioning{};
+      table->partitioning->rangeSize = 10000000;
     }
 
-    if (type == Table::Type::partitioned) {
-      // TODO: setup partition information
+    for (size_t idx = 0; idx < column_count; ++idx) {
+      if (partitioned && idx == 1) {
+        Column col;
+        col.name = fmt::format("col{}", rand.random_number<std::size_t>());
+        col.type = ColumnType::INT;
+        col.partition_key = true;
+        table->columns.push_back(col);
+      } else {
+        table->columns.push_back(randomColumn(rand, idx == 0));
+      }
+    }
+
+    if (partitioned) {
+      // we can't have a serial primary key with partitioned tables
+      table->columns[0].primary_key = false;
     }
 
     // 2: build & execute SQL statement
@@ -108,10 +124,35 @@ void CreateTable::execute(Metadata &metaCtx, ps_random &rand,
                                  boost::algorithm::join(pk_columns, ", ")));
     }
 
+    std::string partitionClause = "";
+
+    if (partitioned) {
+      partitionClause =
+          fmt::format(" PARTITION BY RANGE ({})", table->columns[1].name);
+    }
+
     connection
-        ->executeQuery(fmt::format("CREATE TABLE {} ({});", table->name,
-                                   boost::algorithm::join(defs, ",\n")))
+        ->executeQuery(fmt::format("CREATE TABLE {} ({}) {};", table->name,
+                                   boost::algorithm::join(defs, ",\n"),
+                                   partitionClause))
         .maybeThrow();
+
+    if (partitioned) {
+      auto cnt = rand.random_number(config.min_partition_count,
+                                    config.max_partition_count);
+      const auto partitionSize = table->partitioning->rangeSize;
+      for (std::size_t i = 0; i < cnt; ++i) {
+        connection
+            ->executeQuery(fmt::format("CREATE TABLE {}_p{} PARTITION OF {} "
+                                       "FOR VALUES FROM ({}) TO ({});",
+                                       table->name, i, table->name,
+                                       partitionSize * i,
+                                       partitionSize * (i + 1)))
+            .maybeThrow();
+
+        table->partitioning->ranges.push_back(RangePartition{i});
+      }
+    }
 
     res.complete();
   });
@@ -128,12 +169,11 @@ void DropTable::execute(Metadata &metaCtx, ps_random &rand,
 
   auto idx = rand.random_number(std::size_t(0), metaCtx.size() - 1);
 
-  // TODO: add cascade randomly? And handle possibly other dropped tables
-
   metaCtx.dropTable(idx, [&](Metadata::Reservation &res) {
     if (!res.open())
       return;
-    connection->executeQuery(fmt::format("DROP TABLE {};", res.table()->name))
+    connection
+        ->executeQuery(fmt::format("DROP TABLE {} CASCADE;", res.table()->name))
         .maybeThrow();
 
     res.complete();
@@ -378,4 +418,113 @@ void DropIndex::execute(Metadata &metaCtx, ps_random &rand,
       break;
     }
   }
+}
+
+static int findPartitionedTable(Metadata &metaCtx, ps_random &rand,
+                                DdlConfig const &config) {
+  const auto size = metaCtx.size();
+
+  if (size == 0) {
+    return -1;
+  }
+
+  for (std::size_t i = 0; i < 10; ++i) {
+    auto idx = rand.random_number(std::size_t(0), metaCtx.size() - 1);
+
+    auto table = metaCtx[idx];
+
+    if (table == nullptr || !table->partitioning.has_value()) {
+      continue;
+    }
+
+    auto count = table->partitioning->ranges.size();
+
+    if (count >= config.max_partition_count ||
+        count <= config.min_partition_count) {
+      continue;
+    }
+
+    return idx;
+  }
+
+  return -1;
+}
+
+CreatePartition::CreatePartition(DdlConfig const &config) : config(config) {}
+
+void CreatePartition::execute(Metadata &metaCtx, ps_random &rand,
+                              sql_variant::LoggedSQL *connection) const {
+
+  auto idx = findPartitionedTable(metaCtx, rand, config);
+
+  if (idx == -1)
+    return;
+
+  metaCtx.alterTable(idx, [&](Metadata::Reservation &res) {
+    if (!res.open())
+      return;
+
+    auto table = res.table();
+
+    if (!table->partitioning.has_value())
+      return;
+
+    auto currentCount = table->partitioning->ranges.size();
+    if (currentCount >= config.max_partition_count) {
+      return;
+    }
+
+    std::size_t partIdx = rand.random_number(1, 100000000);
+    const auto partitionSize = table->partitioning->rangeSize;
+    connection
+        ->executeQuery(fmt::format(
+            "CREATE TABLE {}_p{} PARTITION OF {} FOR VALUES FROM ({}) TO ({});",
+            table->name, partIdx, table->name, partitionSize * partIdx,
+            partitionSize * (partIdx + 1)))
+        .maybeThrow();
+
+    table->partitioning->ranges.push_back(RangePartition{partIdx});
+
+    res.complete();
+  });
+}
+
+DropPartition::DropPartition(DdlConfig const &config) : config(config) {}
+
+void DropPartition::execute(Metadata &metaCtx, ps_random &rand,
+                            sql_variant::LoggedSQL *connection) const {
+
+  auto idx = findPartitionedTable(metaCtx, rand, config);
+
+  if (idx == -1)
+    return;
+
+  metaCtx.alterTable(idx, [&](Metadata::Reservation &res) {
+    if (!res.open())
+      return;
+
+    auto table = res.table();
+
+    if (!table->partitioning.has_value())
+      return;
+
+    auto currentCount = table->partitioning->ranges.size();
+    if (currentCount <= config.min_partition_count) {
+      return;
+    }
+
+    std::size_t partId = rand.random_number(
+        std::size_t(0), table->partitioning->ranges.size() - 1);
+
+    std::size_t partIdx = table->partitioning->ranges[partId].rangebase;
+
+    connection
+        ->executeQuery(fmt::format("DROP TABLE {}_p{};", table->name, partIdx))
+        .maybeThrow();
+
+    table->partitioning->ranges.erase(table->partitioning->ranges.begin() +
+                                      partId);
+
+    res.complete();
+  });
 }
