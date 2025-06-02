@@ -95,5 +95,5 @@ function main(argv)
 		pgm:get(1):restart(10)
 	end
 
-	pg:stop(10)
+	pgm:get(1):stop(10)
 end
