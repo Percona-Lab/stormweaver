@@ -10,7 +10,19 @@ using namespace action;
 
 namespace {
 
-std::string generate_value(metadata::Column const &col, ps_random &rand) {
+std::string generate_value(metadata::Column const &col, ps_random &rand,
+                           std::optional<RangePartitioning> const &rp) {
+  if (col.partition_key) {
+    // Query will fail, but at least we don't crash
+    if (rp->ranges.size() == 0)
+      return "0";
+
+    std::size_t num =
+        rand.random_number(std::size_t(0), rp->rangeSize * rp->ranges.size());
+    std::size_t range = num / rp->rangeSize;
+    return std::to_string(rp->ranges[range].rangebase * rp->rangeSize +
+                          (num % rp->rangeSize));
+  }
   switch (col.type) {
   case metadata::ColumnType::INT:
     return std::to_string(rand.random_number(1, 1000000));
@@ -76,7 +88,7 @@ void InsertData::execute(Metadata &metaCtx, ps_random &rand,
       if (!f.auto_increment) {
         if (!first)
           sql << ", ";
-        sql << generate_value(f, rand);
+        sql << generate_value(f, rand, table->partitioning);
         first = false;
       }
     }
@@ -152,7 +164,7 @@ void UpdateOneRow::execute(Metadata &metaCtx, ps_random &rand,
         sql << ", ";
       sql << f.name;
       sql << " = ";
-      sql << generate_value(f, rand);
+      sql << generate_value(f, rand, table->partitioning);
       first = false;
     }
   }
