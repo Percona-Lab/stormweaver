@@ -19,7 +19,6 @@ public:
 
 private:
   DmlConfig config;
-  std::size_t rows;
 };
 
 class DeleteData : public Action {
@@ -31,7 +30,6 @@ public:
 
 private:
   DmlConfig config;
-  std::size_t rows;
 };
 
 class InsertData : public Action {
