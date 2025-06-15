@@ -53,6 +53,7 @@ inline auto init_random_workload(Node &self, WorkloadParams wp) {
 
 extern "C" {
 LUALIB_API int luaopen_toml(lua_State *L);
+LUALIB_API int luaopen_lfs(lua_State *L);
 }
 
 struct Fs {};
@@ -61,6 +62,7 @@ LuaContext::LuaContext(std::shared_ptr<spdlog::logger> logger)
     : logger(logger) {
   luaState.open_libraries();
   luaState.require("toml", luaopen_toml);
+  luaState.require("lfs", luaopen_lfs);
 
   const std::string original_package_path = luaState["package"]["path"];
   const std::string base_dir =

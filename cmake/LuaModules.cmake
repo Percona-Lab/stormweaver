@@ -20,3 +20,13 @@ TARGET_LINK_LIBRARIES(toml-lua
 )
 
 TARGET_COMPILE_OPTIONS(toml-lua PRIVATE "-Wno-missing-declarations")
+
+set(LUA_FILESYSTEM_SOURCES
+_3p-lua/luafilesystem/src/lfs.c
+)
+
+ADD_LIBRARY(lfs-lua ${LUA_FILESYSTEM_SOURCES})
+TARGET_INCLUDE_DIRECTORIES(lfs-lua PUBLIC "${CMAKE_SOURCE_DIR}/_3p-lua/luafilesystem/src/")
+TARGET_LINK_LIBRARIES(lfs-lua
+    sol2::sol2
+)

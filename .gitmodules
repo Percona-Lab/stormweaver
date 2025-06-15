@@ -7,3 +7,6 @@
 [submodule "_3p-lua/argparse"]
 	path = _3p-lua/argparse
 	url = https://github.com/mpeterv/argparse
+[submodule "_3p-lua/luafilesystem"]
+	path = _3p-lua/luafilesystem
+	url = https://github.com/lunarmodules/luafilesystem
