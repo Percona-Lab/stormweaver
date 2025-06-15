@@ -15,7 +15,7 @@ public:
       std::uniform_real_distribution<> len_dist(min, max);
       return len_dist(rng);
     } else {
-      std::uniform_int_distribution<> len_dist(min, max);
+      std::uniform_int_distribution<std::size_t> len_dist(min, max);
       return len_dist(rng);
     }
   }
