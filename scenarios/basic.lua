@@ -8,6 +8,7 @@
 -- additional files can be added and used there, and of course existing files edited
 -- idea is that common helper code should go there
 require("common")
+require("entropy")
 
 -- log messages, debug, info, warn, error, only a single string parameter for now (TODO: variable arguments)
 info("Loading script!")
@@ -93,6 +94,10 @@ function main(argv)
 
 		-- restart the server, workers will automatically reconnect
 		pgm:get(1):restart(10)
+
+		w = pgm.primaryNode:make_worker("verification")
+
+		db_files_entropy(w, "datadirs/datadir_pr/")
 	end
 
 	pgm:get(1):stop(10)

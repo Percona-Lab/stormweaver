@@ -64,6 +64,7 @@ function module:setupAndStartPrimary(connectionCallback, extra_args)
 		port = tostring(primary_port),
 		listen_addresses = "'*'",
 		logging_collector = "on",
+		log_statement = "ALL",
 		log_directory = "'logs'",
 		log_filename = "'server.log'",
 		log_min_messages = "'info'",
