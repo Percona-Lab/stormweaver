@@ -27,5 +27,6 @@ TARGET_LINK_LIBRARIES(libstormweaver
     spdlog::spdlog
     sol2::sol2
     toml-lua
+    lfs-lua
 )
 SET_PROPERTY(TARGET libstormweaver PROPERTY CXX_STANDARD 23)
