@@ -8,6 +8,7 @@
 -- additional files can be added and used there, and of course existing files edited
 -- idea is that common helper code should go there
 require("common")
+require("entropy")
 
 -- log messages, debug, info, warn, error, only a single string parameter for now (TODO: variable arguments)
 info("Loading script!")
@@ -47,7 +48,7 @@ function main(argv)
 
 	-- The PgManager class has helpers for setting up and managing a replication chain
 	pgm = PgManager.new(pgconfig)
-	pgm:setupAndStartPrimary(conn_setting, { shared_preload_libraries = "pg_tde" })
+	pgm:setupAndStartPrimary(conn_settings, { shared_preload_libraries = "pg_tde" })
 
 	-- Modifies the default registry again, but the node already copied the default registry above
 	-- this doesn't affect the existing node
@@ -93,6 +94,10 @@ function main(argv)
 
 		-- restart the server, workers will automatically reconnect
 		pgm:get(1):restart(10)
+
+		w = pgm.primaryNode:make_worker("verification")
+
+		db_files_entropy(w, "datadirs/datadir_pr/")
 	end
 
 	pgm:get(1):stop(10)

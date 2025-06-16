@@ -53,6 +53,7 @@ inline auto init_random_workload(Node &self, WorkloadParams wp) {
 
 extern "C" {
 LUALIB_API int luaopen_toml(lua_State *L);
+LUALIB_API int luaopen_lfs(lua_State *L);
 }
 
 struct Fs {};
@@ -61,6 +62,7 @@ LuaContext::LuaContext(std::shared_ptr<spdlog::logger> logger)
     : logger(logger) {
   luaState.open_libraries();
   luaState.require("toml", luaopen_toml);
+  luaState.require("lfs", luaopen_lfs);
 
   const std::string original_package_path = luaState["package"]["path"];
   const std::string base_dir =
@@ -76,13 +78,45 @@ LuaContext::LuaContext(std::shared_ptr<spdlog::logger> logger)
     return &action::default_registy();
   };
 
-  luaState.new_usertype<sql_variant::LoggedSQL>(
-      "SQL", sol::no_constructor, "execute_query",
-      &sql_variant::LoggedSQL::executeQuery);
+  auto rowview_usertype = luaState.new_usertype<sql_variant::RowView>(
+      "RowView", sol::no_constructor);
+  rowview_usertype["field"] = [](sql_variant::RowView &self, std::size_t idx) {
+    return self.rowData[idx - 1];
+  };
+  rowview_usertype["numFields"] = [](sql_variant::RowView &self) {
+    return self.rowData.size();
+  };
+
+  auto queryspecificresult_usertype =
+      luaState.new_usertype<sql_variant::QuerySpecificResult>(
+          "QuerySpecificResult", sol::no_constructor);
+
+  queryspecificresult_usertype["numField"] =
+      &sql_variant::QuerySpecificResult::numFields;
+  queryspecificresult_usertype["numRows"] =
+      &sql_variant::QuerySpecificResult::numRows;
+  queryspecificresult_usertype["nextRow"] =
+      &sql_variant::QuerySpecificResult::nextRow;
+
+  auto queryresult_usertype = luaState.new_usertype<sql_variant::QueryResult>(
+      "QueryResult", sol::no_constructor);
+
+  queryresult_usertype["sucess"] = &sql_variant::QueryResult::success;
+  queryresult_usertype["data"] = [](sql_variant::QueryResult &self) {
+    return self.data.get();
+  };
+  queryresult_usertype["query"] = &sql_variant::QueryResult::query;
+
+  auto sql_usertype =
+      luaState.new_usertype<sql_variant::LoggedSQL>("SQL", sol::no_constructor);
+  sql_usertype["execute_query"] = &sql_variant::LoggedSQL::executeQuery;
 
   auto node_usertype = luaState.new_usertype<Node>("Node", sol::no_constructor);
   node_usertype["init"] = &node_init;
   node_usertype["initRandomWorkload"] = &init_random_workload;
+  node_usertype["make_worker"] = [](Node &self, std::string const &logName) {
+    return self.make_worker(logName);
+  };
   node_usertype["possibleActions"] = &Node::possibleActions;
 
   auto worker_usertype =
