@@ -5,6 +5,28 @@
 
 namespace metadata {
 
+bool Table::hasReferenceTo(std::string const &tableName) const {
+  for (std::size_t idx = 0; idx < columns.size(); ++idx) {
+    if (columns[idx].foreign_key_references == tableName) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void Table::removeReferencesTo(std::string const &tableName) {
+  updateReferencesTo(tableName, "");
+}
+
+void Table::updateReferencesTo(std::string const &oldTableName,
+                               std::string const &newTableName) {
+  for (std::size_t idx = 0; idx < columns.size(); ++idx) {
+    if (columns[idx].foreign_key_references == oldTableName) {
+      columns[idx].foreign_key_references = newTableName;
+    }
+  }
+}
+
 Metadata::Reservation::Reservation()
     : storage_(nullptr), table_(nullptr), drop_(false), index_(Metadata::npos),
       lock_() {}

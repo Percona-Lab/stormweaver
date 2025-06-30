@@ -1,5 +1,6 @@
 
 #include "action/ddl.hpp"
+#include "action/helper.hpp"
 
 #include <boost/algorithm/string/join.hpp>
 #include <fmt/format.h>
@@ -50,6 +51,10 @@ std::string columnDefinition(Column const &col) {
     if (col.length > 0) {
       def += fmt::format("({})", col.length);
     }
+    if (!col.foreign_key_references.empty()) {
+      def += fmt::format(" REFERENCES {} ON DELETE CASCADE",
+                         col.foreign_key_references);
+    }
     return def;
   }
 }
@@ -83,9 +88,17 @@ void CreateTable::execute(Metadata &metaCtx, ps_random &rand,
 
     const bool partitioned = type == Table::Type::partitioned;
 
+    const bool add_foreign_key = rand.random_number<std::size_t>(1, 100) <=
+                                 config.ct_foreign_key_percentage;
+
     for (size_t idx = 0; idx < column_count; ++idx) {
-      table->columns.push_back(randomColumn(rand, idx == 0));
+      const bool primary_key_column = idx == 0;
+      const bool foreign_key_column = add_foreign_key && idx == 1;
+      table->columns.push_back(
+          randomColumn(rand, primary_key_column || foreign_key_column));
     }
+
+    table->columns[0].name = "id";
 
     if (partitioned) {
       // with partitioned tables, the primary key won't be a serial as we want
@@ -98,6 +111,16 @@ void CreateTable::execute(Metadata &metaCtx, ps_random &rand,
     } else {
       table->columns[0].primary_key = true;
       table->columns[0].auto_increment = true;
+    }
+
+    if (add_foreign_key) {
+      // Foreign keys are always added to the second column (index 1) as a
+      // simplification for now
+      try {
+        auto table_ref = find_random_table(metaCtx, rand);
+        table->columns[1].foreign_key_references = table_ref->name;
+      } catch (ActionException const &ae) {
+      }
     }
 
     // 2: build & execute SQL statement
@@ -166,6 +189,8 @@ void DropTable::execute(Metadata &metaCtx, ps_random &rand,
 
   auto idx = rand.random_number(std::size_t(0), metaCtx.size() - 1);
 
+  std::string tableName;
+
   metaCtx.dropTable(idx, [&](Metadata::Reservation &res) {
     if (!res.open())
       return;
@@ -173,8 +198,25 @@ void DropTable::execute(Metadata &metaCtx, ps_random &rand,
         ->executeQuery(fmt::format("DROP TABLE {} CASCADE;", res.table()->name))
         .maybeThrow();
 
+    tableName = res.table()->name;
+
     res.complete();
   });
+
+  if (tableName == "")
+    return;
+
+  // Make a best effort at trying to remove foreign key references from metadata
+  for (std::size_t table_idx = 0; table_idx < metaCtx.size(); ++table_idx) {
+    auto table = metaCtx[table_idx];
+    if (table && table->hasReferenceTo(tableName)) {
+      metaCtx.dropTable(table_idx, [&](Metadata::Reservation &res) {
+        if (!res.open())
+          return;
+        res.table()->removeReferencesTo(tableName);
+      });
+    }
+  }
 }
 
 AlterTable::AlterTable(DdlConfig const &config,
@@ -247,8 +289,10 @@ void AlterTable::execute(Metadata &metaCtx, ps_random &rand,
           // very simple implementation, we only do numeric -> string
           for (std::size_t idx = 0; idx < availableColumns.size(); ++idx) {
             auto &col = table->columns[availableColumns[idx]];
-            if (col.type == metadata::ColumnType::INT ||
-                col.type == metadata::ColumnType::REAL) {
+            const bool numericColumn = col.type == metadata::ColumnType::INT ||
+                                       col.type == metadata::ColumnType::REAL;
+
+            if (numericColumn && col.foreign_key_references.empty()) {
               alterSubcommands.emplace_back(
                   fmt::format("ALTER COLUMN {} TYPE VARCHAR(32)", col.name));
               availableColumns.erase(availableColumns.begin() + idx);
@@ -300,21 +344,39 @@ void RenameTable::execute(Metadata &metaCtx, ps_random &rand,
 
   auto idx = rand.random_number(std::size_t(0), metaCtx.size() - 1);
 
+  std::string oldTableName;
+  std::string newTableName;
+
   metaCtx.alterTable(idx, [&](Metadata::Reservation &res) {
     if (!res.open())
       return;
 
-    const std::string oldName = res.table()->name;
-    res.table()->name =
-        fmt::format("foo{}", rand.random_number(1, 1000000)); // name;
+    oldTableName = res.table()->name;
+    newTableName = fmt::format("foo{}", rand.random_number(1, 1000000));
+    res.table()->name = newTableName;
 
     connection
-        ->executeQuery(fmt::format("ALTER TABLE {} RENAME TO {};", oldName,
+        ->executeQuery(fmt::format("ALTER TABLE {} RENAME TO {};", oldTableName,
                                    res.table()->name))
         .maybeThrow();
 
     res.complete();
   });
+
+  if (oldTableName == "")
+    return;
+
+  // Make a best effort at trying to update foreign key references in metadata
+  for (std::size_t table_idx = 0; table_idx < metaCtx.size(); ++table_idx) {
+    auto table = metaCtx[table_idx];
+    if (table && table->hasReferenceTo(oldTableName)) {
+      metaCtx.dropTable(table_idx, [&](Metadata::Reservation &res) {
+        if (!res.open())
+          return;
+        res.table()->updateReferencesTo(oldTableName, newTableName);
+      });
+    }
+  }
 }
 
 CreateIndex::CreateIndex(DdlConfig const &config) : config(config) {}
@@ -518,7 +580,8 @@ void DropPartition::execute(Metadata &metaCtx, ps_random &rand,
     std::size_t partIdx = table->partitioning->ranges[partId].rangebase;
 
     connection
-        ->executeQuery(fmt::format("DROP TABLE {}_p{};", table->name, partIdx))
+        ->executeQuery(
+            fmt::format("DROP TABLE {}_p{} CASCADE;", table->name, partIdx))
         .maybeThrow();
 
     table->partitioning->ranges.erase(table->partitioning->ranges.begin() +
