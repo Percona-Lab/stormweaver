@@ -19,7 +19,6 @@ function db_setup(worker)
 	init_pg_tde_only_for_db(worker:sql_connection())
 	-- or creating tables and loading some data
 	worker:create_random_tables(5)
-	worker:generate_initial_data() -- TODO: this method needs some parameters...
 end
 
 -- another callback function, called after establishing any database connection

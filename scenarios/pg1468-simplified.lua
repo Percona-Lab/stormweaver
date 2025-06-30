@@ -6,7 +6,6 @@ function setup_tables(worker)
 	-- comment out next line for non encrypted run
 	init_pg_tde_only_for_db(worker:sql_connection())
 	worker:create_random_tables(5)
-	worker:generate_initial_data()
 end
 
 function conn_settings(sqlconn)

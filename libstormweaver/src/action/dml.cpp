@@ -43,16 +43,16 @@ std::string generate_value(metadata::Column const &col, ps_random &rand,
 }; // namespace
 
 InsertData::InsertData(DmlConfig const &config, std::size_t rows)
-    : config(config), table(nullptr), rows(rows) {}
+    : config(config), rows(rows) {}
 
-InsertData::InsertData(DmlConfig const &config, metadata::table_cptr table,
-                       std::size_t rows)
-    : config(config), table(table), rows(rows) {}
+InsertData::InsertData(DmlConfig const &config, std::size_t rows,
+                       TableLocator const &locator)
+    : config(config), locator(locator), rows(rows) {}
 
 void InsertData::execute(Metadata &metaCtx, ps_random &rand,
                          sql_variant::LoggedSQL *connection) const {
 
-  auto table = this->table;
+  auto table = locator ? locator() : nullptr;
 
   if (metaCtx.size() == 0)
     return; // TODO: log

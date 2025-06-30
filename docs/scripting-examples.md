@@ -7,7 +7,6 @@ require("common")
 
 function setup_tables(worker)
 	worker:create_random_tables(5)
-	worker:generate_initial_data()
 end
 
 function main(argv)

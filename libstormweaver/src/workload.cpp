@@ -30,18 +30,6 @@ void Worker::create_random_tables(std::size_t count) {
   }
 }
 
-void Worker::generate_initial_data() {
-  for (std::size_t idx = 0; idx < metadata->size(); ++idx) {
-    auto table = (*metadata)[idx];
-    if (table) {
-      for (std::size_t i = 0; i < 10; ++i) {
-        action::InsertData inserter(config.actionConfig.dml, table, 100);
-        inserter.execute(*metadata.get(), rand, sql_conn.get());
-      }
-    }
-  }
-}
-
 sql_variant::LoggedSQL *Worker::sql_connection() const {
   return sql_conn.get();
 }

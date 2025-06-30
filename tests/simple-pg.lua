@@ -3,7 +3,6 @@ package.path = "scripts/?.lua;scripts_3p/?.lua;" .. package.path
 require("common")
 function db_setup(worker)
 	worker:create_random_tables(5)
-	worker:generate_initial_data()
 end
 
 function main(argv)

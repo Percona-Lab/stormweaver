@@ -65,6 +65,10 @@ std::string columnDefinition(Column const &col) {
 CreateTable::CreateTable(DdlConfig const &config, Table::Type type)
     : config(config), type(type) {}
 
+void CreateTable::setSuccessCallback(TableCallback const &cb) {
+  successCallback = cb;
+}
+
 void CreateTable::execute(Metadata &metaCtx, ps_random &rand,
                           sql_variant::LoggedSQL *connection) const {
   if (metaCtx.size() >= config.max_table_count) {
@@ -155,6 +159,10 @@ void CreateTable::execute(Metadata &metaCtx, ps_random &rand,
     }
 
     res.complete();
+
+    if (successCallback) {
+      successCallback(table);
+    }
   });
 }
 

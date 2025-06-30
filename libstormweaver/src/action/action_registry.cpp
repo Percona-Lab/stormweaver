@@ -8,21 +8,47 @@ namespace {
 
 using namespace action;
 
-ActionFactory createNormalTable{"create_normal_table",
-                                [](AllConfig const &config) {
-                                  return std::make_unique<CreateTable>(
-                                      config.ddl,
-                                      metadata::Table::Type::normal);
-                                },
-                                100};
+struct TableRef {
+  metadata::table_cptr ptr;
+};
 
-ActionFactory createPartitionedTable{"create_partitioned_table",
-                                     [](AllConfig const &config) {
-                                       return std::make_unique<CreateTable>(
-                                           config.ddl,
-                                           metadata::Table::Type::partitioned);
-                                     },
-                                     100};
+ActionFactory createNormalTable{
+    "create_normal_table",
+    [](AllConfig const &config) {
+      auto ctx = std::make_unique<TableRef>();
+      auto createTable = std::make_unique<CreateTable>(
+          config.ddl, metadata::Table::Type::normal);
+      createTable->setSuccessCallback(
+          [c = ctx.get()](metadata::table_cptr ptr) { c->ptr = ptr; });
+      return std::make_unique<CompositeAction<
+          std::unique_ptr<TableRef>, std::unique_ptr<CreateTable>,
+          std::unique_ptr<RepeatAction<InsertData>>>>(
+          std::move(ctx), std::move(createTable),
+          std::make_unique<RepeatAction<InsertData>>(
+              InsertData(config.dml, 1000,
+                         [c = ctx.get()]() { return c->ptr; }),
+              1));
+    },
+    100};
+
+ActionFactory createPartitionedTable{
+    "create_partitioned_table",
+    [](AllConfig const &config) {
+      auto ctx = std::make_unique<TableRef>();
+      auto createTable = std::make_unique<CreateTable>(
+          config.ddl, metadata::Table::Type::partitioned);
+      createTable->setSuccessCallback(
+          [c = ctx.get()](metadata::table_cptr ptr) { c->ptr = ptr; });
+      return std::make_unique<CompositeAction<
+          std::unique_ptr<TableRef>, std::unique_ptr<CreateTable>,
+          std::unique_ptr<RepeatAction<InsertData>>>>(
+          std::move(ctx), std::move(createTable),
+          std::make_unique<RepeatAction<InsertData>>(
+              InsertData(config.dml, 1000,
+                         [c = ctx.get()]() { return c->ptr; }),
+              1));
+    },
+    100};
 
 ActionFactory dropTable{"drop_table",
                         [](AllConfig const &config) {

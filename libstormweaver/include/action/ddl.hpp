@@ -4,6 +4,8 @@
 #include "action/action.hpp"
 #include "bitflags.hpp"
 
+#include <functional>
+
 namespace action {
 
 struct DdlConfig {
@@ -16,9 +18,13 @@ struct DdlConfig {
   std::vector<std::string> access_methods = {"heap", "tde_heap"};
 };
 
+using TableCallback = std::function<void(metadata::table_cptr ptr)>;
+
 class CreateTable : public Action {
 public:
   CreateTable(DdlConfig const &config, metadata::Table::Type type);
+
+  void setSuccessCallback(TableCallback const &cb);
 
   void execute(metadata::Metadata &metaCtx, ps_random &rand,
                sql_variant::LoggedSQL *connection) const override;
@@ -26,6 +32,7 @@ public:
 private:
   DdlConfig config;
   metadata::Table::Type type;
+  TableCallback successCallback;
 };
 
 class DropTable : public Action {
