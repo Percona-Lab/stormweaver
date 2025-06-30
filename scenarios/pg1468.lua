@@ -5,7 +5,6 @@ require("common")
 function setup_tables(worker)
 	init_pg_tde_globally(worker:sql_connection())
 	worker:create_random_tables(5)
-	worker:generate_initial_data()
 end
 
 function conn_settings(sqlconn)

@@ -122,13 +122,11 @@ LuaContext::LuaContext(std::shared_ptr<spdlog::logger> logger)
   auto worker_usertype =
       luaState.new_usertype<Worker>("Worker", sol::no_constructor);
   worker_usertype["create_random_tables"] = &Worker::create_random_tables;
-  worker_usertype["generate_initial_data"] = &Worker::generate_initial_data;
   worker_usertype["sql_connection"] = &Worker::sql_connection;
 
   luaState.new_usertype<RandomWorker>(
       "Worker", sol::no_constructor, "create_random_tables",
-      &RandomWorker::create_random_tables, "generate_initial_data",
-      &RandomWorker::generate_initial_data, "possibleActions",
+      &RandomWorker::create_random_tables, "possibleActions",
       &RandomWorker::possibleActions);
 
   auto workload_usertype =

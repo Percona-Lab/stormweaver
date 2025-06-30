@@ -432,14 +432,6 @@ Currently the DDL configuration can't be modified.
 worker:create_random_tables(5)
 ```
 
-### generate_initial_data
-
-Generates some rows in all currently existing tables.
-
-```lua
-worker:generate_initial_data()
-```
-
 ### sql_connection
 
 Returns the SQL connection (LoggedSQL) of the worker, which can be used to execute SQL statements directly.

@@ -34,8 +34,6 @@ public:
 
   void create_random_tables(std::size_t count);
 
-  void generate_initial_data();
-
   sql_variant::LoggedSQL *sql_connection() const;
 
   void reconnect();
