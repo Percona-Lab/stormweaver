@@ -15,6 +15,8 @@ struct DdlConfig {
   std::size_t max_alter_clauses = 5;
   std::size_t min_partition_count = 3;
   std::size_t max_partition_count = 10;
+  std::size_t ct_foreign_key_percentage =
+      50; // how many % of create tables will have foreign keys?
   std::vector<std::string> access_methods = {"heap", "tde_heap"};
 };
 

@@ -215,6 +215,7 @@ struct Column {
   bool nullable = false;
   bool primary_key = false;
   bool partition_key = false;
+  std::string foreign_key_references;
   bool auto_increment = false;
 };
 
@@ -261,6 +262,11 @@ struct Table {
   boost::container::small_vector<Column, limits::optimized_column_count>
       columns;
   boost::container::small_vector<Index, limits::optimized_index_count> indexes;
+
+  bool hasReferenceTo(std::string const &tableName) const;
+  void removeReferencesTo(std::string const &tableName);
+  void updateReferencesTo(std::string const &oldTableName,
+                          std::string const &newTableName);
 };
 
 using table_ptr = std::shared_ptr<Table>;

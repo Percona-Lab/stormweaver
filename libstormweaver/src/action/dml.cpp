@@ -24,6 +24,12 @@ std::string generate_value(metadata::Column const &col, ps_random &rand,
     return std::to_string(rp->ranges[range].rangebase * rp->rangeSize +
                           (num % rp->rangeSize));
   }
+  if (!col.foreign_key_references.empty()) {
+    // TODO: column name is hardcoded
+    return fmt::format("(SELECT id FROM {} ORDER BY random() LIMIT 1)",
+                       col.foreign_key_references);
+  }
+
   switch (col.type) {
   case metadata::ColumnType::INT:
     return std::to_string(rand.random_number(1, 1000000));
