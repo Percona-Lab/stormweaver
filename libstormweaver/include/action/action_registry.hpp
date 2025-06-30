@@ -7,16 +7,6 @@
 
 namespace action {
 
-class ActionException : public std::exception {
-public:
-  ActionException(std::string const &message) : message(message) {}
-
-  const char *what() const noexcept override { return message.c_str(); }
-
-private:
-  std::string message;
-};
-
 using action_build_t =
     std::function<std::unique_ptr<action::Action>(action::AllConfig const &)>;
 

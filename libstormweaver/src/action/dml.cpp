@@ -1,5 +1,6 @@
 
 #include "action/dml.hpp"
+#include "action/helper.hpp"
 
 #include <boost/algorithm/string/join.hpp>
 #include <fmt/format.h>
@@ -52,15 +53,7 @@ InsertData::InsertData(DmlConfig const &config, std::size_t rows,
 void InsertData::execute(Metadata &metaCtx, ps_random &rand,
                          sql_variant::LoggedSQL *connection) const {
 
-  auto table = locator ? locator() : nullptr;
-
-  if (metaCtx.size() == 0)
-    return; // TODO: log
-  while (table == nullptr) {
-    // select a random table from metadata
-    std::size_t idx = rand.random_number<std::size_t>(0, metaCtx.size() - 1);
-    table = metaCtx[idx];
-  }
+  table_cptr table = find_random_table(metaCtx, rand);
 
   std::stringstream sql;
   sql << "INSERT INTO ";
@@ -106,16 +99,7 @@ DeleteData::DeleteData(DmlConfig const &config) : config(config) {}
 void DeleteData::execute(Metadata &metaCtx, ps_random &rand,
                          sql_variant::LoggedSQL *connection) const {
 
-  if (metaCtx.size() == 0)
-    return; // TODO: log
-
-  table_cptr table = nullptr;
-
-  while (table == nullptr) {
-    // select a random table from metadata
-    std::size_t idx = rand.random_number<std::size_t>(0, metaCtx.size() - 1);
-    table = metaCtx[idx];
-  }
+  table_cptr table = find_random_table(metaCtx, rand);
 
   auto const &tableName = table->name;
   // TODO: assumes we have a single column primary key as the first column.
@@ -136,16 +120,7 @@ UpdateOneRow::UpdateOneRow(DmlConfig const &config) : config(config) {}
 void UpdateOneRow::execute(Metadata &metaCtx, ps_random &rand,
                            sql_variant::LoggedSQL *connection) const {
 
-  if (metaCtx.size() == 0)
-    return; // TODO: log
-
-  table_cptr table = nullptr;
-
-  while (table == nullptr) {
-    // select a random table from metadata
-    std::size_t idx = rand.random_number<std::size_t>(0, metaCtx.size() - 1);
-    table = metaCtx[idx];
-  }
+  table_cptr table = find_random_table(metaCtx, rand);
 
   auto const &tableName = table->name;
   // TODO: assumes we have a single column primary key as the first column.

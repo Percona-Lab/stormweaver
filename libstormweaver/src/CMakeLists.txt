@@ -5,6 +5,7 @@ set(LIBRARY_SOURCES
     action/custom.cpp
     action/ddl.cpp
     action/dml.cpp
+    action/helper.cpp
     process/postgres.cpp
     process/process.cpp
     random.cpp
