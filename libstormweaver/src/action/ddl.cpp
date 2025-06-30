@@ -234,6 +234,8 @@ void AlterTable::execute(Metadata &metaCtx, ps_random &rand,
           const auto columnIndexIndex =
               rand.random_number(std::size_t(0), availableColumns.size() - 1);
           const auto columnIndex = availableColumns[columnIndexIndex];
+          if (columnIndex == 0)
+            break; // do not try to drop the primary key
           alterSubcommands.emplace_back(
               fmt::format("DROP COLUMN {}", table->columns[columnIndex].name));
           droppedColumns.push_back(columnIndex);
