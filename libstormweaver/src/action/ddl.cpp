@@ -30,18 +30,12 @@ std::size_t randomColumnLength(ps_random &rand, ColumnType type) {
   return 0;
 }
 
-Column randomColumn(ps_random &rand, bool forceSerial = false) {
+Column randomColumn(ps_random &rand, bool forceInt = false) {
   Column col;
 
   col.name = fmt::format("col{}", rand.random_number<std::size_t>());
-  col.type = forceSerial ? ColumnType::INT : randomColumnType(rand);
-
-  if (forceSerial) {
-    col.primary_key = true;
-    col.auto_increment = true;
-  } else {
-    col.length = randomColumnLength(rand, col.type);
-  }
+  col.type = forceInt ? ColumnType::INT : randomColumnType(rand);
+  col.length = randomColumnLength(rand, col.type);
 
   return col;
 }
@@ -89,26 +83,21 @@ void CreateTable::execute(Metadata &metaCtx, ps_random &rand,
 
     const bool partitioned = type == Table::Type::partitioned;
 
+    for (size_t idx = 0; idx < column_count; ++idx) {
+      table->columns.push_back(randomColumn(rand, idx == 0));
+    }
+
     if (partitioned) {
+      // with partitioned tables, the primary key won't be a serial as we want
+      // to generate random numbers to evenly distribute the partitions
+      table->columns[0].primary_key = true;
+      table->columns[0].partition_key = true;
+
       table->partitioning = RangePartitioning{};
       table->partitioning->rangeSize = 10000000;
-    }
-
-    for (size_t idx = 0; idx < column_count; ++idx) {
-      if (partitioned && idx == 1) {
-        Column col;
-        col.name = fmt::format("col{}", rand.random_number<std::size_t>());
-        col.type = ColumnType::INT;
-        col.partition_key = true;
-        table->columns.push_back(col);
-      } else {
-        table->columns.push_back(randomColumn(rand, idx == 0));
-      }
-    }
-
-    if (partitioned) {
-      // we can't have a serial primary key with partitioned tables
-      table->columns[0].primary_key = false;
+    } else {
+      table->columns[0].primary_key = true;
+      table->columns[0].auto_increment = true;
     }
 
     // 2: build & execute SQL statement
@@ -132,7 +121,7 @@ void CreateTable::execute(Metadata &metaCtx, ps_random &rand,
 
     if (partitioned) {
       partitionClause =
-          fmt::format(" PARTITION BY RANGE ({})", table->columns[1].name);
+          fmt::format(" PARTITION BY RANGE ({})", table->columns[0].name);
     }
 
     connection
