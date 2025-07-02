@@ -4,8 +4,10 @@ This guide covers advanced development workflows for extending StormWeaver, focu
 
 ## Action Registry System
 
-The action registry is in the core of StormWeaver's randomized testing framework.
-It manages a collection of weighted actions that are randomly selected and executed by worker threads.
+The action registry is at the core of StormWeaver's randomized testing framework.
+It manages a collection of linearly weighted actions that are randomly selected and executed by worker threads.
+
+During the random selection each action is added to a pool multiple times based on its weight (1 = only once, 10 - 10 entries, and so on), and then one entry in the pool is selected randomly.
 
 ### Understanding the Action Architecture
 
@@ -25,7 +27,7 @@ All actions must implement this interface with these key principles:
 - **Thread-safe**: Multiple workers execute actions concurrently
 - **Metadata-aware**: Actions interact with shared database schema metadata
 
-Actions are expected to throw an `RuntimeException` (preferrably `ActionException`) on failure.
+Actions are expected to throw a `RuntimeException` (preferably `ActionException`) on failure.
 
 **ActionFactory Structure**
 ```cpp
@@ -97,9 +99,9 @@ private:
 
 !!! Note
 
-  The above example showcases a completely new ation type in a new source file.
-  When it is appropriate, edit existing files, such as ddl.hpp/cpp or dml.hpp/cpp.
-  When editing existing files, in most cases it is also better to extend the existing configuration struct instead of defining a new struct.
+  The above example showcases a completely new action type in a new source file.
+  When appropriate, edit existing files, such as ddl.hpp/cpp or dml.hpp/cpp.
+  When editing existing files, it is usually better to extend the existing configuration struct instead of defining a new struct.
 
 **Step 2: Implement Action Logic**
 ```cpp
@@ -165,13 +167,13 @@ ActionFactory myCustomAction{
     25  // Weight
 };
 
-// Add it to the default registry in initializeDefaultRegisty
+// Add it to the default registry in initializeDefaultRegistry
 ar.insert(myCustomAction);
 ```
 
 ### Working with Composite Actions
 
-Composite actions allow combining multiple operations.
+Composite actions allow you to combine multiple operations.
 
 For examples and possibilities, see `action/composite.hpp` and `action/action_registry.cpp`.
 
@@ -322,9 +324,9 @@ worker_usertype["createSpecialTable"] = [](Worker& self, std::string const& name
 #### Callback Support
 ```cpp
 // Support Lua callbacks in C++ code
-// Note: lua callbacks implemented this way are not thread safe,
+// Note: Lua callbacks implemented this way are not thread-safe,
 // only use them for immediate use
-// For more advanced multi threaded use, see the LuaCallback class
+// For more advanced multithreaded use, see the LuaCallback class
 auto lua_callback = luaState.get<sol::function>("my_callback");
 if (lua_callback.valid()) {
   sol::protected_function_result result = lua_callback(arg1, arg2);
@@ -371,10 +373,10 @@ luaState["risky_function"] = [](int value) -> int {
 1. **Memory Management**: Use smart pointers and RAII principles
 2. **Exception Safety**: Wrap C++ exceptions for Lua consumption
 3. **Documentation**: Update lua-cpp-reference.md for new API additions
-4. **Backward Compatibility**: Consider impact on existing scripts
+4. **Backward Compatibility**: Consider the impact on existing scripts
 
 ### Debugging
 1. **Logging**: Use the existing spdlog infrastructure for consistent logging across C++ and Lua
 2. **Error Messages**: Provide clear, actionable error messages
-3. **Stack Traces**: Sol2 provides good error reporting for Lua/C++ boundary
+3. **Stack Traces**: Sol2 provides good error reporting for the Lua/C++ boundary
 4. **Testing**: Use sanitizers (ASAN, TSAN) during development
