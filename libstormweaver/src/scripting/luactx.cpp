@@ -17,6 +17,7 @@ inline std::unique_ptr<Node> setup_node_pg(LuaContext &parentCtx,
   const std::string password = table.get_or("password", std::string(""));
   const std::string database =
       table.get_or("database", std::string("stormweaver"));
+  // TODO: generalize and document proper multithreaded callback creation
   auto on_connect_lua = table.get<sol::function>("on_connect");
 
   SqlFactory::on_connect_t callback;
@@ -179,6 +180,7 @@ LuaContext::LuaContext(std::shared_ptr<spdlog::logger> logger)
           &process::Postgres::add_config);
   postgres_usertype["add_hba"] = &process::Postgres::add_hba;
 
+  // TODO: add a constructor that takes a lua hash and initializes parameters
   auto workload_params_usertype = luaState.new_usertype<WorkloadParams>(
       "WorkloadParams", sol::constructors<WorkloadParams()>());
 
