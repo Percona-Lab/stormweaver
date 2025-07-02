@@ -29,7 +29,7 @@ Returns a modifiable reference to the default action registry
 Creates a new postgres data directory
 
 ```lua
-pg = initPostgresDatadir('pg/intsall/dir', 'new/data/dir')
+pg = initPostgresDatadir('pg/install/dir', 'new/data/dir')
 ```
 
 ### initBasebackupFrom
@@ -54,7 +54,7 @@ Writes a warning message to the log
 
 ### getenv
 
-Returns a the value of an environment variable, or a default.
+Returns the value of an environment variable, or a default.
 
 ```lua
 e = getenv("NAME", "default")
@@ -62,7 +62,7 @@ e = getenv("NAME", "default")
 
 ### setup_node_pg
 
-Configures the connection parameters to a postgres installation.
+Configures the connection parameters to a PostgreSQL installation.
 
 ```lua
 return setup_node_pg({

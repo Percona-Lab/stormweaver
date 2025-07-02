@@ -43,7 +43,7 @@ end
 
 ## Simple postgres manager
 
-It is easy and simple to setup (replicated) PostgreSQL using `PgManager`:
+It is easy and simple to set up (replicated) PostgreSQL using `PgManager`:
 
 ```lua
 pgconfig = PgConf.new(conffile["default"])
@@ -77,7 +77,7 @@ function bg_thread()
 
     for i=1,10 do
         -- the receive, receiveIfAny and send functions are special to background threads, 
-        -- and used to communication with the creator thread
+        -- and used for communication with the creator thread
         msg = receive();
         
         info("Received message: " .. msg);
