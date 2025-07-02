@@ -12,6 +12,7 @@ nav:
   - Scripting examples: scripting-examples.md
   - Config parameters: config-parameters.md
   - Lua C++ API reference: lua-cpp-reference.md
+  - Extensibility workflow: extensibility-workflow.md
   - Code architecture: code-architecture.md
 
 markdown_extensions:
