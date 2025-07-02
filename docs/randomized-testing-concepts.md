@@ -1,6 +1,6 @@
 # Randomized testing concepts
 
-A main goal of StormWeaver is to allow scripted randomized testing.
+A main goal of StormWeaver is to enable scripted randomized testing.
 
 This feature uses the following parts:
 
@@ -8,7 +8,7 @@ This feature uses the following parts:
 
 A workload is a randomized test execution.
 
-It is executed with *some timelimit*, using *some number of `Worker`s*.
+It is executed with *some time limit*, using *some number of `Worker`s*.
 
 ## Worker
 
@@ -35,6 +35,6 @@ While there are some actions implemented in the C++ framework, it also makes it 
 An ActionRegistry is a collection of possible actions, and a definition of how these actions can be constructed.
 Other than the action definition itself, each Action in a Registry also has a weight, which determines the chance of its execution.
 
-For each random action selection, the sum of all weights is calculated, and then a random number is choosen in the (0, sumOfWeights) range.
-Then the action is determined on where this number lands in the list of actions.
+For each random action selection, the sum of all weights is calculated, and then a random number is chosen in the (0, sumOfWeights) range.
+Then the action is determined based on where this number lands in the list of actions.
 
