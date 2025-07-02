@@ -11,20 +11,9 @@ Currently it works with PostgreSQL, and used for testing `pg_tde`.
 
 ## Installation
 
-For a simple start, execute:
+For now, there are no pre built packages, Stormweaver has to be built from source.
 
-```
-TODO
-```
-
-This will:
-
-1. Clone the StormWeaver repository in a folder called `stormweaver`
-2. Try to download the prebuilt binaries from github, if available, or report a failure.
-
-Currently prebuilt binaries exists for Ubuntu 22.04 and Ubuntu 24.04.
-
-Or alternatively it is possible to build StormWeaver from sources manually, for that see [Building from source](building.md).
+See [Building from source](building.md) for details.
 
 ## A first scenario
 
