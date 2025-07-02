@@ -29,7 +29,7 @@ Or alternatively it is possible to build StormWeaver from sources manually, for 
 ## A first scenario
 
 StormWeaver stores test scenarios in the `scenarios` folder, written in lua.
-There is a scenario called `example` with lots of comments intended as a first example.
+There is a scenario called `basic` with lots of comments intended as a first example.
 To run it, execute the following command:
 
 ```bash
