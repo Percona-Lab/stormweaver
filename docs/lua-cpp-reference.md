@@ -114,7 +114,7 @@ ar1:insert(ar2:get("truncate"))
 Tells if the registry has a factory with the specified name.
 
 ```lua
-if ar:has("alter_table) then
+if ar:has("alter_table") then
   --- ...
 end
 ```
@@ -151,10 +151,54 @@ Overwrites the contents of the registry using the specified other registry.
 The two registries will be equal after executing this function.
 
 ```lua
-ar1::use(ar2)
+ar1:use(ar2)
 ```
 
+## Default Actions
 
+The default action registry includes the following built-in actions available for randomized testing:
+
+### Table Management Actions
+- `create_normal_table` - Creates a regular table with random columns and with some initial data
+- `create_partitioned_table` - Creates a partitioned table with random columns and with some initial data
+- `drop_table` - Drops a randomly selected existing table
+- `alter_table` - Performs random alterations to a randomly selected existing table
+- `rename_table` - Renames a randomly selected table
+
+### Index Management Actions  
+- `create_index` - Creates an index on a randomly selected table
+- `drop_index` - Drops a randomly selected existing index
+
+### Partition Management Actions
+- `create_partition` - Creates a partition for an existing randomly selected partitioned table
+- `drop_partition` - Drops a randomly selected partition
+
+### Data Manipulation Action
+- `insert_some_data` - Inserts random data into a randomly selected existing table (multiple rows)
+- `delete_some_data` - Deletes random rows from a randomly selected existing table
+- `update_one_row` - Updates a random row in a a randomly selected existing table
+
+### Example: Customizing Default Actions
+
+```lua
+-- This function modifies the actual default ActionRegistry
+-- Every call after this modification will use the modified default settings
+function customize_default_actions()
+  local registry = defaultActionRegistry()
+  
+  -- Remove actions we don't want
+  registry:remove("drop_table")
+  registry:remove("drop_partition")
+  
+  -- Adjust weights for remaining actions
+  registry:get("insert_some_data").weight = 20  -- Make inserts more likely
+  registry:get("create_index").weight = 5       -- Make index creation less likely
+  
+  -- Add custom actions
+  registry:makeCustomSqlAction("vacuum", "VACUUM;", 2)
+  registry:makeCustomTableSqlAction("analyze_table", "ANALYZE {table};", 3)
+end
+```
 
 ## fs
 
@@ -200,12 +244,118 @@ A class representing a database connection
 
 ### execute_query
 
+Executes a SQL query and returns a QueryResult object containing the result set.
+This function can execute any type of SQL statement and provides access to result data for queries that return results (like SELECT).
+
 ```lua
 conn.execute_query("CREATE EXTENSION pg_tde;")
 ```
 
-A simple funtion that execute a single SQL query.
-Result sets are not yet implemented in lua.
+## QueryResult
+
+A class representing the result of a SQL query execution.
+
+### success
+
+A boolean property indicating whether the query executed successfully.
+
+```lua
+if result.success then
+  -- Query executed successfully
+end
+```
+### query
+
+A string property containing the original SQL query that was executed.
+
+```lua
+print("Executed query: " .. result.query)
+```
+
+### data
+
+A QuerySpecificResult object containing the actual result data, only available when success is true.
+
+```lua
+if result.success then
+  local resultSet = result.data
+end
+```
+
+## QuerySpecificResult
+
+A class representing the data returned from a successful SQL query.
+
+### numRows
+
+A property containing the number of rows returned by the query.
+
+```lua
+local rowCount = result.data.numRows
+```
+
+### numFields
+
+A property containing the number of columns (fields) in the result set.
+
+```lua
+local columnCount = result.data.numFields
+```
+
+### nextRow
+
+Advances to the next row in the result set. Returns true if there is a next row, false if at the end.
+Must be called before accessing field data for each row.
+
+```lua
+while result.data:nextRow() do
+  -- Process current row
+end
+```
+
+## RowView
+
+A class representing the current row in a result set, accessed through QuerySpecificResult.
+
+### field
+
+Returns the value of the specified field in the current row.
+Can be accessed only by column index (1-indexed).
+
+```lua
+local value = result.data:field(1)  -- Get first column (1-indexed)
+```
+
+### numFields
+
+Returns the number of fields (columns) in the current row.
+
+```lua
+local columnCount = result.data:numFields()
+```
+
+### Example: Processing Query Results
+
+```lua
+function process_table_data(worker)
+  local conn = worker:sql_connection()
+  local result = conn:execute_query("SELECT id, name, value FROM test_table")
+  
+  if result.success then
+    info("Query returned " .. result.data.numRows .. " rows")
+    
+    while result.data:nextRow() do
+      local id = result.data:field(1)      -- By index
+      local name = result.data:field("name")  -- By column name
+      local value = result.data:field(3)
+      
+      info("Row: id=" .. id .. ", name=" .. name .. ", value=" .. value)
+    end
+  else
+    warning("Query failed: " .. result.query)
+  end
+end
+```
 
 ## Node
 
@@ -226,14 +376,21 @@ pgm.primaryNode:init(setup_fun)
 
 Creates a new random workload setup with the given parameters.
 
-Currently supports the following parameters:
-
-* `run_seconds`: how long to run the workload
-* `worker_count`: how many workers to use in the workload
+It expects a WorkloadParams object:
 
 ```lua
-node:initRandomWorkload({ run_seconds = 10, worker_count = 5 })
+params = WorkloadParams()
+params.duration_in_seconds = 10
+params.number_of_workers = 5
+node:initRandomWorkload(params)
 ```
+
+Supported parameters:
+
+* `duration_in_seconds`: how long to run the workload (default: 60)
+* `number_of_workers`: how many workers to use in the workload (default 5)
+* `repeat_times`: how many times to repeat the entire workload (default: 10)
+* `max_reconnect_attempts`: maximum number of reconnection attempts when a worker loses connection (default: 5)
 
 ### possibleActions
 
@@ -245,7 +402,35 @@ Will be copied into the workload when one is created using `initRandomWorkload`.
 a = node:possibleActions()
 ```
 
+### make_worker
 
+```lua
+worker = node:make_worker("initialization")
+```
+
+Creates a standalone Worker instance for the node with the specified log name.
+Useful for database initialization or other non-workload operations.
+
+## WorkloadParams
+
+A class for configuring workload parameters. Can be created and configured before passing to `initRandomWorkload`.
+
+### Constructor
+
+```lua
+params = WorkloadParams()
+```
+
+Creates a new WorkloadParams object with default values.
+
+### Properties
+
+```lua
+params.duration_in_seconds = 30      -- How long each workload iteration runs
+params.number_of_workers = 8         -- Number of concurrent worker threads
+params.repeat_times = 5              -- Number of times to repeat the workload
+params.max_reconnect_attempts = 3    -- Max reconnection attempts per worker
+```
 
 ## Postgres
 
@@ -258,8 +443,15 @@ An instance of this class can be created with the global functions `initPostgres
 Starts the server, returns true if succeeds.
 
 ```lua
-pg1:start()
+pg1:start()                                           -- Normal start
+pg1:start("/usr/bin/valgrind", {"--leak-check=full"}) -- Start under valgrind
 ```
+
+The optional wrapper and wrapperArgs parameters allow running PostgreSQL through external tools like debuggers or profilers.
+
+!!! note
+
+  The wrapper parameter doesn't take `$PATH` into account, it requires a full filename
 
 ### stop
 
@@ -277,8 +469,15 @@ Restarts (stops and starts) the server, returns true if succeeds.
 Has a parameter, the graceful wait period - after that, it executes kill9.
 
 ```lua
-pg1:restart(10)
+pg1:restart(10)                                            -- Normal restart with 10s grace period
+pg1:restart(5, "/usr/bin/valgrind", {"--leak-check=full"}) -- Restart under valgrind
 ```
+
+The optional wrapper and wrapperArgs parameters allow running PostgreSQL through external tools like debuggers or profilers on restart.
+
+!!! note
+
+  The wrapper parameter doesn't take `$PATH` into account, it requires a full filename
 
 ### kill9
 
@@ -311,7 +510,7 @@ Creates a user.
 The first parameter is the name of the user, and the second parameter is an array of strings that gets added to the postgres `createuser` command.
 
 ```lua
-pg1:createuser("stormweaver", {"-s"}
+pg1:createuser("stormweaver", {"-s"})
 ```
 
 ### is_running
@@ -402,6 +601,39 @@ Receives a single string from the background thread - blocks and waits if it did
 
 Receives a single string from the background thread, if it sent anything.
 
+## CommQueue
+
+A communication queue for inter-thread message passing. Available in background thread contexts for communication with the main thread.
+
+### send
+
+```lua
+-- In background thread
+commQueue:send("message to main thread")
+```
+
+Sends a string message to the main thread.
+
+### receive
+
+```lua
+-- In background thread
+local message = commQueue:receive()
+```
+
+Receives a string message from the main thread. Blocks until a message is available.
+
+### receiveIfAny
+
+```lua
+-- In background thread
+local message = commQueue:receiveIfAny()
+if message then
+  -- Process message
+end
+```
+
+Receives a string message from the main thread if one is available, otherwise returns nil.
 
 ## RandomWorker
 
@@ -460,7 +692,7 @@ workload:run()
 Waits until the currently running workload is completed.
 
 ```lua
-workload:wait_completin()
+workload:wait_completion()
 ```
 
 ### worker
