@@ -1,6 +1,7 @@
 SET(UNITTEST_SOURCES
     main.cpp
     metadata_test.cpp
+    statistics_test.cpp
 )
 
 add_executable(test-stormweaver-unit ${UNITTEST_SOURCES})

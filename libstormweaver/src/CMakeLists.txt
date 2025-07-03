@@ -9,6 +9,7 @@ set(LIBRARY_SOURCES
     process/process.cpp
     random.cpp
     metadata.cpp
+    statistics.cpp
     workload.cpp
     scripting/luactx.cpp
     sql_variant/generic.cpp

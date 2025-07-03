@@ -177,9 +177,13 @@ public:
 
   void reconnect();
 
+  std::chrono::nanoseconds getAccumulatedSqlTime() const;
+  void resetAccumulatedSqlTime();
+
 private:
   std::unique_ptr<GenericSQL> sql;
   std::shared_ptr<spdlog::logger> logger;
+  mutable std::chrono::nanoseconds accumulatedSqlTime{0};
 };
 
 } // namespace sql_variant
