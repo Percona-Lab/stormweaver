@@ -36,30 +36,42 @@ end
 
 function verify_entropy(relname, tablename, tableam, is_encrypted, filename)
 	entropy = calculate_entropy(filename)
-	info(
-		"TABLE: "
-			.. tablename
-			.. " REL: "
-			.. relname
-			.. " FILE: "
-			.. filename
-			.. " AM: "
-			.. tableam
-			.. " IS_ENCRYPTED: "
-			.. is_encrypted
-			.. " ENTROPY: "
-			.. entropy
-	)
 	if tableam == "tde_heap" then
 		if is_encrypted ~= "t" then
-			error("Table has tde_heap am but is not encrypted: " .. inspect(is_encrypted))
+			error(
+				"Encryption inconsistency (tde_heap am, but not encrypted): "
+					.. tablename
+					.. " REL: "
+					.. relname
+					.. " FILE: "
+					.. filename
+					.. " AM: "
+					.. tableam
+					.. " IS_ENCRYPTED: "
+					.. is_encrypted
+					.. " ENTROPY: "
+					.. entropy
+			)
 		end
 		if entropy ~= 0 and entropy < 0.8 then
 			warning("ENTROPY OF FILE " .. filename .. " FOR TABLE " .. tablename .. " is too low: " .. entropy)
 		end
 	else
 		if is_encrypted == "t" then
-			error("Table has heap am but is encrypted")
+			error(
+				"Encryption inconsistency (not tde_heap am, but encrypted): "
+					.. tablename
+					.. " REL: "
+					.. relname
+					.. " FILE: "
+					.. filename
+					.. " AM: "
+					.. tableam
+					.. " IS_ENCRYPTED: "
+					.. is_encrypted
+					.. " ENTROPY: "
+					.. entropy
+			)
 		end
 		if entropy > 0.8 then
 			warning(
