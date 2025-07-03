@@ -10,7 +10,8 @@ std::unique_ptr<GenericSQL> connect(std::string serverType,
   } else if (serverType == "postgres") {
     return std::make_unique<PostgreSQL>(params);
   } else {
-    throw SqlException(std::string("Unknown database type: ") + serverType);
+    throw SqlException("unknown-database-type",
+                       std::string("Unknown database type: ") + serverType);
   }
 }
 

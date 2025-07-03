@@ -170,6 +170,7 @@ std::size_t ActionRegistry::insert(ActionFactory const &action) {
 
   if (it != factories.end()) {
     throw ActionException(
+        "action-already-exists",
         fmt::format("Action {} already exists in this registy", action.name));
   }
 
@@ -184,6 +185,7 @@ void ActionRegistry::remove(std::string const &name) {
                          [&](auto const &f) { return f.name == name; });
   if (it == factories.end()) {
     throw ActionException(
+        "action-not-found",
         fmt::format("Action {} does not exists in this registy", name));
   }
 
@@ -197,6 +199,7 @@ ActionFactory ActionRegistry::operator[](std::string const &name) const {
                          [&](auto const &f) { return f.name == name; });
   if (it == factories.end()) {
     throw ActionException(
+        "action-not-found",
         fmt::format("Action {} does not exists in this registy", name));
   }
   return *it;
@@ -209,6 +212,7 @@ ActionFactory &ActionRegistry::getReference(std::string const &name) {
                          [&](auto const &f) { return f.name == name; });
   if (it == factories.end()) {
     throw ActionException(
+        "action-not-found",
         fmt::format("Action {} does not exists in this registy", name));
   }
   // TODO issue: lock no longer held after return, detected by tsan
@@ -251,6 +255,7 @@ ActionRegistry::lookupByWeightOffset(std::size_t offset) const {
 
   if (it == factories.end()) {
     throw ActionException(
+        "weight-offset-out-of-range",
         fmt::format("Weight offset {} is outside of this registy", offset));
   }
 
