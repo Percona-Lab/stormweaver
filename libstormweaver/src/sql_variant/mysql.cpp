@@ -31,7 +31,8 @@ struct MySQLSpecificResult : sql_variant::QuerySpecificResult {
 
   sql_variant::RowView nextRow() const override {
     if (res == nullptr) {
-      throw sql_variant::SqlException("Not a SELECT-like statement!");
+      throw sql_variant::SqlException("mysql-no-select",
+                                      "Not a SELECT-like statement!");
     }
 
     sql_variant::RowView ret;
@@ -39,7 +40,7 @@ struct MySQLSpecificResult : sql_variant::QuerySpecificResult {
     const auto lengths = mysql_fetch_lengths(res);
 
     if (mdata == nullptr) {
-      throw sql_variant::SqlException("No more rows");
+      throw sql_variant::SqlException("mysql-no-more-rows", "No more rows");
     }
 
     ret.rowData.resize(num_fields);
@@ -80,11 +81,11 @@ MySQL::MySQL(ServerParams const &params) {
 
     mysql_close(connection);
     mysql_thread_end();
-    throw SqlException(ss.str());
+    throw SqlException("mysql-connection-failed", ss.str());
   }
 
   if (connection == nullptr) {
-    throw SqlException("mysql_init failed");
+    throw SqlException("mysql-init-failed", "mysql_init failed");
   }
 
   serverInfo_ = calculateServerInfo();
