@@ -79,7 +79,7 @@ PostgreSQL::PostgreSQL(ServerParams const &params) try
                           build_connection_string(params))) {
   serverInfo_ = calculateServerInfo();
 } catch (std::exception &err) {
-  throw SqlException(err.what());
+  throw SqlException("pg-connection-failed", err.what());
 }
 
 PostgreSQL::~PostgreSQL() {}

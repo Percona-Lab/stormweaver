@@ -22,11 +22,15 @@ public:
 
 class ActionException : public std::exception {
 public:
-  ActionException(std::string const &message) : message(message) {}
+  ActionException(std::string const &errorName, std::string const &message)
+      : errorName(errorName), message(message) {}
 
   const char *what() const noexcept override { return message.c_str(); }
 
+  const std::string &getErrorName() const noexcept { return errorName; }
+
 private:
+  std::string errorName;
   std::string message;
 };
 
