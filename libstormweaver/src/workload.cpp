@@ -46,12 +46,14 @@ RandomWorker::~RandomWorker() { join(); }
 
 void RandomWorker::run_thread(std::size_t duration_in_seconds) {
   spdlog::info("Worker {} starting, resetting statistics", name);
-  successfulActions = 0;
-  failedActions = 0;
+  stats.reset();
+  stats.start();
+
   if (thread.joinable()) {
     spdlog::error("Error: thread is already running");
     return;
   }
+
   thread = std::thread([this, duration_in_seconds]() {
     std::size_t connectionAttempts = 0;
 
@@ -59,19 +61,35 @@ void RandomWorker::run_thread(std::size_t duration_in_seconds) {
         std::chrono::steady_clock::now();
     std::chrono::steady_clock::time_point now =
         std::chrono::steady_clock::now();
+
     while (
         std::chrono::duration_cast<std::chrono::seconds>(now - begin).count() <
         static_cast<int64_t>(duration_in_seconds)) {
+
       const auto w = rand.random_number(std::size_t(0), actions.totalWeight());
-      auto action =
-          actions.lookupByWeightOffset(w).builder(config.actionConfig);
+      const auto &actionFactory = actions.lookupByWeightOffset(w);
+      auto action = actionFactory.builder(config.actionConfig);
+
+      stats.startAction(actionFactory.name);
+      sql_conn->resetAccumulatedSqlTime();
+
       try {
         action->execute(*metadata, rand, sql_conn.get());
-        successfulActions++;
-        connectionAttempts = 0;
-      } catch (sql_variant::SqlException const &e) {
-        failedActions++;
-        logger->warn("Worker {} Action failed: {}", name, e.what());
+        auto sqlTime = sql_conn->getAccumulatedSqlTime();
+        stats.recordSuccess(actionFactory.name, sqlTime);
+
+      } catch (const action::ActionException &e) {
+        auto sqlTime = sql_conn->getAccumulatedSqlTime();
+        stats.recordActionFailure(actionFactory.name, e.getErrorName(),
+                                  sqlTime);
+        logger->warn("Worker {} Action failed ({}): {}", name, e.getErrorName(),
+                     e.what());
+
+      } catch (const sql_variant::SqlException &e) {
+        auto sqlTime = sql_conn->getAccumulatedSqlTime();
+        stats.recordSqlFailure(actionFactory.name, e.getErrorCode(), sqlTime);
+        logger->warn("Worker {} SQL failed ({}): {}", name, e.getErrorCode(),
+                     e.what());
         if (e.serverGone()) {
           connectionAttempts++;
 
@@ -88,15 +106,19 @@ void RandomWorker::run_thread(std::size_t duration_in_seconds) {
             break;
           }
         }
-      } catch (std::exception const &e) {
-        failedActions++;
-        logger->warn("Worker {} Action failed: {}", name, e.what());
+
+      } catch (const std::exception &e) {
+        auto sqlTime = sql_conn->getAccumulatedSqlTime();
+        stats.recordOtherFailure(actionFactory.name, sqlTime);
+        logger->warn("Worker {} Action failed (other): {}", name, e.what());
       }
 
       now = std::chrono::steady_clock::now();
     }
-    spdlog::info("Worker {} exiting. Success: {}, failure: {}", name,
-                 successfulActions, failedActions);
+
+    stats.stop();
+    spdlog::info("Worker {} exiting", name);
+    spdlog::info("\n=== Worker {} Statistics ===\n{}", name, stats.report());
   });
 }
 
