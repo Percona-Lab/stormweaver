@@ -7,6 +7,7 @@
 #include "metadata.hpp"
 #include "scripting/luactx.hpp"
 #include "sql_variant/generic.hpp"
+#include "statistics.hpp"
 
 using logged_sql_ptr = std::unique_ptr<sql_variant::LoggedSQL>;
 
@@ -69,9 +70,8 @@ public:
 protected:
   action::ActionRegistry actions;
   std::thread thread;
-  std::size_t successfulActions = 0;
-  std::size_t failedActions = 0;
   std::unique_ptr<LuaContext> luaCtx;
+  statistics::WorkerStatistics stats;
 };
 
 class SqlFactory {
