@@ -292,7 +292,8 @@ void AlterTable::execute(Metadata &metaCtx, ps_random &rand,
             const bool numericColumn = col.type == metadata::ColumnType::INT ||
                                        col.type == metadata::ColumnType::REAL;
 
-            if (numericColumn && col.foreign_key_references.empty()) {
+            if (numericColumn && col.foreign_key_references.empty() &&
+                !col.primary_key) {
               alterSubcommands.emplace_back(
                   fmt::format("ALTER COLUMN {} TYPE VARCHAR(32)", col.name));
               availableColumns.erase(availableColumns.begin() + idx);
