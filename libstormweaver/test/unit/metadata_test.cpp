@@ -502,3 +502,360 @@ TEST_CASE("Interleaved delete and create works", "[metadata]") {
     REQUIRE(meta[3]->name == "foofoo");
   }
 }
+
+TEST_CASE("Metadata comparison operators work correctly", "[metadata]") {
+  metadata::Metadata meta1, meta2;
+
+  // Empty metadata should be equal
+  REQUIRE(meta1 == meta2);
+  REQUIRE_FALSE(meta1 != meta2);
+
+  // Add a table to meta1
+  {
+    auto reservation = meta1.createTable();
+    REQUIRE(reservation.open());
+    reservation.table()->name = "test_table";
+    reservation.table()->engine = "heap";
+
+    metadata::Column col;
+    col.name = "id";
+    col.type = metadata::ColumnType::INT;
+    col.primary_key = true;
+    reservation.table()->columns.push_back(col);
+
+    reservation.complete();
+  }
+
+  // Now they should be different
+  REQUIRE_FALSE(meta1 == meta2);
+  REQUIRE(meta1 != meta2);
+
+  // Add same table to meta2
+  {
+    auto reservation = meta2.createTable();
+    REQUIRE(reservation.open());
+    reservation.table()->name = "test_table";
+    reservation.table()->engine = "heap";
+
+    metadata::Column col;
+    col.name = "id";
+    col.type = metadata::ColumnType::INT;
+    col.primary_key = true;
+    reservation.table()->columns.push_back(col);
+
+    reservation.complete();
+  }
+
+  // Now they should be equal again
+  REQUIRE(meta1 == meta2);
+  REQUIRE_FALSE(meta1 != meta2);
+}
+
+TEST_CASE("Metadata copy constructor works correctly", "[metadata]") {
+  metadata::Metadata original;
+
+  // Add a table with various features
+  {
+    auto reservation = original.createTable();
+    REQUIRE(reservation.open());
+    reservation.table()->name = "test_table";
+    reservation.table()->engine = "heap";
+    reservation.table()->tablespace = "test_space";
+
+    metadata::Column col1;
+    col1.name = "id";
+    col1.type = metadata::ColumnType::INT;
+    col1.primary_key = true;
+    col1.auto_increment = true;
+    reservation.table()->columns.push_back(col1);
+
+    metadata::Column col2;
+    col2.name = "name";
+    col2.type = metadata::ColumnType::VARCHAR;
+    col2.length = 100;
+    col2.nullable = true;
+    reservation.table()->columns.push_back(col2);
+
+    metadata::Index idx;
+    idx.name = "idx_name";
+    idx.unique = false;
+    metadata::IndexColumn idx_col;
+    idx_col.column_name = "name";
+    idx_col.ordering = metadata::IndexOrdering::asc;
+    idx.fields.push_back(idx_col);
+    reservation.table()->indexes.push_back(idx);
+
+    reservation.complete();
+  }
+
+  // Copy construct
+  metadata::Metadata copy(original);
+
+  // Should be equal
+  REQUIRE(copy == original);
+  REQUIRE(copy.size() == 1);
+
+  auto copied_table = copy[0];
+  REQUIRE(copied_table != nullptr);
+  REQUIRE(copied_table->name == "test_table");
+  REQUIRE(copied_table->columns.size() == 2);
+  REQUIRE(copied_table->indexes.size() == 1);
+}
+
+TEST_CASE("Metadata reset function works correctly", "[metadata]") {
+  metadata::Metadata meta;
+
+  // Add multiple tables
+  for (int i = 0; i < 3; ++i) {
+    auto reservation = meta.createTable();
+    REQUIRE(reservation.open());
+    reservation.table()->name = "table_" + std::to_string(i);
+    reservation.complete();
+  }
+
+  REQUIRE(meta.size() == 3);
+
+  // Reset
+  meta.reset();
+
+  // Should be empty now
+  REQUIRE(meta.size() == 0);
+  REQUIRE(meta[0] == nullptr);
+  REQUIRE(meta[1] == nullptr);
+  REQUIRE(meta[2] == nullptr);
+}
+
+TEST_CASE("Column comparison operators work correctly", "[metadata]") {
+  metadata::Column col1, col2;
+
+  // Default columns should be equal
+  REQUIRE(col1 == col2);
+  REQUIRE_FALSE(col1 != col2);
+
+  // Change one field
+  col1.name = "test_col";
+  REQUIRE_FALSE(col1 == col2);
+  REQUIRE(col1 != col2);
+
+  // Make them equal again
+  col2.name = "test_col";
+  REQUIRE(col1 == col2);
+
+  // Test different field types
+  col1.type = metadata::ColumnType::VARCHAR;
+  col1.length = 100;
+  col1.primary_key = true;
+  col1.foreign_key_references = "other_table";
+
+  col2.type = metadata::ColumnType::VARCHAR;
+  col2.length = 100;
+  col2.primary_key = true;
+  col2.foreign_key_references = "other_table";
+
+  REQUIRE(col1 == col2);
+}
+
+TEST_CASE("Metadata comparison is order-independent", "[metadata]") {
+  metadata::Metadata meta1, meta2;
+
+  // Add tables to meta1 in one order
+  {
+    auto reservation = meta1.createTable();
+    REQUIRE(reservation.open());
+    reservation.table()->name = "table_a";
+
+    metadata::Column col1;
+    col1.name = "id";
+    col1.type = metadata::ColumnType::INT;
+    reservation.table()->columns.push_back(col1);
+
+    metadata::Column col2;
+    col2.name = "name";
+    col2.type = metadata::ColumnType::VARCHAR;
+    reservation.table()->columns.push_back(col2);
+
+    reservation.complete();
+  }
+
+  {
+    auto reservation = meta1.createTable();
+    REQUIRE(reservation.open());
+    reservation.table()->name = "table_b";
+
+    metadata::Column col;
+    col.name = "data";
+    col.type = metadata::ColumnType::TEXT;
+    reservation.table()->columns.push_back(col);
+
+    reservation.complete();
+  }
+
+  // Add same tables to meta2 in different order and with columns in different
+  // order
+  {
+    auto reservation = meta2.createTable();
+    REQUIRE(reservation.open());
+    reservation.table()->name = "table_b";
+
+    metadata::Column col;
+    col.name = "data";
+    col.type = metadata::ColumnType::TEXT;
+    reservation.table()->columns.push_back(col);
+
+    reservation.complete();
+  }
+
+  {
+    auto reservation = meta2.createTable();
+    REQUIRE(reservation.open());
+    reservation.table()->name = "table_a";
+
+    // Add columns in different order
+    metadata::Column col2;
+    col2.name = "name";
+    col2.type = metadata::ColumnType::VARCHAR;
+    reservation.table()->columns.push_back(col2);
+
+    metadata::Column col1;
+    col1.name = "id";
+    col1.type = metadata::ColumnType::INT;
+    reservation.table()->columns.push_back(col1);
+
+    reservation.complete();
+  }
+
+  // Should be equal despite different order
+  REQUIRE(meta1 == meta2);
+  REQUIRE_FALSE(meta1 != meta2);
+}
+
+TEST_CASE("Table comparison is order-independent for columns and indexes",
+          "[metadata]") {
+  metadata::Table table1, table2;
+
+  table1.name = "test_table";
+  table1.engine = "heap";
+
+  table2.name = "test_table";
+  table2.engine = "heap";
+
+  // Add columns to table1 in one order
+  metadata::Column col1;
+  col1.name = "id";
+  col1.type = metadata::ColumnType::INT;
+  col1.primary_key = true;
+  table1.columns.push_back(col1);
+
+  metadata::Column col2;
+  col2.name = "name";
+  col2.type = metadata::ColumnType::VARCHAR;
+  col2.length = 100;
+  table1.columns.push_back(col2);
+
+  // Add indexes to table1
+  metadata::Index idx1;
+  idx1.name = "idx_name";
+  idx1.unique = false;
+  metadata::IndexColumn idx_col1;
+  idx_col1.column_name = "name";
+  idx_col1.ordering = metadata::IndexOrdering::asc;
+  idx1.fields.push_back(idx_col1);
+  table1.indexes.push_back(idx1);
+
+  metadata::Index idx2;
+  idx2.name = "idx_id";
+  idx2.unique = true;
+  metadata::IndexColumn idx_col2;
+  idx_col2.column_name = "id";
+  idx_col2.ordering = metadata::IndexOrdering::desc;
+  idx2.fields.push_back(idx_col2);
+  table1.indexes.push_back(idx2);
+
+  // Add same columns to table2 in different order
+  table2.columns.push_back(col2); // name first
+  table2.columns.push_back(col1); // id second
+
+  // Add same indexes to table2 in different order
+  table2.indexes.push_back(idx2); // idx_id first
+  table2.indexes.push_back(idx1); // idx_name second
+
+  // Should be equal despite different order
+  REQUIRE(table1 == table2);
+  REQUIRE_FALSE(table1 != table2);
+}
+
+TEST_CASE("Index comparison is order-dependent for fields", "[metadata]") {
+  metadata::Index idx1, idx2;
+
+  idx1.name = "composite_idx";
+  idx1.unique = false;
+
+  idx2.name = "composite_idx";
+  idx2.unique = false;
+
+  // Add fields to idx1 in one order
+  metadata::IndexColumn field1;
+  field1.column_name = "col_a";
+  field1.ordering = metadata::IndexOrdering::asc;
+  idx1.fields.push_back(field1);
+
+  metadata::IndexColumn field2;
+  field2.column_name = "col_b";
+  field2.ordering = metadata::IndexOrdering::desc;
+  idx1.fields.push_back(field2);
+
+  // Add same fields to idx2 in different order
+  idx2.fields.push_back(field2); // col_b first
+  idx2.fields.push_back(field1); // col_a second
+
+  // Should NOT be equal because field order is important for indexes
+  REQUIRE_FALSE(idx1 == idx2);
+  REQUIRE(idx1 != idx2);
+
+  // But if we add fields in same order, they should be equal
+  metadata::Index idx3;
+  idx3.name = "composite_idx";
+  idx3.unique = false;
+  idx3.fields.push_back(field1); // col_a first
+  idx3.fields.push_back(field2); // col_b second
+
+  REQUIRE(idx1 == idx3);
+  REQUIRE_FALSE(idx1 != idx3);
+}
+
+TEST_CASE("Metadata debug output functions work correctly", "[metadata]") {
+  metadata::Metadata meta;
+
+  // Add a test table
+  {
+    auto reservation = meta.createTable();
+    REQUIRE(reservation.open());
+    reservation.table()->name = "debug_test_table";
+    reservation.table()->engine = "heap";
+
+    metadata::Column col;
+    col.name = "id";
+    col.type = metadata::ColumnType::INT;
+    col.primary_key = true;
+    col.auto_increment = true;
+    reservation.table()->columns.push_back(col);
+
+    metadata::Index idx;
+    idx.name = "test_idx";
+    idx.unique = true;
+    metadata::IndexColumn idx_col;
+    idx_col.column_name = "id";
+    idx_col.ordering = metadata::IndexOrdering::asc;
+    idx.fields.push_back(idx_col);
+    reservation.table()->indexes.push_back(idx);
+
+    reservation.complete();
+  }
+
+  // Test debug output functions don't crash and produce non-empty output
+  std::string debug_output = meta.debug_dump();
+  REQUIRE_FALSE(debug_output.empty());
+  REQUIRE(debug_output.find("debug_test_table") != std::string::npos);
+  REQUIRE(debug_output.find("id INT") != std::string::npos);
+  REQUIRE(debug_output.find("test_idx UNIQUE") != std::string::npos);
+}

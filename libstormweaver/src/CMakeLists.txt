@@ -12,6 +12,8 @@ set(LIBRARY_SOURCES
     metadata.cpp
     workload.cpp
     scripting/luactx.cpp
+    schema_discovery.cpp
+    metadata_populator.cpp
     sql_variant/generic.cpp
     #sql_variant/mysql.cpp
     sql_variant/postgresql.cpp
