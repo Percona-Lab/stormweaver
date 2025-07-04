@@ -100,16 +100,16 @@ void CreateTable::execute(Metadata &metaCtx, ps_random &rand,
 
     table->columns[0].name = "id";
 
+    table->columns[0].primary_key = true;
+    table->columns[0].nullable = false;
     if (partitioned) {
       // with partitioned tables, the primary key won't be a serial as we want
       // to generate random numbers to evenly distribute the partitions
-      table->columns[0].primary_key = true;
       table->columns[0].partition_key = true;
 
       table->partitioning = RangePartitioning{};
       table->partitioning->rangeSize = 10000000;
     } else {
-      table->columns[0].primary_key = true;
       table->columns[0].auto_increment = true;
     }
 
