@@ -298,6 +298,8 @@ void AlterTable::execute(Metadata &metaCtx, ps_random &rand,
                   fmt::format("ALTER COLUMN {} TYPE VARCHAR(32)", col.name));
               availableColumns.erase(availableColumns.begin() + idx);
               addedSubcommand = true;
+              col.type = ColumnType::VARCHAR;
+              col.length = 32;
               break;
             }
           }
