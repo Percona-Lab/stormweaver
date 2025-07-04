@@ -2,11 +2,43 @@
 #include "workload.hpp"
 
 #include <chrono>
+#include <fstream>
+#include <iomanip>
 #include <spdlog/sinks/basic_file_sink.h>
+#include <sstream>
 
 #include "action/action_registry.hpp"
+#include "metadata_populator.hpp"
+#include "schema_discovery.hpp"
 #include "sql_variant/generic.hpp"
 #include "sql_variant/postgresql.hpp"
+
+namespace {
+
+std::string generate_timestamp() {
+  auto now = std::chrono::system_clock::now();
+  auto time_t = std::chrono::system_clock::to_time_t(now);
+  auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                now.time_since_epoch()) %
+            1000;
+
+  std::stringstream timestamp_ss;
+  timestamp_ss << std::put_time(std::localtime(&time_t), "%Y%m%d_%H%M%S");
+  timestamp_ss << "_" << std::setfill('0') << std::setw(3) << ms.count();
+  return timestamp_ss.str();
+}
+
+void write_metadata_file(const metadata::Metadata &metadata,
+                         const std::string &timestamp,
+                         const std::string &suffix) {
+  std::string filename =
+      fmt::format("logs/metadata_{}.{}.txt", timestamp, suffix);
+  std::ofstream file(filename);
+  file << metadata.debug_dump();
+  file.close();
+}
+
+} // anonymous namespace
 
 Worker::Worker(std::string const &name, sql_connector_t const &sql_connector,
                WorkloadParams const &config, metadata_ptr metadata)
@@ -27,6 +59,51 @@ void Worker::create_random_tables(std::size_t count) {
     action::CreateTable creator(config.actionConfig.ddl,
                                 metadata::Table::Type::normal);
     creator.execute(*metadata.get(), rand, sql_conn.get());
+  }
+}
+
+void Worker::discover_existing_schema() {
+  logger->info("Worker {} starting schema discovery from existing database",
+               name);
+
+  try {
+    schema_discovery::SchemaDiscovery discovery(sql_conn.get());
+    metadata_populator::MetadataPopulator populator(*metadata);
+
+    populator.populateFromExistingDatabase(discovery);
+
+    logger->info("Worker {} completed schema discovery, found {} tables", name,
+                 metadata->size());
+  } catch (const std::exception &e) {
+    logger->error("Worker {} schema discovery failed: {}", name, e.what());
+    throw;
+  }
+}
+
+void Worker::reset_metadata() { metadata->reset(); }
+
+bool Worker::validate_metadata() {
+  try {
+    metadata::Metadata original_metadata(*metadata);
+
+    reset_metadata();
+    discover_existing_schema();
+
+    bool is_valid = (*metadata == original_metadata);
+
+    if (!is_valid) {
+      std::string timestamp = generate_timestamp();
+      write_metadata_file(original_metadata, timestamp, "orig");
+      write_metadata_file(*metadata, timestamp, "new");
+      logger->error("Metadata validation failed - reloaded metadata differs "
+                    "from original. Debug files written with timestamp {}",
+                    timestamp);
+    }
+
+    return is_valid;
+  } catch (const std::exception &e) {
+    logger->error("Metadata validation failed with exception: {}", e.what());
+    return false;
   }
 }
 

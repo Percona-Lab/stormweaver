@@ -1,6 +1,9 @@
 SET(SQLTEST_SOURCES
     main.cpp
     ddl.cpp
+    schema_discovery.cpp
+    metadata_populator.cpp
+    worker_schema_discovery.cpp
 )
 
 add_executable(test-stormweaver-sql ${SQLTEST_SOURCES})
