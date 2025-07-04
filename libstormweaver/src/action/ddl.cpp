@@ -100,16 +100,16 @@ void CreateTable::execute(Metadata &metaCtx, ps_random &rand,
 
     table->columns[0].name = "id";
 
+    table->columns[0].primary_key = true;
+    table->columns[0].nullable = false;
     if (partitioned) {
       // with partitioned tables, the primary key won't be a serial as we want
       // to generate random numbers to evenly distribute the partitions
-      table->columns[0].primary_key = true;
       table->columns[0].partition_key = true;
 
       table->partitioning = RangePartitioning{};
       table->partitioning->rangeSize = 10000000;
     } else {
-      table->columns[0].primary_key = true;
       table->columns[0].auto_increment = true;
     }
 
@@ -158,15 +158,20 @@ void CreateTable::execute(Metadata &metaCtx, ps_random &rand,
                                     config.max_partition_count);
       const auto partitionSize = table->partitioning->rangeSize;
       for (std::size_t i = 0; i < cnt; ++i) {
-        connection
-            ->executeQuery(fmt::format("CREATE TABLE {}_p{} PARTITION OF {} "
-                                       "FOR VALUES FROM ({}) TO ({});",
-                                       table->name, i, table->name,
-                                       partitionSize * i,
-                                       partitionSize * (i + 1)))
-            .maybeThrow();
+        for (std::size_t tries = 0; tries < 3; ++tries) {
+          const auto res = connection->executeQuery(
+              fmt::format("CREATE TABLE {}_p{} PARTITION OF {} "
+                          "FOR VALUES FROM ({}) TO ({});",
+                          table->name, i, table->name, partitionSize * i,
+                          partitionSize * (i + 1)));
 
-        table->partitioning->ranges.push_back(RangePartition{i});
+          if (!res)
+            continue;
+
+          table->partitioning->ranges.push_back(RangePartition{i});
+
+          break;
+        }
       }
     }
 
@@ -298,6 +303,8 @@ void AlterTable::execute(Metadata &metaCtx, ps_random &rand,
                   fmt::format("ALTER COLUMN {} TYPE VARCHAR(32)", col.name));
               availableColumns.erase(availableColumns.begin() + idx);
               addedSubcommand = true;
+              col.type = ColumnType::VARCHAR;
+              col.length = 32;
               break;
             }
           }
@@ -401,6 +408,7 @@ void CreateIndex::execute(Metadata &metaCtx, ps_random &rand,
         fmt::format("idx{}", rand.random_number(1, 100000000)); // name;
 
     std::vector<std::size_t> availableColumns(res.table()->columns.size());
+    std::iota(availableColumns.begin(), availableColumns.end(), 0);
     rand.shuffle(availableColumns);
 
     const auto columnCount = rand.random_number(

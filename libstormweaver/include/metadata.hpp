@@ -212,7 +212,7 @@ struct Column {
 
   Generated generated = Generated::notGenerated;
 
-  bool nullable = false;
+  bool nullable = true;
   bool primary_key = false;
   bool partition_key = false;
   std::string foreign_key_references;
