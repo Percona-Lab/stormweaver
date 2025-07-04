@@ -75,14 +75,18 @@ enum class SqlStatus { success, error, serverGone };
 
 class SqlException : public std::exception {
 public:
-  SqlException(std::string const &message, SqlStatus status = SqlStatus::error)
-      : message(message), status(status) {}
+  SqlException(std::string const &errorCode, std::string const &message,
+               SqlStatus status = SqlStatus::error)
+      : errorCode(errorCode), message(message), status(status) {}
 
   const char *what() const noexcept override { return message.c_str(); }
+
+  const std::string &getErrorCode() const noexcept { return errorCode; }
 
   bool serverGone() const { return status == SqlStatus::serverGone; }
 
 private:
+  std::string errorCode;
   std::string message;
   SqlStatus status;
 };
@@ -124,7 +128,8 @@ struct QueryResult {
 
   void maybeThrow() const {
     if (!success()) {
-      throw SqlException(fmt::format("Error while executing query: {} {}",
+      throw SqlException(errorInfo.errorCode,
+                         fmt::format("Error while executing query: {} {}",
                                      errorInfo.errorCode,
                                      errorInfo.errorMessage),
                          errorInfo.errorStatus);
@@ -172,9 +177,13 @@ public:
 
   void reconnect();
 
+  std::chrono::nanoseconds getAccumulatedSqlTime() const;
+  void resetAccumulatedSqlTime();
+
 private:
   std::unique_ptr<GenericSQL> sql;
   std::shared_ptr<spdlog::logger> logger;
+  mutable std::chrono::nanoseconds accumulatedSqlTime{0};
 };
 
 } // namespace sql_variant
