@@ -403,6 +403,7 @@ void CreateIndex::execute(Metadata &metaCtx, ps_random &rand,
         fmt::format("idx{}", rand.random_number(1, 100000000)); // name;
 
     std::vector<std::size_t> availableColumns(res.table()->columns.size());
+    std::iota(availableColumns.begin(), availableColumns.end(), 0);
     rand.shuffle(availableColumns);
 
     const auto columnCount = rand.random_number(
