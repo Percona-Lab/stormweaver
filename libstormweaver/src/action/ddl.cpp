@@ -158,15 +158,20 @@ void CreateTable::execute(Metadata &metaCtx, ps_random &rand,
                                     config.max_partition_count);
       const auto partitionSize = table->partitioning->rangeSize;
       for (std::size_t i = 0; i < cnt; ++i) {
-        connection
-            ->executeQuery(fmt::format("CREATE TABLE {}_p{} PARTITION OF {} "
-                                       "FOR VALUES FROM ({}) TO ({});",
-                                       table->name, i, table->name,
-                                       partitionSize * i,
-                                       partitionSize * (i + 1)))
-            .maybeThrow();
+        for (std::size_t tries = 0; tries < 3; ++tries) {
+          const auto res = connection->executeQuery(
+              fmt::format("CREATE TABLE {}_p{} PARTITION OF {} "
+                          "FOR VALUES FROM ({}) TO ({});",
+                          table->name, i, table->name, partitionSize * i,
+                          partitionSize * (i + 1)));
 
-        table->partitioning->ranges.push_back(RangePartition{i});
+          if (!res)
+            continue;
+
+          table->partitioning->ranges.push_back(RangePartition{i});
+
+          break;
+        }
       }
     }
 
