@@ -4,10 +4,10 @@ StormWeaver supports configuration through multiple layers with a clear preceden
 
 !!! Note
 
-  Configuration parameters are parsed by Lua scenario scripts.
-  The C++ runner only passes the command-line parameters to the scenario, and provides an API for accessing all configuration options.
+    Configuration parameters are parsed by Lua scenario scripts.
+    The C++ runner only passes the command-line parameters to the scenario, and provides an API for accessing all configuration options.
   
-  Custom (external) scenario files might work differently.
+    Custom (external) scenario files might work differently.
 
 ## TOML Configuration File
 

@@ -99,9 +99,9 @@ private:
 
 !!! Note
 
-  The above example showcases a completely new action type in a new source file.
-  When appropriate, edit existing files, such as ddl.hpp/cpp or dml.hpp/cpp.
-  When editing existing files, it is usually better to extend the existing configuration struct instead of defining a new struct.
+    The above example showcases a completely new action type in a new source file.
+    When appropriate, edit existing files, such as ddl.hpp/cpp or dml.hpp/cpp.
+    When editing existing files, it is usually better to extend the existing configuration struct instead of defining a new struct.
 
 **Step 2: Implement Action Logic**
 ```cpp

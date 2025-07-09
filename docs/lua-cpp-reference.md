@@ -451,7 +451,7 @@ The optional wrapper and wrapperArgs parameters allow running PostgreSQL through
 
 !!! note
 
-  The wrapper parameter doesn't take `$PATH` into account, it requires a full filename
+    The wrapper parameter doesn't take `$PATH` into account, it requires a full filename
 
 ### stop
 
@@ -477,7 +477,7 @@ The optional wrapper and wrapperArgs parameters allow running PostgreSQL through
 
 !!! note
 
-  The wrapper parameter doesn't take `$PATH` into account, it requires a full filename
+    The wrapper parameter doesn't take `$PATH` into account, it requires a full filename
 
 ### kill9
 
