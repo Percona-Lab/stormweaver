@@ -6,6 +6,7 @@ set(LIBRARY_SOURCES
     action/ddl.cpp
     action/dml.cpp
     action/helper.cpp
+    checksum.cpp
     process/postgres.cpp
     process/process.cpp
     random.cpp
@@ -32,5 +33,6 @@ TARGET_LINK_LIBRARIES(libstormweaver
     sol2::sol2
     toml-lua
     lfs-lua
+    cryptopp::cryptopp
 )
 SET_PROPERTY(TARGET libstormweaver PROPERTY CXX_STANDARD 23)

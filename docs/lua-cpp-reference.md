@@ -708,6 +708,40 @@ Returns the SQL connection (LoggedSQL) of the worker, which can be used to execu
 sql = worker:sql_connection()
 ```
 
+### calculate_database_checksums
+
+Calculates SHA-256 checksums for all metadata tables in the database and writes the results to a specified file.
+
+This function iterates through all tables tracked in the metadata system, calculates a checksum of their contents using SHA-256 hashing, and outputs the results in CSV format. The checksums are deterministic and will produce the same result for identical table contents.
+
+```lua
+worker:calculate_database_checksums("checksums.csv")
+```
+
+**Parameters:**
+- `filename` (string): Path to the output file where checksums will be written
+
+**Output Format:**
+The output file contains CSV data with the following columns:
+- `table_name`: Name of the table
+- `checksum`: SHA-256 hash of the table contents (64-character hex string)
+- `row_count`: Number of rows in the table
+
+**Example output:**
+```csv
+table_name,checksum,row_count
+users,a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456,1500
+products,e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855,0
+orders,f7a8b9c0d1e2f3456789012345678901234567890abcdef1234567890abcdef12,2300
+```
+
+**Note:** Empty tables will have the SHA-256 hash of an empty string (`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`).
+
+**Error Handling:**
+- Throws a Lua error if the file cannot be opened for writing
+- Throws a Lua error if a table query fails
+- Throws a Lua error if row count retrieval fails
+
 ## Workload
 
 Represents a testrun, it is created by `Node` using `initRandomWorkload`.
