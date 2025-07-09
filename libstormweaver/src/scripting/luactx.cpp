@@ -128,6 +128,8 @@ LuaContext::LuaContext(std::shared_ptr<spdlog::logger> logger)
   worker_usertype["reset_metadata"] = &Worker::reset_metadata;
   worker_usertype["validate_metadata"] = &Worker::validate_metadata;
   worker_usertype["sql_connection"] = &Worker::sql_connection;
+  worker_usertype["calculate_database_checksums"] =
+      &Worker::calculate_database_checksums;
 
   luaState.new_usertype<RandomWorker>(
       "Worker", sol::no_constructor, "create_random_tables",

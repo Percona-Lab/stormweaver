@@ -111,6 +111,12 @@ sql_variant::LoggedSQL *Worker::sql_connection() const {
   return sql_conn.get();
 }
 
+void Worker::calculate_database_checksums(const std::string &filename) {
+  DatabaseChecksum checksummer(*sql_conn, *metadata);
+  checksummer.calculateAllTableChecksums();
+  checksummer.writeResultsToFile(filename);
+}
+
 RandomWorker::RandomWorker(std::string const &name,
                            Worker::sql_connector_t const &sql_connector,
                            WorkloadParams const &config, metadata_ptr metadata,

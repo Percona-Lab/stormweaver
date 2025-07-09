@@ -4,6 +4,7 @@
 #include <thread>
 
 #include "action/action_registry.hpp"
+#include "checksum.hpp"
 #include "metadata.hpp"
 #include "scripting/luactx.hpp"
 #include "sql_variant/generic.hpp"
@@ -42,6 +43,8 @@ public:
   bool validate_metadata();
 
   sql_variant::LoggedSQL *sql_connection() const;
+
+  void calculate_database_checksums(const std::string &filename);
 
   void reconnect();
 
