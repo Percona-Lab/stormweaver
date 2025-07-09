@@ -38,6 +38,10 @@ void DatabaseChecksum::calculateAllTableChecksums() {
 
     results_.push_back(result);
   }
+
+  std::sort(results_.begin(), results_.end(), [](auto const &a, auto const &b) {
+    return a.tableName < b.tableName;
+  });
 }
 
 void DatabaseChecksum::writeResultsToFile(const std::string &filename) {
