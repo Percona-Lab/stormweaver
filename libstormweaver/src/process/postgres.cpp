@@ -11,36 +11,36 @@
 
 namespace process {
 
-Postgres::Postgres(bool initDatadir, std::string const &logname,
-                   std::string const &installDir, std::string const &dataDir)
-    : installDir(installDir), dataDir(dataDir),
+Postgres::Postgres(bool initdataDir, std::string const &logname,
+                   std::string const &installDir, std::string const &datadir)
+    : installDir(installDir), dataDir_(datadir),
       logger(spdlog::basic_logger_st(fmt::format("pg-{}", logname),
                                      fmt::format("logs/pg-{}.log", logname))) {
 
   spdlog::info("Using PG install directory '{}' with datadir '{}'", installDir,
-               dataDir);
+               datadir);
 
   if (!std::filesystem::is_directory(this->installDir)) {
     throw std::runtime_error(fmt::format(
         "Specified install directory '{}' is not a directory.", installDir));
   }
-  if (initDatadir) {
-    spdlog::info("Initializing data directory '{}'", dataDir);
-    if (std::filesystem::exists(this->dataDir)) {
+  if (initdataDir) {
+    spdlog::info("Initializing data directory '{}'", datadir);
+    if (std::filesystem::exists(this->dataDir())) {
       throw std::runtime_error(fmt::format(
-          "Data directory '{}' already exists, can't initialize.", dataDir));
+          "Data directory '{}' already exists, can't initialize.", datadir));
     }
 
     int result = BackgroundProcess::runAndWait(
-        logger, fmt::format("{}/bin/initdb", installDir), {"-D", dataDir});
+        logger, fmt::format("{}/bin/initdb", installDir), {"-D", dataDir()});
 
     if (result != 0) {
       throw std::runtime_error(fmt::format(
-          "Initdb failed with data directory '{}' and install dir {}.", dataDir,
+          "Initdb failed with data directory '{}' and install dir {}.", datadir,
           installDir));
     }
   } else {
-    if (!std::filesystem::is_directory(dataDir)) {
+    if (!std::filesystem::is_directory(dataDir())) {
       throw std::runtime_error(fmt::format(
           "Specified data directory '{}' is not a directory.", installDir));
     }
@@ -48,12 +48,13 @@ Postgres::Postgres(bool initDatadir, std::string const &logname,
 }
 
 bool Postgres::start(std::string const &wrapper, args_t wrapperArgs) {
-  spdlog::info("Starting postmaster for datadir {}", dataDir.string());
+  spdlog::info("Starting postmaster for dataDir() {}", dataDir().string());
   if (postmaster != nullptr) {
     if (postmaster->running()) {
-      spdlog::error("Can't start postgres with datadir {}: previous postmaster "
-                    "is still running",
-                    dataDir.string());
+      spdlog::error(
+          "Can't start postgres with dataDir() {}: previous postmaster "
+          "is still running",
+          dataDir().string());
       return false;
     }
     spdlog::warn("Previous postmaster reference still exist, but the process "
@@ -64,11 +65,11 @@ bool Postgres::start(std::string const &wrapper, args_t wrapperArgs) {
   if (wrapper.empty()) {
     postmaster = BackgroundProcess::run(
         logger, fmt::format("{}/bin/postgres", installDir.string()),
-        {"-D", dataDir.string()});
+        {"-D", dataDir().string()});
   } else {
     wrapperArgs.push_back(fmt::format("{}/bin/postgres", installDir.string()));
     wrapperArgs.push_back("-D");
-    wrapperArgs.push_back(dataDir.string());
+    wrapperArgs.push_back(dataDir().string());
 
     postmaster = BackgroundProcess::run(logger, wrapper, wrapperArgs);
   }
@@ -85,7 +86,7 @@ bool Postgres::restart(std::size_t graceful_wait_period,
 }
 
 void Postgres::stop(std::size_t graceful_wait_period) {
-  spdlog::info("Stopping postmaster for datadir {}", dataDir.string());
+  spdlog::info("Stopping postmaster for datadir {}", dataDir().string());
   if (postmaster == nullptr || !postmaster->running()) {
     spdlog::error("Postmaster isn't running, nothing to stop.");
     postmaster = nullptr;
@@ -112,17 +113,17 @@ void Postgres::stop(std::size_t graceful_wait_period) {
 }
 
 void Postgres::kill9() {
-  spdlog::info("Killing postmaster with datadir {}", dataDir.string());
+  spdlog::info("Killing postmaster with datadir {}", dataDir().string());
   postmaster->kill(SIGKILL);
   postmaster->waitUntilExits();
   postmaster = nullptr;
 }
 
 Postgres::Postgres(std::string const &logname, std::string const &installDir,
-                   std::string const &dataDir,
+                   std::string const &datadir,
                    sql_variant::ServerParams const &from,
                    args_t additionalParams)
-    : installDir(installDir), dataDir(dataDir),
+    : installDir(installDir), dataDir_(datadir),
       logger(spdlog::basic_logger_st(fmt::format("pg-{}", logname),
                                      fmt::format("logs/pg-{}.log", logname))) {
 
@@ -131,7 +132,7 @@ Postgres::Postgres(std::string const &logname, std::string const &installDir,
         "Specified install directory '{}' is not a directory.", installDir));
   }
 
-  if (std::filesystem::is_directory(this->dataDir)) {
+  if (std::filesystem::is_directory(this->dataDir())) {
     throw std::runtime_error(fmt::format(
         "Specified data directory '{}' already exists.", installDir));
   }
@@ -139,7 +140,7 @@ Postgres::Postgres(std::string const &logname, std::string const &installDir,
   std::vector<std::string> allParams = {"-h",     from.address,
                                         "-U",     from.username,
                                         "--port", std::to_string(from.port),
-                                        "-D",     dataDir};
+                                        "-D",     dataDir()};
   allParams.insert(allParams.end(), additionalParams.begin(),
                    additionalParams.end());
   int result = BackgroundProcess::runAndWait(
@@ -151,7 +152,7 @@ Postgres::Postgres(std::string const &logname, std::string const &installDir,
 }
 
 void Postgres::add_config(std::string_view name, std::string_view value) {
-  std::ofstream stream(fmt::format("{}/postgresql.conf", dataDir.string()),
+  std::ofstream stream(fmt::format("{}/postgresql.conf", dataDir().string()),
                        std::ios_base::app);
   stream << fmt::format("{} = {}", name, value) << std::endl;
   if (name == "port") {
@@ -160,7 +161,7 @@ void Postgres::add_config(std::string_view name, std::string_view value) {
 }
 
 void Postgres::add_config(params_t additionalConfig) {
-  std::ofstream stream(fmt::format("{}/postgresql.conf", dataDir.string()),
+  std::ofstream stream(fmt::format("{}/postgresql.conf", dataDir().string()),
                        std::ios_base::app);
   for (auto const &conf : additionalConfig) {
     if (conf.first == "port") {
@@ -195,7 +196,7 @@ bool Postgres::wait_ready(std::size_t maxWaitTime) {
 void Postgres::add_hba(std::string const &host, std::string const &database,
                        std::string const &user, std::string const &address,
                        std::string const &method) {
-  std::ofstream stream(fmt::format("{}/pg_hba.conf", dataDir.string()),
+  std::ofstream stream(fmt::format("{}/pg_hba.conf", dataDir().string()),
                        std::ios_base::app);
   stream << fmt::format("{} {} {} {} {}", host, database, user, address, method)
          << std::endl;
@@ -207,10 +208,21 @@ bool Postgres::createdb(std::string const &name) {
              {"-h", "127.0.0.1", "-p", port, name}) == 0;
 }
 
+bool Postgres::basebackup(args_t args) {
+  args.push_back("-h");
+  args.push_back("127.0.0.1");
+  args.push_back("-p");
+  args.push_back(port);
+  return BackgroundProcess::runAndWait(
+             logger, fmt::format("{}/bin/pg_basebackup", installDir.string()),
+             args) == 0;
+}
+
 bool Postgres::createuser(std::string const &name, args_t args) {
   args.push_back("-p");
   args.push_back(port);
   args.push_back("-h");
+
   args.push_back("127.0.0.1");
   args.push_back(name);
   return BackgroundProcess::runAndWait(
@@ -227,5 +239,7 @@ bool Postgres::dropdb(std::string const &name) {
 Postgres::~Postgres() { stop(10); }
 
 std::string Postgres::serverPort() const { return port; }
+
+std::filesystem::path Postgres::dataDir() const { return dataDir_; }
 
 } // namespace process

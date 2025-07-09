@@ -8,6 +8,7 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/spdlog.h>
 
 inline std::unique_ptr<Node> setup_node_pg(LuaContext &parentCtx,
                                            sol::table const &table) {
@@ -174,11 +175,15 @@ LuaContext::LuaContext(std::shared_ptr<spdlog::logger> logger)
                       return self.restart(wait_period, "", {});
                     });
   postgres_usertype["kill9"] = &process::Postgres::kill9;
+  postgres_usertype["basebackup"] = &process::Postgres::basebackup;
   postgres_usertype["createdb"] = &process::Postgres::createdb;
   postgres_usertype["dropdb"] = &process::Postgres::dropdb;
   postgres_usertype["createuser"] = &process::Postgres::createuser;
   postgres_usertype["is_running"] = &process::Postgres::is_running;
   postgres_usertype["serverPort"] = &process::Postgres::serverPort;
+  postgres_usertype["dataDir"] = [](process::Postgres &self) {
+    return self.dataDir().string();
+  };
   postgres_usertype["is_ready"] = &process::Postgres::is_ready;
   postgres_usertype["wait_ready"] = &process::Postgres::wait_ready;
   postgres_usertype["add_config"] =
@@ -215,6 +220,22 @@ LuaContext::LuaContext(std::shared_ptr<spdlog::logger> logger)
   bg_t["receive"] = [](BackgroundThread &self) { self.fromQueue().receive(); };
   bg_t["receiveIfAny"] = [](BackgroundThread &self) {
     self.fromQueue().receiveIfAny();
+  };
+
+  auto bg_process_t = luaState.new_usertype<process::BackgroundProcess>(
+      "BackgroundProcess", sol::no_constructor);
+
+  bg_process_t["waitUntilExits"] = &process::BackgroundProcess::waitUntilExits;
+  bg_process_t["kill"] = &process::BackgroundProcess::kill;
+  bg_process_t["running"] = &process::BackgroundProcess::running;
+  bg_process_t["start"] = [](std::string const &logname, std::string const &cmd,
+                             sol::variadic_args args) {
+    auto logger = spdlog::get(logname)
+                      ? spdlog::get(logname)
+                      : spdlog::basic_logger_st(
+                            logname, fmt::format("logs/{}.log", logname));
+    return process::BackgroundProcess::run(
+        logger, cmd, std::vector<std::string>(args.begin(), args.end()));
   };
 
   auto bgq_t =
