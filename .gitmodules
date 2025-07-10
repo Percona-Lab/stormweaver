@@ -6,7 +6,7 @@
 	url = https://github.com/LebJe/toml.lua.git
 [submodule "_3p-lua/argparse"]
 	path = _3p-lua/argparse
-	url = https://github.com/mpeterv/argparse
+	url = https://github.com/luarocks/argparse
 [submodule "_3p-lua/luafilesystem"]
 	path = _3p-lua/luafilesystem
 	url = https://github.com/lunarmodules/luafilesystem
