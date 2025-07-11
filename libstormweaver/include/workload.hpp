@@ -35,6 +35,12 @@ public:
 
   void create_random_tables(std::size_t count);
 
+  void discover_existing_schema();
+
+  void reset_metadata();
+
+  bool validate_metadata();
+
   sql_variant::LoggedSQL *sql_connection() const;
 
   void reconnect();

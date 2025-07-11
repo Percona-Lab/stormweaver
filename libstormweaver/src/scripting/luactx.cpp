@@ -123,6 +123,10 @@ LuaContext::LuaContext(std::shared_ptr<spdlog::logger> logger)
   auto worker_usertype =
       luaState.new_usertype<Worker>("Worker", sol::no_constructor);
   worker_usertype["create_random_tables"] = &Worker::create_random_tables;
+  worker_usertype["discover_existing_schema"] =
+      &Worker::discover_existing_schema;
+  worker_usertype["reset_metadata"] = &Worker::reset_metadata;
+  worker_usertype["validate_metadata"] = &Worker::validate_metadata;
   worker_usertype["sql_connection"] = &Worker::sql_connection;
 
   luaState.new_usertype<RandomWorker>(

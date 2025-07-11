@@ -204,7 +204,7 @@ enum class Generated { notGenerated, stored, virt };
 
 struct Column {
   std::string name; // TODO: fixed buffers for strings?
-  ColumnType type;
+  ColumnType type = ColumnType::INT;
 
   std::size_t length = 0;
 
@@ -217,6 +217,10 @@ struct Column {
   bool partition_key = false;
   std::string foreign_key_references;
   bool auto_increment = false;
+
+  auto operator<=>(const Column &other) const = default;
+
+  std::string debug_dump() const;
 };
 
 enum class IndexOrdering { default_, asc, desc };
@@ -224,6 +228,8 @@ enum class IndexOrdering { default_, asc, desc };
 struct IndexColumn {
   std::string column_name; // column + ordering or func(columns...)
   IndexOrdering ordering;
+
+  auto operator<=>(const IndexColumn &other) const = default;
 };
 
 struct Index {
@@ -235,6 +241,11 @@ struct Index {
   boost::container::small_vector<IndexColumn,
                                  limits::optimized_index_column_count>
       fields;
+
+  bool operator==(const Index &other) const;
+  bool operator!=(const Index &other) const;
+
+  std::string debug_dump() const;
 };
 
 struct RangePartition {
@@ -242,11 +253,15 @@ struct RangePartition {
   // TODO: add partition specific indexes?
   // boost::container::small_vector<Index, limits::optimized_index_count>
   // indexes;
+
+  auto operator<=>(const RangePartition &other) const = default;
 };
 
 struct RangePartitioning {
   std::size_t rangeSize;
   std::vector<RangePartition> ranges;
+
+  auto operator<=>(const RangePartitioning &other) const = default;
 };
 
 struct Table {
@@ -267,6 +282,11 @@ struct Table {
   void removeReferencesTo(std::string const &tableName);
   void updateReferencesTo(std::string const &oldTableName,
                           std::string const &newTableName);
+
+  bool operator==(const Table &other) const;
+  bool operator!=(const Table &other) const;
+
+  std::string debug_dump() const;
 };
 
 using table_ptr = std::shared_ptr<Table>;
@@ -320,6 +340,14 @@ public:
   };
 
   Metadata();
+  Metadata(const Metadata &other);
+
+  void reset();
+
+  bool operator==(const Metadata &other) const;
+  bool operator!=(const Metadata &other) const;
+
+  std::string debug_dump() const;
 
   // If no slots are left, returns an invalid (non open) Reservation
   Reservation createTable();

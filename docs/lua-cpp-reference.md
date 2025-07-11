@@ -664,6 +664,42 @@ Currently the DDL configuration can't be modified.
 worker:create_random_tables(5)
 ```
 
+### discover_existing_schema
+
+Discovers and populates the metadata system with the existing database schema.
+
+This function scans the connected database and builds StormWeaver's internal metadata representation based on the actual database structure (tables, columns, indexes, etc.).
+
+```lua
+worker:discover_existing_schema()
+```
+
+### reset_metadata
+
+Clears all metadata, resetting it to an empty state.
+
+This function removes all stored table and schema information from StormWeaver's internal metadata system.
+
+```lua
+worker:reset_metadata()
+```
+
+### validate_metadata
+
+Validates that the current metadata accurately reflects the actual database schema.
+
+This function compares the current metadata against a fresh schema discovery from the database. If validation fails, it writes debug files to the `logs/` directory containing both the original and newly discovered metadata for comparison.
+
+Returns `true` if metadata matches the database schema, `false` otherwise.
+
+```lua
+if worker:validate_metadata() then
+  info("Metadata is consistent with database schema")
+else
+  warning("Metadata validation failed - check logs/ directory for debug files")
+end
+```
+
 ### sql_connection
 
 Returns the SQL connection (LoggedSQL) of the worker, which can be used to execute SQL statements directly.
