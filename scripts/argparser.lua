@@ -2,7 +2,7 @@ local argparse = require("argparse")
 
 argparser = argparse("stormweaver", "")
 argparser:argument("scenario", "Scenario file")
-argparser:option("-c --config", "Configuration file.", "config/stormweaver.toml")
+argparser:option("-c --config", "Configuration file", "config/stormweaver.toml")
 argparser:option(
 	"-i --install_dir",
 	"PostgreSQL installation directory (if specified, overrides configuration value for default server)",
