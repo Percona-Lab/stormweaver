@@ -150,7 +150,7 @@ void RandomWorker::run_thread(std::size_t duration_in_seconds) {
         static_cast<int64_t>(duration_in_seconds)) {
 
       const auto w = rand.random_number(std::size_t(0), actions.totalWeight());
-      const auto &actionFactory = actions.lookupByWeightOffset(w);
+      const auto actionFactory = actions.lookupByWeightOffset(w);
       auto action = actionFactory.builder(config.actionConfig);
 
       stats.startAction(actionFactory.name);

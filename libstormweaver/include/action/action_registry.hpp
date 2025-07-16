@@ -45,7 +45,7 @@ public:
   std::size_t totalWeight() const;
   bool has(std::string name) const;
 
-  ActionFactory const &lookupByWeightOffset(std::size_t offset) const;
+  ActionFactory lookupByWeightOffset(std::size_t offset) const;
 
 private:
   std::vector<ActionFactory> factories;
