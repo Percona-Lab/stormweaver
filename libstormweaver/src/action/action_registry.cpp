@@ -242,8 +242,7 @@ bool ActionRegistry::has(std::string name) const {
   return it != factories.end();
 }
 
-ActionFactory const &
-ActionRegistry::lookupByWeightOffset(std::size_t offset) const {
+ActionFactory ActionRegistry::lookupByWeightOffset(std::size_t offset) const {
   std::unique_lock<std::mutex> lk(mutex);
 
   std::size_t accum = 0;
