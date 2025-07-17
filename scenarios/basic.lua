@@ -92,12 +92,12 @@ function main(argv)
 		t1:wait_completion()
 
 		-- restart the server, workers will automatically reconnect
-		pgm:get(1):restart(10)
+		pgm:restart(1, 10)
 
 		w = pgm.primaryNode:make_worker("verification")
 
 		db_files_entropy(w, "datadirs/datadir_pr/")
 	end
 
-	pgm:get(1):stop(10)
+	pgm:stop(1, 10)
 end

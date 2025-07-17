@@ -487,6 +487,20 @@ Kills the server without waiting for it to stop.
 pg1:kill9()
 ```
 
+### basebackup
+
+Performs a base backup of the database to the specified directory.
+
+The first parameter is an array of strings that gets added to the PostgreSQL `pg_basebackup` command. The `-h`, `-p` options are automatically added based on the server configuration.
+
+```lua
+-- Basic backup
+pg1:basebackup({"-D", "backup_dir", "-U", "stormweaver", "-c", "fast"})
+
+-- Incremental backup
+pg1:basebackup({"-D", "backup_dir", "-U", "stormweaver", "-c", "fast", "-i", "prev_backup/backup_manifest"})
+```
+
 ### createdb
 
 Creates a database with the specified name.
@@ -529,6 +543,14 @@ Returns the port the server is using
 
 ```lua
 p = pg1:serverPort()
+```
+
+### dataDir
+
+Returns the data directory path as a string
+
+```lua
+path = pg1:dataDir()
 ```
 
 ### is_ready
@@ -634,6 +656,102 @@ end
 ```
 
 Receives a string message from the main thread if one is available, otherwise returns nil.
+
+## BackgroundProcess
+
+A class for managing external processes in the background.
+
+### start
+
+Starts a new background process with the specified command and arguments.
+
+```lua
+-- Static method to start a new process
+local proc = BackgroundProcess.start("logname", "/usr/bin/command", "arg1", "arg2")
+```
+
+**Parameters:**
+- `logname` (string): Name for the log file (logs will be written to `logs/{logname}.log`)
+- `command` (string): Full path to the executable to run
+- `...` (variadic): Command line arguments to pass to the process
+
+**Returns:**
+- A BackgroundProcess object that can be used to control the process
+
+### waitUntilExits
+
+Waits for the process to complete and returns the exit status.
+
+```lua
+local success = proc:waitUntilExits()
+if success then
+  info("Process completed successfully")
+else
+  warning("Process failed")
+end
+```
+
+**Returns:**
+- `true` if the process exited with status 0, `false` otherwise
+
+### kill
+
+Sends a signal to the process to terminate it.
+
+```lua
+proc:kill(9)  -- Send SIGKILL
+```
+
+**Parameters:**
+- `signal` (number): The signal number to send (e.g., 9 for SIGKILL, 15 for SIGTERM)
+
+### running
+
+Checks if the process is currently running.
+
+```lua
+if proc:running() then
+  info("Process is still running")
+else
+  info("Process has finished")
+end
+```
+
+**Returns:**
+- `true` if the process is running, `false` if it has finished
+
+### Example: Running External Commands
+
+```lua
+function run_pg_dump()
+  local proc = BackgroundProcess.start("pg_dump", "/usr/bin/pg_dump", "-h", "localhost", "-p", "5432", "mydb")
+  
+  if proc:waitUntilExits() then
+    info("Database dump completed successfully")
+  else
+    warning("Database dump failed")
+  end
+end
+
+function run_with_timeout()
+  local proc = BackgroundProcess.start("long_task", "/usr/bin/sleep", "30")
+  
+  -- Wait for 10 seconds
+  local start_time = os.time()
+  while proc:running() and (os.time() - start_time) < 10 do
+    sleep(1000)  -- Check every second
+  end
+  
+  if proc:running() then
+    warning("Process taking too long, killing it")
+    proc:kill(15)  -- Send SIGTERM
+    sleep(2000)    -- Give it time to clean up
+    if proc:running() then
+      proc:kill(9)  -- Force kill if still running
+    end
+  end
+end
+```
 
 ## RandomWorker
 

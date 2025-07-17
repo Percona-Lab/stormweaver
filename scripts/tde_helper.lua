@@ -12,6 +12,7 @@ function init_pg_tde_globally(sqlconn)
 	sqlconn:execute_query("SELECT pg_tde_add_global_key_provider_file('reg_file', '/tmp/pg_tde_test_keyring.per');")
 	sqlconn:execute_query("SELECT pg_tde_create_key_using_global_key_provider('server-principal-key', 'reg_file');")
 	sqlconn:execute_query("SELECT pg_tde_set_key_using_global_key_provider('server-principal-key', 'reg_file');")
+	sqlconn:execute_query("SELECT pg_tde_set_server_key_using_global_key_provider('server-principal-key', 'reg_file');")
 	sqlconn:execute_query("SELECT pg_tde_set_default_key_using_global_key_provider('def-principal-key', 'reg_file');")
-	--sqlconn:execute_query("ALTER SYSTEM SET pg_Tde.wal_encrypt = ON;")
+	sqlconn:execute_query("ALTER SYSTEM SET pg_Tde.wal_encrypt = ON;")
 end

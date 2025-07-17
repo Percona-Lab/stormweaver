@@ -18,10 +18,10 @@ public:
   using args_t = std::vector<std::string>;
 
   Postgres(bool initDatadir, std::string const &logname,
-           std::string const &installDir, std::string const &dataDir);
+           std::string const &installDir, std::string const &datadir);
 
   Postgres(std::string const &logname, std::string const &installDir,
-           std::string const &dataDir, sql_variant::ServerParams const &from,
+           std::string const &datadir, sql_variant::ServerParams const &from,
            args_t additionalParams);
 
   ~Postgres();
@@ -42,6 +42,8 @@ public:
 
   void kill9();
 
+  bool basebackup(args_t args);
+
   bool createdb(std::string const &name);
 
   bool createuser(std::string const &name, args_t args);
@@ -56,9 +58,11 @@ public:
 
   std::string serverPort() const;
 
+  std::filesystem::path dataDir() const;
+
 private:
   std::filesystem::path installDir;
-  std::filesystem::path dataDir;
+  std::filesystem::path dataDir_;
   std::string port;
 
   std::shared_ptr<spdlog::logger> logger;

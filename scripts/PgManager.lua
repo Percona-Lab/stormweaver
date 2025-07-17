@@ -14,10 +14,33 @@ function module.new(pgconfig)
 	return o
 end
 
-function module:start(index)
-	if not self.servers[index]:start() then
+function module:start(index, ...)
+	local t = { ... }
+	if not self.servers[index]:start(table.unpack(t)) then
 		error("Node couldn't start")
 	end
+end
+
+function module:basebackup(index, ...)
+	local t = { ... }
+	if not self.servers[index]:basebackup(t) then
+		error("Backup failed")
+	end
+end
+
+function module:stop(index, ...)
+	local t = { ... }
+	self.servers[index]:stop(table.unpack(t))
+end
+
+function module:restart(index, ...)
+	local t = { ... }
+	self:stop(index, table.unpack(t))
+	self:start(index)
+end
+
+function module:kill9(index)
+	self.servers[index]:kill9()
 end
 
 function module:createdb(...)
@@ -30,8 +53,19 @@ function module:createuser(...)
 	return self.servers[1]:createuser(table.unpack(t))
 end
 
+function module:combinebackup(...)
+	local t = { ... }
+	local installdir = pgconfig:pgroot()
+	bp = BackgroundProcess.start("pg_combinebackup", installdir .. "/bin/pg_combinebackup", table.unpack(t))
+	return bp:waitUntilExits()
+end
+
 function module:get(index)
 	return self.servers[index]
+end
+
+function module:getDatadir(index)
+	return self.servers[index]:dataDir()
 end
 
 function module:connect(index, user, db, conn_callback)
