@@ -56,7 +56,13 @@ function simple_pg_single(argv, test)
 	pgconfig = PgConf.new(conffile["default"])
 	pgm = PgManager.new(pgconfig)
 
-	additional_settings = { shared_preload_libraries = "", summarize_wal = "on" }
+	additional_settings = {
+		shared_preload_libraries = "",
+		summarize_wal = "on",
+		archive_mode = "on",
+		archive_command = "'cp %p " .. fs.absolute("archive/%f'"),
+		max_wal_senders = "3",
+	}
 
 	if args["tde"] ~= "off" then
 		info("Running tests with pg_tde = " .. args["tde"])
