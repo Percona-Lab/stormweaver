@@ -1,0 +1,1213 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../scripting-examples/">
+      
+      
+        <link rel="next" href="../lua-cpp-reference/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.17">
+    
+    
+      
+        <title>Config parameters - StormWeaver Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.bcfcd587.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#configuration-parameters" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="StormWeaver Documentation" class="md-header__button md-logo" aria-label="StormWeaver Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            StormWeaver Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Config parameters
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="StormWeaver Documentation" class="md-nav__button md-logo" aria-label="StormWeaver Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    StormWeaver Documentation
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../building/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Building from source
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-architecture/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Scripting architecture
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../randomized-testing-concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Randomized testing concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-examples/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Scripting examples
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Config parameters
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Config parameters
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#toml-configuration-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      TOML Configuration File
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="TOML Configuration File">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#default-configuration-section" class="md-nav__link">
+    <span class="md-ellipsis">
+      Default Configuration Section
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration-parameters_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration Parameters
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pgroot" class="md-nav__link">
+    <span class="md-ellipsis">
+      pgroot
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#datadir_root" class="md-nav__link">
+    <span class="md-ellipsis">
+      datadir_root
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#port_start" class="md-nav__link">
+    <span class="md-ellipsis">
+      port_start
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#port_end" class="md-nav__link">
+    <span class="md-ellipsis">
+      port_end
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#command-line-arguments" class="md-nav__link">
+    <span class="md-ellipsis">
+      Command-Line Arguments
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Command-Line Arguments">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#required-arguments" class="md-nav__link">
+    <span class="md-ellipsis">
+      Required Arguments
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Required Arguments">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      scenario
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optional-arguments" class="md-nav__link">
+    <span class="md-ellipsis">
+      Optional Arguments
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Optional Arguments">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-c-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      -c, --config
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-i-install_dir" class="md-nav__link">
+    <span class="md-ellipsis">
+      -i, --install_dir
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-include" class="md-nav__link">
+    <span class="md-ellipsis">
+      --include
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Usage
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Environment Variables
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Environment Variables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pgroot_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      PGROOT
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generic-environment-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      Generic Environment Access
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build-time-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Build-Time Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Build-Time Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cmake-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      CMake Variables
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CMake Variables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sanitizer-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Sanitizer Options
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Test Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#compiler-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Compiler Options
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#conan-build-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Conan Build Options
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-postgresql-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      Default PostgreSQL Settings
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lua-package-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      Lua Package Path
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lua-cpp-reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Lua C++ API reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../extensibility-workflow/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Extensibility workflow
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../code-architecture/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Code architecture
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#toml-configuration-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      TOML Configuration File
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="TOML Configuration File">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#default-configuration-section" class="md-nav__link">
+    <span class="md-ellipsis">
+      Default Configuration Section
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration-parameters_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration Parameters
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pgroot" class="md-nav__link">
+    <span class="md-ellipsis">
+      pgroot
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#datadir_root" class="md-nav__link">
+    <span class="md-ellipsis">
+      datadir_root
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#port_start" class="md-nav__link">
+    <span class="md-ellipsis">
+      port_start
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#port_end" class="md-nav__link">
+    <span class="md-ellipsis">
+      port_end
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#command-line-arguments" class="md-nav__link">
+    <span class="md-ellipsis">
+      Command-Line Arguments
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Command-Line Arguments">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#required-arguments" class="md-nav__link">
+    <span class="md-ellipsis">
+      Required Arguments
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Required Arguments">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      scenario
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optional-arguments" class="md-nav__link">
+    <span class="md-ellipsis">
+      Optional Arguments
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Optional Arguments">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-c-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      -c, --config
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-i-install_dir" class="md-nav__link">
+    <span class="md-ellipsis">
+      -i, --install_dir
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-include" class="md-nav__link">
+    <span class="md-ellipsis">
+      --include
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Usage
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Environment Variables
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Environment Variables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pgroot_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      PGROOT
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generic-environment-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      Generic Environment Access
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build-time-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Build-Time Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Build-Time Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cmake-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      CMake Variables
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CMake Variables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sanitizer-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Sanitizer Options
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Test Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#compiler-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Compiler Options
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#conan-build-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Conan Build Options
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-postgresql-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      Default PostgreSQL Settings
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lua-package-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      Lua Package Path
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+<h1 id="configuration-parameters">Configuration Parameters</h1>
+<p>StormWeaver supports configuration through multiple layers with a clear precedence order: Environment Variables &gt; Command Line Arguments &gt; TOML Configuration File &gt; Hardcoded Defaults.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Configuration parameters are parsed by Lua scenario scripts.
+The C++ runner only passes the command-line parameters to the scenario, and provides an API for accessing all configuration options.</p>
+<p>Custom (external) scenario files might work differently.</p>
+</div>
+<h2 id="toml-configuration-file">TOML Configuration File</h2>
+<p>The main configuration is stored in <code>config/stormweaver.toml</code>. You can specify a different config file using the <code>-c/--config</code> command-line option.</p>
+<h3 id="default-configuration-section">Default Configuration Section</h3>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">[default]</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">pgroot</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="w">             </span><span class="c1"># PostgreSQL installation directory path</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">datadir_root</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;datadirs&quot;</span><span class="w">   </span><span class="c1"># Root directory for PostgreSQL data directories</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">port_start</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">15432</span><span class="w">      </span><span class="c1"># Starting port number for PostgreSQL instances</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">port_end</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">15531</span><span class="w">        </span><span class="c1"># Ending port number for PostgreSQL instances</span>
+</span></code></pre></div>
+<h3 id="configuration-parameters_1">Configuration Parameters</h3>
+<h4 id="pgroot">pgroot</h4>
+<ul>
+<li><strong>Type</strong>: String</li>
+<li><strong>Default</strong>: <code>""</code> (empty string)</li>
+<li><strong>Purpose</strong>: Path to the PostgreSQL installation directory</li>
+<li><strong>Override</strong>: Can be overridden by <code>--install_dir</code> command-line option or <code>PGROOT</code> environment variable</li>
+<li><strong>Example</strong>: <code>pgroot = "/usr/lib/postgresql/16"</code></li>
+</ul>
+<h4 id="datadir_root">datadir_root</h4>
+<ul>
+<li><strong>Type</strong>: String  </li>
+<li><strong>Default</strong>: <code>"datadirs"</code></li>
+<li><strong>Purpose</strong>: Root directory where PostgreSQL data directories will be created</li>
+<li><strong>Example</strong>: <code>datadir_root = "/tmp/stormweaver_data"</code></li>
+</ul>
+<h4 id="port_start">port_start</h4>
+<ul>
+<li><strong>Type</strong>: Integer</li>
+<li><strong>Default</strong>: <code>15432</code></li>
+<li><strong>Purpose</strong>: Starting port number for PostgreSQL instances (avoids conflicts with system PostgreSQL)</li>
+<li><strong>Example</strong>: <code>port_start = 20000</code></li>
+</ul>
+<h4 id="port_end">port_end</h4>
+<ul>
+<li><strong>Type</strong>: Integer</li>
+<li><strong>Default</strong>: <code>15531</code></li>
+<li><strong>Purpose</strong>: Ending port number for PostgreSQL instances (defines available port range)</li>
+<li><strong>Example</strong>: <code>port_end = 20099</code></li>
+</ul>
+<h2 id="command-line-arguments">Command-Line Arguments</h2>
+<p>StormWeaver accepts the following command-line arguments:</p>
+<h3 id="required-arguments">Required Arguments</h3>
+<h4 id="scenario">scenario</h4>
+<p><div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>stormweaver<span class="w"> </span>scenarios/basic.lua
+</span></code></pre></div>
+- <strong>Purpose</strong>: Path to the Lua scenario file to execute
+- <strong>Type</strong>: Positional argument (first argument)</p>
+<h3 id="optional-arguments">Optional Arguments</h3>
+<h4 id="-c-config">-c, --config</h4>
+<p><div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>stormweaver<span class="w"> </span>-c<span class="w"> </span>/path/to/config.toml<span class="w"> </span>scenarios/basic.lua
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>stormweaver<span class="w"> </span>--config<span class="w"> </span>custom-config.toml<span class="w"> </span>scenarios/basic.lua
+</span></code></pre></div>
+- <strong>Purpose</strong>: Specify configuration file path
+- <strong>Default</strong>: <code>"config/stormweaver.toml"</code>
+- <strong>Type</strong>: String</p>
+<h4 id="-i-install_dir">-i, --install_dir</h4>
+<p><div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>stormweaver<span class="w"> </span>-i<span class="w"> </span>/usr/lib/postgresql/16<span class="w"> </span>scenarios/basic.lua
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>stormweaver<span class="w"> </span>--install_dir<span class="w"> </span>/opt/postgres<span class="w"> </span>scenarios/basic.lua
+</span></code></pre></div>
+- <strong>Purpose</strong>: PostgreSQL installation directory (overrides config file and environment variable)
+- <strong>Default</strong>: <code>""</code> (uses config file value)
+- <strong>Type</strong>: String</p>
+<h4 id="-include">--include</h4>
+<p><div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>stormweaver<span class="w"> </span>--include<span class="w"> </span>/path/to/scripts<span class="w"> </span>--include<span class="w"> </span>/another/path<span class="w"> </span>scenarios/basic.lua
+</span></code></pre></div>
+- <strong>Purpose</strong>: Add directories to Lua package search path
+- <strong>Default</strong>: <code>""</code> (empty)
+- <strong>Type</strong>: String (can be specified multiple times)</p>
+<h3 id="example-usage">Example Usage</h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Basic usage</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>stormweaver<span class="w"> </span>scenarios/basic.lua
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># With custom config and PostgreSQL installation</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>stormweaver<span class="w"> </span>-c<span class="w"> </span>myconfig.toml<span class="w"> </span>-i<span class="w"> </span>/usr/lib/postgresql/16<span class="w"> </span>scenarios/basic.lua
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># With additional Lua script directories</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>stormweaver<span class="w"> </span>--include<span class="w"> </span>/my/scripts<span class="w"> </span>scenarios/basic.lua
+</span></code></pre></div>
+<h2 id="environment-variables">Environment Variables</h2>
+<h3 id="pgroot_1">PGROOT</h3>
+<p><div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">PGROOT</span><span class="o">=</span><span class="s2">&quot;/usr/lib/postgresql/16&quot;</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>stormweaver<span class="w"> </span>scenarios/basic.lua
+</span></code></pre></div>
+- <strong>Purpose</strong>: Override PostgreSQL installation directory
+- <strong>Precedence</strong>: Takes precedence over TOML config but not command-line <code>--install_dir</code>
+- <strong>Type</strong>: String</p>
+<h3 id="generic-environment-access">Generic Environment Access</h3>
+<p>Lua scripts can access any environment variable using the <code>getenv()</code> function:
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kd">local</span> <span class="n">value</span> <span class="o">=</span> <span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;MY_VARIABLE&quot;</span><span class="p">,</span> <span class="s2">&quot;default_value&quot;</span><span class="p">)</span>
+</span></code></pre></div></p>
+<h2 id="build-time-configuration">Build-Time Configuration</h2>
+<h3 id="cmake-variables">CMake Variables</h3>
+<h4 id="sanitizer-options">Sanitizer Options</h4>
+<p><div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>cmake<span class="w"> </span>-DWITH_ASAN<span class="o">=</span>ON<span class="w"> </span>-DWITH_UBSAN<span class="o">=</span>ON<span class="w"> </span>..
+</span></code></pre></div>
+- <strong>WITH_ASAN</strong>: Enable Address Sanitizer (default: OFF)
+- <strong>WITH_UBSAN</strong>: Enable Undefined Behavior Sanitizer (default: OFF)
+- <strong>WITH_TSAN</strong>: Enable Thread Sanitizer (default: OFF)
+- <strong>WITH_MSAN</strong>: Enable Memory Sanitizer (default: OFF)</p>
+<h4 id="test-configuration">Test Configuration</h4>
+<p><div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>cmake<span class="w"> </span>-DTEST_PG_DIR<span class="o">=</span>/usr/lib/postgresql/16<span class="w"> </span>..
+</span></code></pre></div>
+- <strong>TEST_PG_DIR</strong>: PostgreSQL installation directory for testing
+- <strong>Default</strong>: Auto-detected from common locations or empty
+- <strong>Purpose</strong>: Required for SQL integration tests</p>
+<h4 id="compiler-options">Compiler Options</h4>
+<p><div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>cmake<span class="w"> </span>-DSTRICT_FLAGS<span class="o">=</span>OFF<span class="w"> </span>-DSTRICT_CPU<span class="o">=</span>ON<span class="w"> </span>..
+</span></code></pre></div>
+- <strong>STRICT_FLAGS</strong>: Enable strict compiler warnings (default: ON)
+- <strong>STRICT_CPU</strong>: Optimize for current CPU architecture (default: OFF)</p>
+<h3 id="conan-build-options">Conan Build Options</h3>
+<p><div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>conan<span class="w"> </span>build<span class="w"> </span>.<span class="w"> </span>-o<span class="w"> </span><span class="s1">&#39;&amp;:asan=True&#39;</span><span class="w"> </span>-o<span class="w"> </span><span class="s1">&#39;&amp;:ubsan=True&#39;</span>
+</span></code></pre></div>
+- <strong>asan</strong>: Address sanitizer (default: False)
+- <strong>ubsan</strong>: Undefined behavior sanitizer (default: False)
+- <strong>tsan</strong>: Thread sanitizer (default: False)
+- <strong>msan</strong>: Memory sanitizer (default: False)</p>
+<h2 id="default-postgresql-settings">Default PostgreSQL Settings</h2>
+<p>When StormWeaver creates PostgreSQL instances, it applies these default settings:</p>
+<div class="language-ini highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="na">listen_addresses</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&#39;*&#39;</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="na">logging_collector</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">on</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="na">log_statement</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">ALL</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="na">log_directory</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&#39;logs&#39;</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="na">log_filename</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&#39;server.log&#39;</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="na">log_min_messages</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">info</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="na">unix_socket_directories</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">sock</span>
+</span></code></pre></div>
+<p>These can be modified in scenarios using the <code>add_config()</code> method:</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">pg</span><span class="p">:</span><span class="n">add_config</span><span class="p">({</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>  <span class="n">max_connections</span> <span class="o">=</span> <span class="s2">&quot;200&quot;</span><span class="p">,</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>  <span class="n">shared_buffers</span> <span class="o">=</span> <span class="s2">&quot;256MB&quot;</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="p">})</span>
+</span></code></pre></div>
+<h2 id="lua-package-path">Lua Package Path</h2>
+<p>StormWeaver automatically extends the Lua package path with:
+- <code>scripts/</code> - Helper functions and utilities
+- <code>scripts_3p/</code> - Third-party Lua modules
+- Current working directory
+- Any directories specified via <code>--include</code></p>
+<p>This allows scenarios to use <code>require()</code> to load modules from these locations.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.1e8ae164.min.js"></script>
+      
+    
+  </body>
+</html>

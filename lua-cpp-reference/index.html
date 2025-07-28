@@ -1,0 +1,3071 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../config-parameters/">
+      
+      
+        <link rel="next" href="../extensibility-workflow/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.17">
+    
+    
+      
+        <title>Lua C++ API reference - StormWeaver Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.bcfcd587.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#lua-c-api-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="StormWeaver Documentation" class="md-header__button md-logo" aria-label="StormWeaver Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            StormWeaver Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Lua C++ API reference
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="StormWeaver Documentation" class="md-nav__button md-logo" aria-label="StormWeaver Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    StormWeaver Documentation
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../building/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Building from source
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-architecture/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Scripting architecture
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../randomized-testing-concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Randomized testing concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-examples/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Scripting examples
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../config-parameters/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Config parameters
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Lua C++ API reference
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Lua C++ API reference
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#global-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Global functions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Global functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sleep" class="md-nav__link">
+    <span class="md-ellipsis">
+      sleep
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#defaultactionregistry" class="md-nav__link">
+    <span class="md-ellipsis">
+      defaultActionRegistry
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#initpostgresdatadir" class="md-nav__link">
+    <span class="md-ellipsis">
+      initPostgresDatadir
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#initbasebackupfrom" class="md-nav__link">
+    <span class="md-ellipsis">
+      initBasebackupFrom
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#debug" class="md-nav__link">
+    <span class="md-ellipsis">
+      debug
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#info" class="md-nav__link">
+    <span class="md-ellipsis">
+      info
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#warning" class="md-nav__link">
+    <span class="md-ellipsis">
+      warning
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#getenv" class="md-nav__link">
+    <span class="md-ellipsis">
+      getenv
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#setup_node_pg" class="md-nav__link">
+    <span class="md-ellipsis">
+      setup_node_pg
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#actionfactory" class="md-nav__link">
+    <span class="md-ellipsis">
+      ActionFactory
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ActionFactory">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#weight" class="md-nav__link">
+    <span class="md-ellipsis">
+      weight
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#actionregistry" class="md-nav__link">
+    <span class="md-ellipsis">
+      ActionRegistry
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ActionRegistry">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#remove" class="md-nav__link">
+    <span class="md-ellipsis">
+      remove
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#insert" class="md-nav__link">
+    <span class="md-ellipsis">
+      insert
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#has" class="md-nav__link">
+    <span class="md-ellipsis">
+      has
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#makecustomsqlaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      makeCustomSqlAction
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#makecustomtablesqlaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      makeCustomTableSqlAction
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get" class="md-nav__link">
+    <span class="md-ellipsis">
+      get
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#use" class="md-nav__link">
+    <span class="md-ellipsis">
+      use
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Default Actions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Default Actions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#table-management-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Table Management Actions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#index-management-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Index Management Actions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#partition-management-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Partition Management Actions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-manipulation-action" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Manipulation Action
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-customizing-default-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example: Customizing Default Actions
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fs" class="md-nav__link">
+    <span class="md-ellipsis">
+      fs
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="fs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#is_directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      is_directory
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#copy_directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      copy_directory
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create_directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      create_directory
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#delete_directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      delete_directory
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#loggedsql" class="md-nav__link">
+    <span class="md-ellipsis">
+      LoggedSQL
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LoggedSQL">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#execute_query" class="md-nav__link">
+    <span class="md-ellipsis">
+      execute_query
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#queryresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      QueryResult
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="QueryResult">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#success" class="md-nav__link">
+    <span class="md-ellipsis">
+      success
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query" class="md-nav__link">
+    <span class="md-ellipsis">
+      query
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data" class="md-nav__link">
+    <span class="md-ellipsis">
+      data
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#queryspecificresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      QuerySpecificResult
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="QuerySpecificResult">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#numrows" class="md-nav__link">
+    <span class="md-ellipsis">
+      numRows
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#numfields" class="md-nav__link">
+    <span class="md-ellipsis">
+      numFields
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nextrow" class="md-nav__link">
+    <span class="md-ellipsis">
+      nextRow
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rowview" class="md-nav__link">
+    <span class="md-ellipsis">
+      RowView
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RowView">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#field" class="md-nav__link">
+    <span class="md-ellipsis">
+      field
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#numfields_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      numFields
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-processing-query-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example: Processing Query Results
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#node" class="md-nav__link">
+    <span class="md-ellipsis">
+      Node
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Node">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#init" class="md-nav__link">
+    <span class="md-ellipsis">
+      init
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#initrandomworkload" class="md-nav__link">
+    <span class="md-ellipsis">
+      initRandomWorkload
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#possibleactions" class="md-nav__link">
+    <span class="md-ellipsis">
+      possibleActions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#make_worker" class="md-nav__link">
+    <span class="md-ellipsis">
+      make_worker
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workloadparams" class="md-nav__link">
+    <span class="md-ellipsis">
+      WorkloadParams
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="WorkloadParams">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#constructor" class="md-nav__link">
+    <span class="md-ellipsis">
+      Constructor
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      Properties
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#postgres" class="md-nav__link">
+    <span class="md-ellipsis">
+      Postgres
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Postgres">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#start" class="md-nav__link">
+    <span class="md-ellipsis">
+      start
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stop" class="md-nav__link">
+    <span class="md-ellipsis">
+      stop
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#restart" class="md-nav__link">
+    <span class="md-ellipsis">
+      restart
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kill9" class="md-nav__link">
+    <span class="md-ellipsis">
+      kill9
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#basebackup" class="md-nav__link">
+    <span class="md-ellipsis">
+      basebackup
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#createdb" class="md-nav__link">
+    <span class="md-ellipsis">
+      createdb
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dropdb" class="md-nav__link">
+    <span class="md-ellipsis">
+      dropdb
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#createuser" class="md-nav__link">
+    <span class="md-ellipsis">
+      createuser
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#is_running" class="md-nav__link">
+    <span class="md-ellipsis">
+      is_running
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#serverport" class="md-nav__link">
+    <span class="md-ellipsis">
+      serverPort
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#datadir" class="md-nav__link">
+    <span class="md-ellipsis">
+      dataDir
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#is_ready" class="md-nav__link">
+    <span class="md-ellipsis">
+      is_ready
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wait_ready" class="md-nav__link">
+    <span class="md-ellipsis">
+      wait_ready
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#add_config" class="md-nav__link">
+    <span class="md-ellipsis">
+      add_config
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#add_hba" class="md-nav__link">
+    <span class="md-ellipsis">
+      add_hba
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backgroundthread" class="md-nav__link">
+    <span class="md-ellipsis">
+      BackgroundThread
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="BackgroundThread">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#run" class="md-nav__link">
+    <span class="md-ellipsis">
+      run
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#join" class="md-nav__link">
+    <span class="md-ellipsis">
+      join
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#send" class="md-nav__link">
+    <span class="md-ellipsis">
+      send
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#receive" class="md-nav__link">
+    <span class="md-ellipsis">
+      receive
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#receiveifany" class="md-nav__link">
+    <span class="md-ellipsis">
+      receiveIfAny
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#commqueue" class="md-nav__link">
+    <span class="md-ellipsis">
+      CommQueue
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CommQueue">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#send_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      send
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#receive_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      receive
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#receiveifany_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      receiveIfAny
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backgroundprocess" class="md-nav__link">
+    <span class="md-ellipsis">
+      BackgroundProcess
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="BackgroundProcess">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#start_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      start
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#waituntilexits" class="md-nav__link">
+    <span class="md-ellipsis">
+      waitUntilExits
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kill" class="md-nav__link">
+    <span class="md-ellipsis">
+      kill
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running" class="md-nav__link">
+    <span class="md-ellipsis">
+      running
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-running-external-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example: Running External Commands
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#randomworker" class="md-nav__link">
+    <span class="md-ellipsis">
+      RandomWorker
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RandomWorker">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#possibleactions_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      possibleActions
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#worker" class="md-nav__link">
+    <span class="md-ellipsis">
+      Worker
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Worker">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#create_random_tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      create_random_tables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#discover_existing_schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      discover_existing_schema
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reset_metadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      reset_metadata
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validate_metadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      validate_metadata
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sql_connection" class="md-nav__link">
+    <span class="md-ellipsis">
+      sql_connection
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#calculate_database_checksums" class="md-nav__link">
+    <span class="md-ellipsis">
+      calculate_database_checksums
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workload" class="md-nav__link">
+    <span class="md-ellipsis">
+      Workload
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Workload">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#run_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      run
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wait_completion" class="md-nav__link">
+    <span class="md-ellipsis">
+      wait_completion
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#worker_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      worker
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#worker_count" class="md-nav__link">
+    <span class="md-ellipsis">
+      worker_count
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reconnect_workers" class="md-nav__link">
+    <span class="md-ellipsis">
+      reconnect_workers
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../extensibility-workflow/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Extensibility workflow
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../code-architecture/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Code architecture
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#global-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Global functions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Global functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sleep" class="md-nav__link">
+    <span class="md-ellipsis">
+      sleep
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#defaultactionregistry" class="md-nav__link">
+    <span class="md-ellipsis">
+      defaultActionRegistry
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#initpostgresdatadir" class="md-nav__link">
+    <span class="md-ellipsis">
+      initPostgresDatadir
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#initbasebackupfrom" class="md-nav__link">
+    <span class="md-ellipsis">
+      initBasebackupFrom
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#debug" class="md-nav__link">
+    <span class="md-ellipsis">
+      debug
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#info" class="md-nav__link">
+    <span class="md-ellipsis">
+      info
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#warning" class="md-nav__link">
+    <span class="md-ellipsis">
+      warning
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#getenv" class="md-nav__link">
+    <span class="md-ellipsis">
+      getenv
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#setup_node_pg" class="md-nav__link">
+    <span class="md-ellipsis">
+      setup_node_pg
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#actionfactory" class="md-nav__link">
+    <span class="md-ellipsis">
+      ActionFactory
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ActionFactory">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#weight" class="md-nav__link">
+    <span class="md-ellipsis">
+      weight
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#actionregistry" class="md-nav__link">
+    <span class="md-ellipsis">
+      ActionRegistry
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ActionRegistry">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#remove" class="md-nav__link">
+    <span class="md-ellipsis">
+      remove
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#insert" class="md-nav__link">
+    <span class="md-ellipsis">
+      insert
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#has" class="md-nav__link">
+    <span class="md-ellipsis">
+      has
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#makecustomsqlaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      makeCustomSqlAction
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#makecustomtablesqlaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      makeCustomTableSqlAction
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get" class="md-nav__link">
+    <span class="md-ellipsis">
+      get
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#use" class="md-nav__link">
+    <span class="md-ellipsis">
+      use
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Default Actions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Default Actions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#table-management-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Table Management Actions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#index-management-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Index Management Actions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#partition-management-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Partition Management Actions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-manipulation-action" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Manipulation Action
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-customizing-default-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example: Customizing Default Actions
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fs" class="md-nav__link">
+    <span class="md-ellipsis">
+      fs
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="fs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#is_directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      is_directory
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#copy_directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      copy_directory
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create_directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      create_directory
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#delete_directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      delete_directory
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#loggedsql" class="md-nav__link">
+    <span class="md-ellipsis">
+      LoggedSQL
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LoggedSQL">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#execute_query" class="md-nav__link">
+    <span class="md-ellipsis">
+      execute_query
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#queryresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      QueryResult
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="QueryResult">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#success" class="md-nav__link">
+    <span class="md-ellipsis">
+      success
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query" class="md-nav__link">
+    <span class="md-ellipsis">
+      query
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data" class="md-nav__link">
+    <span class="md-ellipsis">
+      data
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#queryspecificresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      QuerySpecificResult
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="QuerySpecificResult">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#numrows" class="md-nav__link">
+    <span class="md-ellipsis">
+      numRows
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#numfields" class="md-nav__link">
+    <span class="md-ellipsis">
+      numFields
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nextrow" class="md-nav__link">
+    <span class="md-ellipsis">
+      nextRow
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rowview" class="md-nav__link">
+    <span class="md-ellipsis">
+      RowView
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RowView">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#field" class="md-nav__link">
+    <span class="md-ellipsis">
+      field
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#numfields_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      numFields
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-processing-query-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example: Processing Query Results
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#node" class="md-nav__link">
+    <span class="md-ellipsis">
+      Node
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Node">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#init" class="md-nav__link">
+    <span class="md-ellipsis">
+      init
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#initrandomworkload" class="md-nav__link">
+    <span class="md-ellipsis">
+      initRandomWorkload
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#possibleactions" class="md-nav__link">
+    <span class="md-ellipsis">
+      possibleActions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#make_worker" class="md-nav__link">
+    <span class="md-ellipsis">
+      make_worker
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workloadparams" class="md-nav__link">
+    <span class="md-ellipsis">
+      WorkloadParams
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="WorkloadParams">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#constructor" class="md-nav__link">
+    <span class="md-ellipsis">
+      Constructor
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      Properties
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#postgres" class="md-nav__link">
+    <span class="md-ellipsis">
+      Postgres
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Postgres">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#start" class="md-nav__link">
+    <span class="md-ellipsis">
+      start
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stop" class="md-nav__link">
+    <span class="md-ellipsis">
+      stop
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#restart" class="md-nav__link">
+    <span class="md-ellipsis">
+      restart
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kill9" class="md-nav__link">
+    <span class="md-ellipsis">
+      kill9
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#basebackup" class="md-nav__link">
+    <span class="md-ellipsis">
+      basebackup
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#createdb" class="md-nav__link">
+    <span class="md-ellipsis">
+      createdb
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dropdb" class="md-nav__link">
+    <span class="md-ellipsis">
+      dropdb
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#createuser" class="md-nav__link">
+    <span class="md-ellipsis">
+      createuser
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#is_running" class="md-nav__link">
+    <span class="md-ellipsis">
+      is_running
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#serverport" class="md-nav__link">
+    <span class="md-ellipsis">
+      serverPort
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#datadir" class="md-nav__link">
+    <span class="md-ellipsis">
+      dataDir
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#is_ready" class="md-nav__link">
+    <span class="md-ellipsis">
+      is_ready
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wait_ready" class="md-nav__link">
+    <span class="md-ellipsis">
+      wait_ready
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#add_config" class="md-nav__link">
+    <span class="md-ellipsis">
+      add_config
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#add_hba" class="md-nav__link">
+    <span class="md-ellipsis">
+      add_hba
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backgroundthread" class="md-nav__link">
+    <span class="md-ellipsis">
+      BackgroundThread
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="BackgroundThread">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#run" class="md-nav__link">
+    <span class="md-ellipsis">
+      run
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#join" class="md-nav__link">
+    <span class="md-ellipsis">
+      join
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#send" class="md-nav__link">
+    <span class="md-ellipsis">
+      send
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#receive" class="md-nav__link">
+    <span class="md-ellipsis">
+      receive
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#receiveifany" class="md-nav__link">
+    <span class="md-ellipsis">
+      receiveIfAny
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#commqueue" class="md-nav__link">
+    <span class="md-ellipsis">
+      CommQueue
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CommQueue">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#send_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      send
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#receive_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      receive
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#receiveifany_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      receiveIfAny
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backgroundprocess" class="md-nav__link">
+    <span class="md-ellipsis">
+      BackgroundProcess
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="BackgroundProcess">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#start_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      start
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#waituntilexits" class="md-nav__link">
+    <span class="md-ellipsis">
+      waitUntilExits
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kill" class="md-nav__link">
+    <span class="md-ellipsis">
+      kill
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running" class="md-nav__link">
+    <span class="md-ellipsis">
+      running
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-running-external-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example: Running External Commands
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#randomworker" class="md-nav__link">
+    <span class="md-ellipsis">
+      RandomWorker
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RandomWorker">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#possibleactions_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      possibleActions
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#worker" class="md-nav__link">
+    <span class="md-ellipsis">
+      Worker
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Worker">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#create_random_tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      create_random_tables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#discover_existing_schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      discover_existing_schema
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reset_metadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      reset_metadata
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validate_metadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      validate_metadata
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sql_connection" class="md-nav__link">
+    <span class="md-ellipsis">
+      sql_connection
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#calculate_database_checksums" class="md-nav__link">
+    <span class="md-ellipsis">
+      calculate_database_checksums
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workload" class="md-nav__link">
+    <span class="md-ellipsis">
+      Workload
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Workload">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#run_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      run
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wait_completion" class="md-nav__link">
+    <span class="md-ellipsis">
+      wait_completion
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#worker_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      worker
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#worker_count" class="md-nav__link">
+    <span class="md-ellipsis">
+      worker_count
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reconnect_workers" class="md-nav__link">
+    <span class="md-ellipsis">
+      reconnect_workers
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+<h1 id="lua-c-api-reference">Lua C++ API Reference</h1>
+<p>This is a reference of the Lua API implemented directly in C++.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Lua bindings are defined in <code>libstormweaver/src/scripting/luactx.cpp</code></p>
+</div>
+<h2 id="global-functions">Global functions</h2>
+<h3 id="sleep">sleep</h3>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">sleep</span><span class="p">(</span><span class="n">milliseconds</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Sleeps for the specified time</p>
+<h3 id="defaultactionregistry">defaultActionRegistry</h3>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">a</span> <span class="o">=</span> <span class="n">defaultActionRegistry</span><span class="p">()</span>
+</span></code></pre></div>
+<p>Returns a modifiable reference to the default action registry</p>
+<h3 id="initpostgresdatadir">initPostgresDatadir</h3>
+<p>Creates a new postgres data directory</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">pg</span> <span class="o">=</span> <span class="n">initPostgresDatadir</span><span class="p">(</span><span class="s1">&#39;pg/install/dir&#39;</span><span class="p">,</span> <span class="s1">&#39;new/data/dir&#39;</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="initbasebackupfrom">initBasebackupFrom</h3>
+<p>Creates a new postgres data directory as a backup of a running postgres instance.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">replica</span> <span class="o">=</span> <span class="n">initBasebackupFrom</span><span class="p">(</span><span class="s1">&#39;pg/install/dir&#39;</span><span class="p">,</span> <span class="s1">&#39;new/data/dir&#39;</span><span class="p">,</span> <span class="n">primaryNode</span><span class="p">)</span> <span class="c1">-- allows any number of additional parameters, added to the basebackup command line</span>
+</span></code></pre></div>
+<h3 id="debug">debug</h3>
+<p>Writes a debug message to the log</p>
+<h3 id="info">info</h3>
+<p>Writes an info message to the log</p>
+<h3 id="warning">warning</h3>
+<p>Writes a warning message to the log</p>
+<h3 id="getenv">getenv</h3>
+<p>Returns the value of an environment variable, or a default.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">e</span> <span class="o">=</span> <span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;NAME&quot;</span><span class="p">,</span> <span class="s2">&quot;default&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="setup_node_pg">setup_node_pg</h3>
+<p>Configures the connection parameters to a PostgreSQL installation.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kr">return</span> <span class="n">setup_node_pg</span><span class="p">({</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>  <span class="n">host</span> <span class="o">=</span> <span class="s2">&quot;localhost&quot;</span><span class="p">,</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>  <span class="n">port</span> <span class="o">=</span> <span class="mi">5432</span><span class="p">,</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>  <span class="n">user</span> <span class="o">=</span> <span class="s2">&quot;username&quot;</span><span class="p">,</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>  <span class="n">password</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>  <span class="n">database</span> <span class="o">=</span> <span class="s2">&quot;stormweaver&quot;</span><span class="p">,</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>  <span class="n">on_connect</span> <span class="o">=</span> <span class="n">conn_callback</span><span class="p">,</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="p">})</span>
+</span></code></pre></div>
+<h2 id="actionfactory">ActionFactory</h2>
+<p>Used to create a specific action, stored in an <code>ActionRegistry</code></p>
+<h3 id="weight">weight</h3>
+<p>A property representing the chance/weight of an action</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">action</span><span class="p">.</span><span class="n">weight</span> <span class="o">=</span> <span class="n">action</span><span class="p">.</span><span class="n">weight</span> <span class="o">+</span> <span class="mi">13</span><span class="p">;</span>
+</span></code></pre></div>
+<h2 id="actionregistry">ActionRegistry</h2>
+<p>Represents a set of actions executed by worker(s).</p>
+<h3 id="remove">remove</h3>
+<p>Removes the action with the name from the registry.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">ar</span><span class="p">:</span><span class="n">remove</span><span class="p">(</span><span class="s2">&quot;alter_table&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="insert">insert</h3>
+<p>Inserts the specified ActionFactory to the registry.
+This function requires a specific Factory, which can be retrieved from another Registry using the <code>get</code> function.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">ar1</span><span class="p">:</span><span class="n">insert</span><span class="p">(</span><span class="n">ar2</span><span class="p">:</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;truncate&quot;</span><span class="p">))</span>
+</span></code></pre></div>
+<h3 id="has">has</h3>
+<p>Tells if the registry has a factory with the specified name.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kr">if</span> <span class="n">ar</span><span class="p">:</span><span class="n">has</span><span class="p">(</span><span class="s2">&quot;alter_table&quot;</span><span class="p">)</span> <span class="kr">then</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>  <span class="c1">--- ...</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="kr">end</span>
+</span></code></pre></div>
+<h3 id="makecustomsqlaction">makeCustomSqlAction</h3>
+<p>Creates a new custom SQL action with a specific query and weight.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">ar</span><span class="p">:</span><span class="n">makeCustomSqlAction</span><span class="p">(</span><span class="s2">&quot;checkpoint&quot;</span><span class="p">,</span> <span class="s2">&quot;CHECKPOINT;&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="makecustomtablesqlaction">makeCustomTableSqlAction</h3>
+<p>Creates a new custom SQL action related to a table, with a specific weight.
+The <code>{table}</code> expression in the SQL command is replaced with a randomly choosen table.
+Can be specified multiple times, and the same table will be used each time.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">ar</span><span class="p">:</span><span class="n">makeCustomTableSqlAction</span><span class="p">(</span><span class="s2">&quot;truncate_table&quot;</span><span class="p">,</span> <span class="s2">&quot;TRUNCATE {table};&quot;</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="get">get</h3>
+<p>Returns a reference to the factory with the specified name.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">ar1</span><span class="p">:</span><span class="n">insert</span><span class="p">(</span><span class="n">ar2</span><span class="p">:</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;truncate&quot;</span><span class="p">))</span>
+</span></code></pre></div>
+<h3 id="use">use</h3>
+<p>Overwrites the contents of the registry using the specified other registry.
+The two registries will be equal after executing this function.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">ar1</span><span class="p">:</span><span class="n">use</span><span class="p">(</span><span class="n">ar2</span><span class="p">)</span>
+</span></code></pre></div>
+<h2 id="default-actions">Default Actions</h2>
+<p>The default action registry includes the following built-in actions available for randomized testing:</p>
+<h3 id="table-management-actions">Table Management Actions</h3>
+<ul>
+<li><code>create_normal_table</code> - Creates a regular table with random columns and with some initial data</li>
+<li><code>create_partitioned_table</code> - Creates a partitioned table with random columns and with some initial data</li>
+<li><code>drop_table</code> - Drops a randomly selected existing table</li>
+<li><code>alter_table</code> - Performs random alterations to a randomly selected existing table</li>
+<li><code>rename_table</code> - Renames a randomly selected table</li>
+</ul>
+<h3 id="index-management-actions">Index Management Actions</h3>
+<ul>
+<li><code>create_index</code> - Creates an index on a randomly selected table</li>
+<li><code>drop_index</code> - Drops a randomly selected existing index</li>
+</ul>
+<h3 id="partition-management-actions">Partition Management Actions</h3>
+<ul>
+<li><code>create_partition</code> - Creates a partition for an existing randomly selected partitioned table</li>
+<li><code>drop_partition</code> - Drops a randomly selected partition</li>
+</ul>
+<h3 id="data-manipulation-action">Data Manipulation Action</h3>
+<ul>
+<li><code>insert_some_data</code> - Inserts random data into a randomly selected existing table (multiple rows)</li>
+<li><code>delete_some_data</code> - Deletes random rows from a randomly selected existing table</li>
+<li><code>update_one_row</code> - Updates a random row in a a randomly selected existing table</li>
+</ul>
+<h3 id="example-customizing-default-actions">Example: Customizing Default Actions</h3>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1">-- This function modifies the actual default ActionRegistry</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="c1">-- Every call after this modification will use the modified default settings</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="kr">function</span> <span class="nf">customize_default_actions</span><span class="p">()</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>  <span class="kd">local</span> <span class="n">registry</span> <span class="o">=</span> <span class="n">defaultActionRegistry</span><span class="p">()</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>  <span class="c1">-- Remove actions we don&#39;t want</span>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>  <span class="n">registry</span><span class="p">:</span><span class="n">remove</span><span class="p">(</span><span class="s2">&quot;drop_table&quot;</span><span class="p">)</span>
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>  <span class="n">registry</span><span class="p">:</span><span class="n">remove</span><span class="p">(</span><span class="s2">&quot;drop_partition&quot;</span><span class="p">)</span>
+</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>
+</span><span id="__span-14-10"><a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a>  <span class="c1">-- Adjust weights for remaining actions</span>
+</span><span id="__span-14-11"><a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>  <span class="n">registry</span><span class="p">:</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;insert_some_data&quot;</span><span class="p">).</span><span class="n">weight</span> <span class="o">=</span> <span class="mi">20</span>  <span class="c1">-- Make inserts more likely</span>
+</span><span id="__span-14-12"><a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a>  <span class="n">registry</span><span class="p">:</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;create_index&quot;</span><span class="p">).</span><span class="n">weight</span> <span class="o">=</span> <span class="mi">5</span>       <span class="c1">-- Make index creation less likely</span>
+</span><span id="__span-14-13"><a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a>
+</span><span id="__span-14-14"><a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a>  <span class="c1">-- Add custom actions</span>
+</span><span id="__span-14-15"><a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a>  <span class="n">registry</span><span class="p">:</span><span class="n">makeCustomSqlAction</span><span class="p">(</span><span class="s2">&quot;vacuum&quot;</span><span class="p">,</span> <span class="s2">&quot;VACUUM;&quot;</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+</span><span id="__span-14-16"><a id="__codelineno-14-16" name="__codelineno-14-16" href="#__codelineno-14-16"></a>  <span class="n">registry</span><span class="p">:</span><span class="n">makeCustomTableSqlAction</span><span class="p">(</span><span class="s2">&quot;analyze_table&quot;</span><span class="p">,</span> <span class="s2">&quot;ANALYZE {table};&quot;</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+</span><span id="__span-14-17"><a id="__codelineno-14-17" name="__codelineno-14-17" href="#__codelineno-14-17"></a><span class="kr">end</span>
+</span></code></pre></div>
+<h2 id="fs">fs</h2>
+<p>A collection of filesystem operations.</p>
+<h3 id="is_directory">is_directory</h3>
+<p>Returns true if a directory with the specified name exists</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kr">if</span> <span class="n">fs</span><span class="p">.</span><span class="n">is_directory</span><span class="p">(</span><span class="s1">&#39;foo/bar&#39;</span><span class="p">)</span> <span class="kr">then</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>  <span class="c1">-- ...</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="kr">end</span>
+</span></code></pre></div>
+<h3 id="copy_directory">copy_directory</h3>
+<p>Copies the directory recursively</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="n">fs</span><span class="p">.</span><span class="n">copy_directory</span><span class="p">(</span><span class="s1">&#39;from&#39;</span><span class="p">,</span> <span class="s1">&#39;to&#39;</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="create_directory">create_directory</h3>
+<p>Creates a new directory recursively</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">fs</span><span class="p">.</span><span class="n">create_directory</span><span class="p">(</span><span class="s1">&#39;path/to/the/new/dir&#39;</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="delete_directory">delete_directory</h3>
+<p>Deletes the specified directory</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="n">fs</span><span class="p">.</span><span class="n">delete_directory</span><span class="p">(</span><span class="s1">&#39;foo/bar&#39;</span><span class="p">)</span>
+</span></code></pre></div>
+<h2 id="loggedsql">LoggedSQL</h2>
+<p>A class representing a database connection</p>
+<h3 id="execute_query">execute_query</h3>
+<p>Executes a SQL query and returns a QueryResult object containing the result set.
+This function can execute any type of SQL statement and provides access to result data for queries that return results (like SELECT).</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="n">conn</span><span class="p">.</span><span class="n">execute_query</span><span class="p">(</span><span class="s2">&quot;CREATE EXTENSION pg_tde;&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<h2 id="queryresult">QueryResult</h2>
+<p>A class representing the result of a SQL query execution.</p>
+<h3 id="success">success</h3>
+<p>A boolean property indicating whether the query executed successfully.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="kr">if</span> <span class="n">result</span><span class="p">.</span><span class="n">success</span> <span class="kr">then</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>  <span class="c1">-- Query executed successfully</span>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="kr">end</span>
+</span></code></pre></div>
+<h3 id="query">query</h3>
+<p>A string property containing the original SQL query that was executed.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Executed query: &quot;</span> <span class="o">..</span> <span class="n">result</span><span class="p">.</span><span class="n">query</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="data">data</h3>
+<p>A QuerySpecificResult object containing the actual result data, only available when success is true.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="kr">if</span> <span class="n">result</span><span class="p">.</span><span class="n">success</span> <span class="kr">then</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>  <span class="kd">local</span> <span class="n">resultSet</span> <span class="o">=</span> <span class="n">result</span><span class="p">.</span><span class="n">data</span>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="kr">end</span>
+</span></code></pre></div>
+<h2 id="queryspecificresult">QuerySpecificResult</h2>
+<p>A class representing the data returned from a successful SQL query.</p>
+<h3 id="numrows">numRows</h3>
+<p>A property containing the number of rows returned by the query.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="kd">local</span> <span class="n">rowCount</span> <span class="o">=</span> <span class="n">result</span><span class="p">.</span><span class="n">data</span><span class="p">.</span><span class="n">numRows</span>
+</span></code></pre></div>
+<h3 id="numfields">numFields</h3>
+<p>A property containing the number of columns (fields) in the result set.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="kd">local</span> <span class="n">columnCount</span> <span class="o">=</span> <span class="n">result</span><span class="p">.</span><span class="n">data</span><span class="p">.</span><span class="n">numFields</span>
+</span></code></pre></div>
+<h3 id="nextrow">nextRow</h3>
+<p>Advances to the next row in the result set. Returns true if there is a next row, false if at the end.
+Must be called before accessing field data for each row.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="kr">while</span> <span class="n">result</span><span class="p">.</span><span class="n">data</span><span class="p">:</span><span class="n">nextRow</span><span class="p">()</span> <span class="kr">do</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>  <span class="c1">-- Process current row</span>
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="kr">end</span>
+</span></code></pre></div>
+<h2 id="rowview">RowView</h2>
+<p>A class representing the current row in a result set, accessed through QuerySpecificResult.</p>
+<h3 id="field">field</h3>
+<p>Returns the value of the specified field in the current row.
+Can be accessed only by column index (1-indexed).</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="kd">local</span> <span class="n">value</span> <span class="o">=</span> <span class="n">result</span><span class="p">.</span><span class="n">data</span><span class="p">:</span><span class="n">field</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>  <span class="c1">-- Get first column (1-indexed)</span>
+</span></code></pre></div>
+<h3 id="numfields_1">numFields</h3>
+<p>Returns the number of fields (columns) in the current row.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="kd">local</span> <span class="n">columnCount</span> <span class="o">=</span> <span class="n">result</span><span class="p">.</span><span class="n">data</span><span class="p">:</span><span class="n">numFields</span><span class="p">()</span>
+</span></code></pre></div>
+<h3 id="example-processing-query-results">Example: Processing Query Results</h3>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="kr">function</span> <span class="nf">process_table_data</span><span class="p">(</span><span class="n">worker</span><span class="p">)</span>
+</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>  <span class="kd">local</span> <span class="n">conn</span> <span class="o">=</span> <span class="n">worker</span><span class="p">:</span><span class="n">sql_connection</span><span class="p">()</span>
+</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>  <span class="kd">local</span> <span class="n">result</span> <span class="o">=</span> <span class="n">conn</span><span class="p">:</span><span class="n">execute_query</span><span class="p">(</span><span class="s2">&quot;SELECT id, name, value FROM test_table&quot;</span><span class="p">)</span>
+</span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a>
+</span><span id="__span-28-5"><a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a>  <span class="kr">if</span> <span class="n">result</span><span class="p">.</span><span class="n">success</span> <span class="kr">then</span>
+</span><span id="__span-28-6"><a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a>    <span class="n">info</span><span class="p">(</span><span class="s2">&quot;Query returned &quot;</span> <span class="o">..</span> <span class="n">result</span><span class="p">.</span><span class="n">data</span><span class="p">.</span><span class="n">numRows</span> <span class="o">..</span> <span class="s2">&quot; rows&quot;</span><span class="p">)</span>
+</span><span id="__span-28-7"><a id="__codelineno-28-7" name="__codelineno-28-7" href="#__codelineno-28-7"></a>
+</span><span id="__span-28-8"><a id="__codelineno-28-8" name="__codelineno-28-8" href="#__codelineno-28-8"></a>    <span class="kr">while</span> <span class="n">result</span><span class="p">.</span><span class="n">data</span><span class="p">:</span><span class="n">nextRow</span><span class="p">()</span> <span class="kr">do</span>
+</span><span id="__span-28-9"><a id="__codelineno-28-9" name="__codelineno-28-9" href="#__codelineno-28-9"></a>      <span class="kd">local</span> <span class="n">id</span> <span class="o">=</span> <span class="n">result</span><span class="p">.</span><span class="n">data</span><span class="p">:</span><span class="n">field</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>      <span class="c1">-- By index</span>
+</span><span id="__span-28-10"><a id="__codelineno-28-10" name="__codelineno-28-10" href="#__codelineno-28-10"></a>      <span class="kd">local</span> <span class="n">name</span> <span class="o">=</span> <span class="n">result</span><span class="p">.</span><span class="n">data</span><span class="p">:</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">)</span>  <span class="c1">-- By column name</span>
+</span><span id="__span-28-11"><a id="__codelineno-28-11" name="__codelineno-28-11" href="#__codelineno-28-11"></a>      <span class="kd">local</span> <span class="n">value</span> <span class="o">=</span> <span class="n">result</span><span class="p">.</span><span class="n">data</span><span class="p">:</span><span class="n">field</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+</span><span id="__span-28-12"><a id="__codelineno-28-12" name="__codelineno-28-12" href="#__codelineno-28-12"></a>
+</span><span id="__span-28-13"><a id="__codelineno-28-13" name="__codelineno-28-13" href="#__codelineno-28-13"></a>      <span class="n">info</span><span class="p">(</span><span class="s2">&quot;Row: id=&quot;</span> <span class="o">..</span> <span class="n">id</span> <span class="o">..</span> <span class="s2">&quot;, name=&quot;</span> <span class="o">..</span> <span class="n">name</span> <span class="o">..</span> <span class="s2">&quot;, value=&quot;</span> <span class="o">..</span> <span class="n">value</span><span class="p">)</span>
+</span><span id="__span-28-14"><a id="__codelineno-28-14" name="__codelineno-28-14" href="#__codelineno-28-14"></a>    <span class="kr">end</span>
+</span><span id="__span-28-15"><a id="__codelineno-28-15" name="__codelineno-28-15" href="#__codelineno-28-15"></a>  <span class="kr">else</span>
+</span><span id="__span-28-16"><a id="__codelineno-28-16" name="__codelineno-28-16" href="#__codelineno-28-16"></a>    <span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Query failed: &quot;</span> <span class="o">..</span> <span class="n">result</span><span class="p">.</span><span class="n">query</span><span class="p">)</span>
+</span><span id="__span-28-17"><a id="__codelineno-28-17" name="__codelineno-28-17" href="#__codelineno-28-17"></a>  <span class="kr">end</span>
+</span><span id="__span-28-18"><a id="__codelineno-28-18" name="__codelineno-28-18" href="#__codelineno-28-18"></a><span class="kr">end</span>
+</span></code></pre></div>
+<h2 id="node">Node</h2>
+<p>A class representing a database server, created using the <code>setupPgNode</code> global function.</p>
+<h3 id="init">init</h3>
+<p>Intended for node initialization, takes a callback that receives as a Worker as the single parameter.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="kr">function</span> <span class="nf">setup_fun</span><span class="p">(</span><span class="n">worker</span><span class="p">)</span>
+</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>    <span class="n">worker</span><span class="p">:</span><span class="n">create_random_tables</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+</span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a><span class="kr">end</span>
+</span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a><span class="n">pgm</span><span class="p">.</span><span class="n">primaryNode</span><span class="p">:</span><span class="n">init</span><span class="p">(</span><span class="n">setup_fun</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="initrandomworkload">initRandomWorkload</h3>
+<p>Creates a new random workload setup with the given parameters.</p>
+<p>It expects a WorkloadParams object:</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="n">params</span> <span class="o">=</span> <span class="n">WorkloadParams</span><span class="p">()</span>
+</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a><span class="n">params</span><span class="p">.</span><span class="n">duration_in_seconds</span> <span class="o">=</span> <span class="mi">10</span>
+</span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a><span class="n">params</span><span class="p">.</span><span class="n">number_of_workers</span> <span class="o">=</span> <span class="mi">5</span>
+</span><span id="__span-30-4"><a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a><span class="n">node</span><span class="p">:</span><span class="n">initRandomWorkload</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Supported parameters:</p>
+<ul>
+<li><code>duration_in_seconds</code>: how long to run the workload (default: 60)</li>
+<li><code>number_of_workers</code>: how many workers to use in the workload (default 5)</li>
+<li><code>repeat_times</code>: how many times to repeat the entire workload (default: 10)</li>
+<li><code>max_reconnect_attempts</code>: maximum number of reconnection attempts when a worker loses connection (default: 5)</li>
+</ul>
+<h3 id="possibleactions">possibleActions</h3>
+<p>Returns a reference to the action registry associated with the node.
+This is a copy made at the time of creating the node, and can be modified separately.
+Will be copied into the workload when one is created using <code>initRandomWorkload</code>.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="n">a</span> <span class="o">=</span> <span class="n">node</span><span class="p">:</span><span class="n">possibleActions</span><span class="p">()</span>
+</span></code></pre></div>
+<h3 id="make_worker">make_worker</h3>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="n">worker</span> <span class="o">=</span> <span class="n">node</span><span class="p">:</span><span class="n">make_worker</span><span class="p">(</span><span class="s2">&quot;initialization&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Creates a standalone Worker instance for the node with the specified log name.
+Useful for database initialization or other non-workload operations.</p>
+<h2 id="workloadparams">WorkloadParams</h2>
+<p>A class for configuring workload parameters. Can be created and configured before passing to <code>initRandomWorkload</code>.</p>
+<h3 id="constructor">Constructor</h3>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="n">params</span> <span class="o">=</span> <span class="n">WorkloadParams</span><span class="p">()</span>
+</span></code></pre></div>
+<p>Creates a new WorkloadParams object with default values.</p>
+<h3 id="properties">Properties</h3>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="n">params</span><span class="p">.</span><span class="n">duration_in_seconds</span> <span class="o">=</span> <span class="mi">30</span>      <span class="c1">-- How long each workload iteration runs</span>
+</span><span id="__span-34-2"><a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a><span class="n">params</span><span class="p">.</span><span class="n">number_of_workers</span> <span class="o">=</span> <span class="mi">8</span>         <span class="c1">-- Number of concurrent worker threads</span>
+</span><span id="__span-34-3"><a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a><span class="n">params</span><span class="p">.</span><span class="n">repeat_times</span> <span class="o">=</span> <span class="mi">5</span>              <span class="c1">-- Number of times to repeat the workload</span>
+</span><span id="__span-34-4"><a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a><span class="n">params</span><span class="p">.</span><span class="n">max_reconnect_attempts</span> <span class="o">=</span> <span class="mi">3</span>    <span class="c1">-- Max reconnection attempts per worker</span>
+</span></code></pre></div>
+<h2 id="postgres">Postgres</h2>
+<p>A class used to manage a Postgres installation/datadir.</p>
+<p>An instance of this class can be created with the global functions <code>initPostgresDatadir</code> and <code>initBasebackupFrom</code>.</p>
+<h3 id="start">start</h3>
+<p>Starts the server, returns true if succeeds.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a><span class="n">pg1</span><span class="p">:</span><span class="n">start</span><span class="p">()</span>                                           <span class="c1">-- Normal start</span>
+</span><span id="__span-35-2"><a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a><span class="n">pg1</span><span class="p">:</span><span class="n">start</span><span class="p">(</span><span class="s2">&quot;/usr/bin/valgrind&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;--leak-check=full&quot;</span><span class="p">})</span> <span class="c1">-- Start under valgrind</span>
+</span></code></pre></div>
+<p>The optional wrapper and wrapperArgs parameters allow running PostgreSQL through external tools like debuggers or profilers.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The wrapper parameter doesn't take <code>$PATH</code> into account, it requires a full filename</p>
+</div>
+<h3 id="stop">stop</h3>
+<p>Stops the server
+Has a parameter, the graceful wait period - after that, it executes kill9.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-36-1"><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a><span class="n">pg1</span><span class="p">:</span><span class="n">stop</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="restart">restart</h3>
+<p>Restarts (stops and starts) the server, returns true if succeeds.
+Has a parameter, the graceful wait period - after that, it executes kill9.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-37-1"><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a><span class="n">pg1</span><span class="p">:</span><span class="n">restart</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>                                            <span class="c1">-- Normal restart with 10s grace period</span>
+</span><span id="__span-37-2"><a id="__codelineno-37-2" name="__codelineno-37-2" href="#__codelineno-37-2"></a><span class="n">pg1</span><span class="p">:</span><span class="n">restart</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="s2">&quot;/usr/bin/valgrind&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;--leak-check=full&quot;</span><span class="p">})</span> <span class="c1">-- Restart under valgrind</span>
+</span></code></pre></div>
+<p>The optional wrapper and wrapperArgs parameters allow running PostgreSQL through external tools like debuggers or profilers on restart.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The wrapper parameter doesn't take <code>$PATH</code> into account, it requires a full filename</p>
+</div>
+<h3 id="kill9">kill9</h3>
+<p>Kills the server without waiting for it to stop.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-38-1"><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a><span class="n">pg1</span><span class="p">:</span><span class="n">kill9</span><span class="p">()</span>
+</span></code></pre></div>
+<h3 id="basebackup">basebackup</h3>
+<p>Performs a base backup of the database to the specified directory.</p>
+<p>The first parameter is an array of strings that gets added to the PostgreSQL <code>pg_basebackup</code> command. The <code>-h</code>, <code>-p</code> options are automatically added based on the server configuration.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-39-1"><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a><span class="c1">-- Basic backup</span>
+</span><span id="__span-39-2"><a id="__codelineno-39-2" name="__codelineno-39-2" href="#__codelineno-39-2"></a><span class="n">pg1</span><span class="p">:</span><span class="n">basebackup</span><span class="p">({</span><span class="s2">&quot;-D&quot;</span><span class="p">,</span> <span class="s2">&quot;backup_dir&quot;</span><span class="p">,</span> <span class="s2">&quot;-U&quot;</span><span class="p">,</span> <span class="s2">&quot;stormweaver&quot;</span><span class="p">,</span> <span class="s2">&quot;-c&quot;</span><span class="p">,</span> <span class="s2">&quot;fast&quot;</span><span class="p">})</span>
+</span><span id="__span-39-3"><a id="__codelineno-39-3" name="__codelineno-39-3" href="#__codelineno-39-3"></a>
+</span><span id="__span-39-4"><a id="__codelineno-39-4" name="__codelineno-39-4" href="#__codelineno-39-4"></a><span class="c1">-- Incremental backup</span>
+</span><span id="__span-39-5"><a id="__codelineno-39-5" name="__codelineno-39-5" href="#__codelineno-39-5"></a><span class="n">pg1</span><span class="p">:</span><span class="n">basebackup</span><span class="p">({</span><span class="s2">&quot;-D&quot;</span><span class="p">,</span> <span class="s2">&quot;backup_dir&quot;</span><span class="p">,</span> <span class="s2">&quot;-U&quot;</span><span class="p">,</span> <span class="s2">&quot;stormweaver&quot;</span><span class="p">,</span> <span class="s2">&quot;-c&quot;</span><span class="p">,</span> <span class="s2">&quot;fast&quot;</span><span class="p">,</span> <span class="s2">&quot;-i&quot;</span><span class="p">,</span> <span class="s2">&quot;prev_backup/backup_manifest&quot;</span><span class="p">})</span>
+</span></code></pre></div>
+<h3 id="createdb">createdb</h3>
+<p>Creates a database with the specified name.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-40-1"><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a><span class="n">pg1</span><span class="p">:</span><span class="n">createdb</span><span class="p">(</span><span class="s2">&quot;foo&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="dropdb">dropdb</h3>
+<p>Drops the database with the specified name.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-41-1"><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a><span class="n">pg1</span><span class="p">:</span><span class="n">dropdb</span><span class="p">(</span><span class="s2">&quot;foo&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="createuser">createuser</h3>
+<p>Creates a user.</p>
+<p>The first parameter is the name of the user, and the second parameter is an array of strings that gets added to the postgres <code>createuser</code> command.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-42-1"><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a><span class="n">pg1</span><span class="p">:</span><span class="n">createuser</span><span class="p">(</span><span class="s2">&quot;stormweaver&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;-s&quot;</span><span class="p">})</span>
+</span></code></pre></div>
+<h3 id="is_running">is_running</h3>
+<p>Returns true if the server is running.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-43-1"><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a><span class="kr">if</span> <span class="n">pg1</span><span class="p">:</span><span class="n">is_running</span><span class="p">()</span> <span class="kr">then</span>
+</span><span id="__span-43-2"><a id="__codelineno-43-2" name="__codelineno-43-2" href="#__codelineno-43-2"></a> <span class="c1">-- ...</span>
+</span><span id="__span-43-3"><a id="__codelineno-43-3" name="__codelineno-43-3" href="#__codelineno-43-3"></a><span class="kr">end</span>
+</span></code></pre></div>
+<h3 id="serverport">serverPort</h3>
+<p>Returns the port the server is using</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-44-1"><a id="__codelineno-44-1" name="__codelineno-44-1" href="#__codelineno-44-1"></a><span class="n">p</span> <span class="o">=</span> <span class="n">pg1</span><span class="p">:</span><span class="n">serverPort</span><span class="p">()</span>
+</span></code></pre></div>
+<h3 id="datadir">dataDir</h3>
+<p>Returns the data directory path as a string</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-45-1"><a id="__codelineno-45-1" name="__codelineno-45-1" href="#__codelineno-45-1"></a><span class="n">path</span> <span class="o">=</span> <span class="n">pg1</span><span class="p">:</span><span class="n">dataDir</span><span class="p">()</span>
+</span></code></pre></div>
+<h3 id="is_ready">is_ready</h3>
+<p>Returns true if the server is ready to accept connections.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-46-1"><a id="__codelineno-46-1" name="__codelineno-46-1" href="#__codelineno-46-1"></a><span class="kr">if</span> <span class="n">pg1</span><span class="p">:</span><span class="n">is_ready</span> <span class="kr">then</span>
+</span><span id="__span-46-2"><a id="__codelineno-46-2" name="__codelineno-46-2" href="#__codelineno-46-2"></a>  <span class="c1">-- ...</span>
+</span><span id="__span-46-3"><a id="__codelineno-46-3" name="__codelineno-46-3" href="#__codelineno-46-3"></a><span class="kr">end</span>
+</span></code></pre></div>
+<h3 id="wait_ready">wait_ready</h3>
+<p>Waits up to the specified time in seconds, or until the server is ready.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-47-1"><a id="__codelineno-47-1" name="__codelineno-47-1" href="#__codelineno-47-1"></a><span class="kr">if</span> <span class="ow">not</span> <span class="n">pg1</span><span class="p">:</span><span class="n">wait_ready</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span> <span class="kr">then</span>
+</span><span id="__span-47-2"><a id="__codelineno-47-2" name="__codelineno-47-2" href="#__codelineno-47-2"></a>  <span class="c1">-- ...</span>
+</span><span id="__span-47-3"><a id="__codelineno-47-3" name="__codelineno-47-3" href="#__codelineno-47-3"></a><span class="kr">end</span>
+</span></code></pre></div>
+<h3 id="add_config">add_config</h3>
+<p>Appends the specified settings to the postgres configuration.</p>
+<p>As Postgres only uses the last entry if the same setting is specified multiple times, this can also be used to modify existing settings.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-48-1"><a id="__codelineno-48-1" name="__codelineno-48-1" href="#__codelineno-48-1"></a><span class="n">pg1</span><span class="p">:</span><span class="n">add_config</span><span class="p">({</span>
+</span><span id="__span-48-2"><a id="__codelineno-48-2" name="__codelineno-48-2" href="#__codelineno-48-2"></a>  <span class="n">logging_collector</span> <span class="o">=</span> <span class="s2">&quot;on&quot;</span><span class="p">,</span>
+</span><span id="__span-48-3"><a id="__codelineno-48-3" name="__codelineno-48-3" href="#__codelineno-48-3"></a>  <span class="n">log_directory</span> <span class="o">=</span> <span class="s2">&quot;&#39;logs&#39;&quot;</span><span class="p">,</span>
+</span><span id="__span-48-4"><a id="__codelineno-48-4" name="__codelineno-48-4" href="#__codelineno-48-4"></a>  <span class="n">log_filename</span> <span class="o">=</span> <span class="s2">&quot;&#39;server.log&#39;&quot;</span><span class="p">,</span>
+</span><span id="__span-48-5"><a id="__codelineno-48-5" name="__codelineno-48-5" href="#__codelineno-48-5"></a>  <span class="n">log_min_messages</span> <span class="o">=</span> <span class="s2">&quot;&#39;info&#39;&quot;</span><span class="p">,</span>
+</span><span id="__span-48-6"><a id="__codelineno-48-6" name="__codelineno-48-6" href="#__codelineno-48-6"></a><span class="p">})</span>
+</span></code></pre></div>
+<h3 id="add_hba">add_hba</h3>
+<p>Adds an entry to the <code>pg_hba.conf</code>.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-49-1"><a id="__codelineno-49-1" name="__codelineno-49-1" href="#__codelineno-49-1"></a><span class="n">pg1</span><span class="p">:</span><span class="n">add_hba</span><span class="p">(</span><span class="s2">&quot;host&quot;</span><span class="p">,</span> <span class="s2">&quot;replication&quot;</span><span class="p">,</span> <span class="s2">&quot;repuser&quot;</span><span class="p">,</span> <span class="s2">&quot;127.0.0.1/32&quot;</span><span class="p">,</span> <span class="s2">&quot;trust&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<h2 id="backgroundthread">BackgroundThread</h2>
+<p>Allows scripts to run something in the background.</p>
+<p>For a more detailed example, see the section in the Lua Examples page.</p>
+<h3 id="run">run</h3>
+<p>Starts a background thread, using the specified logfile name and lua function.</p>
+<h3 id="join">join</h3>
+<p>Waits until the background thread completes.</p>
+<h3 id="send">send</h3>
+<p>Sends the specified string to the background thread.</p>
+<h3 id="receive">receive</h3>
+<p>Receives a single string from the background thread - blocks and waits if it didn't send anything yet.</p>
+<h3 id="receiveifany">receiveIfAny</h3>
+<p>Receives a single string from the background thread, if it sent anything.</p>
+<h2 id="commqueue">CommQueue</h2>
+<p>A communication queue for inter-thread message passing. Available in background thread contexts for communication with the main thread.</p>
+<h3 id="send_1">send</h3>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-50-1"><a id="__codelineno-50-1" name="__codelineno-50-1" href="#__codelineno-50-1"></a><span class="c1">-- In background thread</span>
+</span><span id="__span-50-2"><a id="__codelineno-50-2" name="__codelineno-50-2" href="#__codelineno-50-2"></a><span class="n">commQueue</span><span class="p">:</span><span class="n">send</span><span class="p">(</span><span class="s2">&quot;message to main thread&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Sends a string message to the main thread.</p>
+<h3 id="receive_1">receive</h3>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-51-1"><a id="__codelineno-51-1" name="__codelineno-51-1" href="#__codelineno-51-1"></a><span class="c1">-- In background thread</span>
+</span><span id="__span-51-2"><a id="__codelineno-51-2" name="__codelineno-51-2" href="#__codelineno-51-2"></a><span class="kd">local</span> <span class="n">message</span> <span class="o">=</span> <span class="n">commQueue</span><span class="p">:</span><span class="n">receive</span><span class="p">()</span>
+</span></code></pre></div>
+<p>Receives a string message from the main thread. Blocks until a message is available.</p>
+<h3 id="receiveifany_1">receiveIfAny</h3>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-52-1"><a id="__codelineno-52-1" name="__codelineno-52-1" href="#__codelineno-52-1"></a><span class="c1">-- In background thread</span>
+</span><span id="__span-52-2"><a id="__codelineno-52-2" name="__codelineno-52-2" href="#__codelineno-52-2"></a><span class="kd">local</span> <span class="n">message</span> <span class="o">=</span> <span class="n">commQueue</span><span class="p">:</span><span class="n">receiveIfAny</span><span class="p">()</span>
+</span><span id="__span-52-3"><a id="__codelineno-52-3" name="__codelineno-52-3" href="#__codelineno-52-3"></a><span class="kr">if</span> <span class="n">message</span> <span class="kr">then</span>
+</span><span id="__span-52-4"><a id="__codelineno-52-4" name="__codelineno-52-4" href="#__codelineno-52-4"></a>  <span class="c1">-- Process message</span>
+</span><span id="__span-52-5"><a id="__codelineno-52-5" name="__codelineno-52-5" href="#__codelineno-52-5"></a><span class="kr">end</span>
+</span></code></pre></div>
+<p>Receives a string message from the main thread if one is available, otherwise returns nil.</p>
+<h2 id="backgroundprocess">BackgroundProcess</h2>
+<p>A class for managing external processes in the background.</p>
+<h3 id="start_1">start</h3>
+<p>Starts a new background process with the specified command and arguments.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-53-1"><a id="__codelineno-53-1" name="__codelineno-53-1" href="#__codelineno-53-1"></a><span class="c1">-- Static method to start a new process</span>
+</span><span id="__span-53-2"><a id="__codelineno-53-2" name="__codelineno-53-2" href="#__codelineno-53-2"></a><span class="kd">local</span> <span class="n">proc</span> <span class="o">=</span> <span class="n">BackgroundProcess</span><span class="p">.</span><span class="n">start</span><span class="p">(</span><span class="s2">&quot;logname&quot;</span><span class="p">,</span> <span class="s2">&quot;/usr/bin/command&quot;</span><span class="p">,</span> <span class="s2">&quot;arg1&quot;</span><span class="p">,</span> <span class="s2">&quot;arg2&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<p><strong>Parameters:</strong>
+- <code>logname</code> (string): Name for the log file (logs will be written to <code>logs/{logname}.log</code>)
+- <code>command</code> (string): Full path to the executable to run
+- <code>...</code> (variadic): Command line arguments to pass to the process</p>
+<p><strong>Returns:</strong>
+- A BackgroundProcess object that can be used to control the process</p>
+<h3 id="waituntilexits">waitUntilExits</h3>
+<p>Waits for the process to complete and returns the exit status.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-54-1"><a id="__codelineno-54-1" name="__codelineno-54-1" href="#__codelineno-54-1"></a><span class="kd">local</span> <span class="n">success</span> <span class="o">=</span> <span class="n">proc</span><span class="p">:</span><span class="n">waitUntilExits</span><span class="p">()</span>
+</span><span id="__span-54-2"><a id="__codelineno-54-2" name="__codelineno-54-2" href="#__codelineno-54-2"></a><span class="kr">if</span> <span class="n">success</span> <span class="kr">then</span>
+</span><span id="__span-54-3"><a id="__codelineno-54-3" name="__codelineno-54-3" href="#__codelineno-54-3"></a>  <span class="n">info</span><span class="p">(</span><span class="s2">&quot;Process completed successfully&quot;</span><span class="p">)</span>
+</span><span id="__span-54-4"><a id="__codelineno-54-4" name="__codelineno-54-4" href="#__codelineno-54-4"></a><span class="kr">else</span>
+</span><span id="__span-54-5"><a id="__codelineno-54-5" name="__codelineno-54-5" href="#__codelineno-54-5"></a>  <span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Process failed&quot;</span><span class="p">)</span>
+</span><span id="__span-54-6"><a id="__codelineno-54-6" name="__codelineno-54-6" href="#__codelineno-54-6"></a><span class="kr">end</span>
+</span></code></pre></div>
+<p><strong>Returns:</strong>
+- <code>true</code> if the process exited with status 0, <code>false</code> otherwise</p>
+<h3 id="kill">kill</h3>
+<p>Sends a signal to the process to terminate it.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-55-1"><a id="__codelineno-55-1" name="__codelineno-55-1" href="#__codelineno-55-1"></a><span class="n">proc</span><span class="p">:</span><span class="n">kill</span><span class="p">(</span><span class="mi">9</span><span class="p">)</span>  <span class="c1">-- Send SIGKILL</span>
+</span></code></pre></div>
+<p><strong>Parameters:</strong>
+- <code>signal</code> (number): The signal number to send (e.g., 9 for SIGKILL, 15 for SIGTERM)</p>
+<h3 id="running">running</h3>
+<p>Checks if the process is currently running.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-56-1"><a id="__codelineno-56-1" name="__codelineno-56-1" href="#__codelineno-56-1"></a><span class="kr">if</span> <span class="n">proc</span><span class="p">:</span><span class="n">running</span><span class="p">()</span> <span class="kr">then</span>
+</span><span id="__span-56-2"><a id="__codelineno-56-2" name="__codelineno-56-2" href="#__codelineno-56-2"></a>  <span class="n">info</span><span class="p">(</span><span class="s2">&quot;Process is still running&quot;</span><span class="p">)</span>
+</span><span id="__span-56-3"><a id="__codelineno-56-3" name="__codelineno-56-3" href="#__codelineno-56-3"></a><span class="kr">else</span>
+</span><span id="__span-56-4"><a id="__codelineno-56-4" name="__codelineno-56-4" href="#__codelineno-56-4"></a>  <span class="n">info</span><span class="p">(</span><span class="s2">&quot;Process has finished&quot;</span><span class="p">)</span>
+</span><span id="__span-56-5"><a id="__codelineno-56-5" name="__codelineno-56-5" href="#__codelineno-56-5"></a><span class="kr">end</span>
+</span></code></pre></div>
+<p><strong>Returns:</strong>
+- <code>true</code> if the process is running, <code>false</code> if it has finished</p>
+<h3 id="example-running-external-commands">Example: Running External Commands</h3>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-57-1"><a id="__codelineno-57-1" name="__codelineno-57-1" href="#__codelineno-57-1"></a><span class="kr">function</span> <span class="nf">run_pg_dump</span><span class="p">()</span>
+</span><span id="__span-57-2"><a id="__codelineno-57-2" name="__codelineno-57-2" href="#__codelineno-57-2"></a>  <span class="kd">local</span> <span class="n">proc</span> <span class="o">=</span> <span class="n">BackgroundProcess</span><span class="p">.</span><span class="n">start</span><span class="p">(</span><span class="s2">&quot;pg_dump&quot;</span><span class="p">,</span> <span class="s2">&quot;/usr/bin/pg_dump&quot;</span><span class="p">,</span> <span class="s2">&quot;-h&quot;</span><span class="p">,</span> <span class="s2">&quot;localhost&quot;</span><span class="p">,</span> <span class="s2">&quot;-p&quot;</span><span class="p">,</span> <span class="s2">&quot;5432&quot;</span><span class="p">,</span> <span class="s2">&quot;mydb&quot;</span><span class="p">)</span>
+</span><span id="__span-57-3"><a id="__codelineno-57-3" name="__codelineno-57-3" href="#__codelineno-57-3"></a>
+</span><span id="__span-57-4"><a id="__codelineno-57-4" name="__codelineno-57-4" href="#__codelineno-57-4"></a>  <span class="kr">if</span> <span class="n">proc</span><span class="p">:</span><span class="n">waitUntilExits</span><span class="p">()</span> <span class="kr">then</span>
+</span><span id="__span-57-5"><a id="__codelineno-57-5" name="__codelineno-57-5" href="#__codelineno-57-5"></a>    <span class="n">info</span><span class="p">(</span><span class="s2">&quot;Database dump completed successfully&quot;</span><span class="p">)</span>
+</span><span id="__span-57-6"><a id="__codelineno-57-6" name="__codelineno-57-6" href="#__codelineno-57-6"></a>  <span class="kr">else</span>
+</span><span id="__span-57-7"><a id="__codelineno-57-7" name="__codelineno-57-7" href="#__codelineno-57-7"></a>    <span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Database dump failed&quot;</span><span class="p">)</span>
+</span><span id="__span-57-8"><a id="__codelineno-57-8" name="__codelineno-57-8" href="#__codelineno-57-8"></a>  <span class="kr">end</span>
+</span><span id="__span-57-9"><a id="__codelineno-57-9" name="__codelineno-57-9" href="#__codelineno-57-9"></a><span class="kr">end</span>
+</span><span id="__span-57-10"><a id="__codelineno-57-10" name="__codelineno-57-10" href="#__codelineno-57-10"></a>
+</span><span id="__span-57-11"><a id="__codelineno-57-11" name="__codelineno-57-11" href="#__codelineno-57-11"></a><span class="kr">function</span> <span class="nf">run_with_timeout</span><span class="p">()</span>
+</span><span id="__span-57-12"><a id="__codelineno-57-12" name="__codelineno-57-12" href="#__codelineno-57-12"></a>  <span class="kd">local</span> <span class="n">proc</span> <span class="o">=</span> <span class="n">BackgroundProcess</span><span class="p">.</span><span class="n">start</span><span class="p">(</span><span class="s2">&quot;long_task&quot;</span><span class="p">,</span> <span class="s2">&quot;/usr/bin/sleep&quot;</span><span class="p">,</span> <span class="s2">&quot;30&quot;</span><span class="p">)</span>
+</span><span id="__span-57-13"><a id="__codelineno-57-13" name="__codelineno-57-13" href="#__codelineno-57-13"></a>
+</span><span id="__span-57-14"><a id="__codelineno-57-14" name="__codelineno-57-14" href="#__codelineno-57-14"></a>  <span class="c1">-- Wait for 10 seconds</span>
+</span><span id="__span-57-15"><a id="__codelineno-57-15" name="__codelineno-57-15" href="#__codelineno-57-15"></a>  <span class="kd">local</span> <span class="n">start_time</span> <span class="o">=</span> <span class="nb">os.time</span><span class="p">()</span>
+</span><span id="__span-57-16"><a id="__codelineno-57-16" name="__codelineno-57-16" href="#__codelineno-57-16"></a>  <span class="kr">while</span> <span class="n">proc</span><span class="p">:</span><span class="n">running</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">os.time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">10</span> <span class="kr">do</span>
+</span><span id="__span-57-17"><a id="__codelineno-57-17" name="__codelineno-57-17" href="#__codelineno-57-17"></a>    <span class="n">sleep</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>  <span class="c1">-- Check every second</span>
+</span><span id="__span-57-18"><a id="__codelineno-57-18" name="__codelineno-57-18" href="#__codelineno-57-18"></a>  <span class="kr">end</span>
+</span><span id="__span-57-19"><a id="__codelineno-57-19" name="__codelineno-57-19" href="#__codelineno-57-19"></a>
+</span><span id="__span-57-20"><a id="__codelineno-57-20" name="__codelineno-57-20" href="#__codelineno-57-20"></a>  <span class="kr">if</span> <span class="n">proc</span><span class="p">:</span><span class="n">running</span><span class="p">()</span> <span class="kr">then</span>
+</span><span id="__span-57-21"><a id="__codelineno-57-21" name="__codelineno-57-21" href="#__codelineno-57-21"></a>    <span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Process taking too long, killing it&quot;</span><span class="p">)</span>
+</span><span id="__span-57-22"><a id="__codelineno-57-22" name="__codelineno-57-22" href="#__codelineno-57-22"></a>    <span class="n">proc</span><span class="p">:</span><span class="n">kill</span><span class="p">(</span><span class="mi">15</span><span class="p">)</span>  <span class="c1">-- Send SIGTERM</span>
+</span><span id="__span-57-23"><a id="__codelineno-57-23" name="__codelineno-57-23" href="#__codelineno-57-23"></a>    <span class="n">sleep</span><span class="p">(</span><span class="mi">2000</span><span class="p">)</span>    <span class="c1">-- Give it time to clean up</span>
+</span><span id="__span-57-24"><a id="__codelineno-57-24" name="__codelineno-57-24" href="#__codelineno-57-24"></a>    <span class="kr">if</span> <span class="n">proc</span><span class="p">:</span><span class="n">running</span><span class="p">()</span> <span class="kr">then</span>
+</span><span id="__span-57-25"><a id="__codelineno-57-25" name="__codelineno-57-25" href="#__codelineno-57-25"></a>      <span class="n">proc</span><span class="p">:</span><span class="n">kill</span><span class="p">(</span><span class="mi">9</span><span class="p">)</span>  <span class="c1">-- Force kill if still running</span>
+</span><span id="__span-57-26"><a id="__codelineno-57-26" name="__codelineno-57-26" href="#__codelineno-57-26"></a>    <span class="kr">end</span>
+</span><span id="__span-57-27"><a id="__codelineno-57-27" name="__codelineno-57-27" href="#__codelineno-57-27"></a>  <span class="kr">end</span>
+</span><span id="__span-57-28"><a id="__codelineno-57-28" name="__codelineno-57-28" href="#__codelineno-57-28"></a><span class="kr">end</span>
+</span></code></pre></div>
+<h2 id="randomworker">RandomWorker</h2>
+<p>Represents a randomized worker.
+It supports the same functions as the <code>Worker</code>, with the following additions:</p>
+<h3 id="possibleactions_1">possibleActions</h3>
+<p>Returns a reference to the action registry associated with the specfic worker.
+This can be used to modify the actions executed by a single Worker, without affecting other Workers.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-58-1"><a id="__codelineno-58-1" name="__codelineno-58-1" href="#__codelineno-58-1"></a><span class="n">workload</span><span class="p">:</span><span class="n">worker</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span><span class="n">possibleActions</span><span class="p">():</span><span class="n">remove</span><span class="p">(</span><span class="s2">&quot;alter_table&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<h2 id="worker">Worker</h2>
+<p>A (non randomized) worker that can be used for initialization and other database related things.</p>
+<h3 id="create_random_tables">create_random_tables</h3>
+<p>Creates a specified number of tables according to the DDL configuration.</p>
+<p>Currently the DDL configuration can't be modified.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-59-1"><a id="__codelineno-59-1" name="__codelineno-59-1" href="#__codelineno-59-1"></a><span class="n">worker</span><span class="p">:</span><span class="n">create_random_tables</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="discover_existing_schema">discover_existing_schema</h3>
+<p>Discovers and populates the metadata system with the existing database schema.</p>
+<p>This function scans the connected database and builds StormWeaver's internal metadata representation based on the actual database structure (tables, columns, indexes, etc.).</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-60-1"><a id="__codelineno-60-1" name="__codelineno-60-1" href="#__codelineno-60-1"></a><span class="n">worker</span><span class="p">:</span><span class="n">discover_existing_schema</span><span class="p">()</span>
+</span></code></pre></div>
+<h3 id="reset_metadata">reset_metadata</h3>
+<p>Clears all metadata, resetting it to an empty state.</p>
+<p>This function removes all stored table and schema information from StormWeaver's internal metadata system.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-61-1"><a id="__codelineno-61-1" name="__codelineno-61-1" href="#__codelineno-61-1"></a><span class="n">worker</span><span class="p">:</span><span class="n">reset_metadata</span><span class="p">()</span>
+</span></code></pre></div>
+<h3 id="validate_metadata">validate_metadata</h3>
+<p>Validates that the current metadata accurately reflects the actual database schema.</p>
+<p>This function compares the current metadata against a fresh schema discovery from the database. If validation fails, it writes debug files to the <code>logs/</code> directory containing both the original and newly discovered metadata for comparison.</p>
+<p>Returns <code>true</code> if metadata matches the database schema, <code>false</code> otherwise.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-62-1"><a id="__codelineno-62-1" name="__codelineno-62-1" href="#__codelineno-62-1"></a><span class="kr">if</span> <span class="n">worker</span><span class="p">:</span><span class="n">validate_metadata</span><span class="p">()</span> <span class="kr">then</span>
+</span><span id="__span-62-2"><a id="__codelineno-62-2" name="__codelineno-62-2" href="#__codelineno-62-2"></a>  <span class="n">info</span><span class="p">(</span><span class="s2">&quot;Metadata is consistent with database schema&quot;</span><span class="p">)</span>
+</span><span id="__span-62-3"><a id="__codelineno-62-3" name="__codelineno-62-3" href="#__codelineno-62-3"></a><span class="kr">else</span>
+</span><span id="__span-62-4"><a id="__codelineno-62-4" name="__codelineno-62-4" href="#__codelineno-62-4"></a>  <span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Metadata validation failed - check logs/ directory for debug files&quot;</span><span class="p">)</span>
+</span><span id="__span-62-5"><a id="__codelineno-62-5" name="__codelineno-62-5" href="#__codelineno-62-5"></a><span class="kr">end</span>
+</span></code></pre></div>
+<h3 id="sql_connection">sql_connection</h3>
+<p>Returns the SQL connection (LoggedSQL) of the worker, which can be used to execute SQL statements directly.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-63-1"><a id="__codelineno-63-1" name="__codelineno-63-1" href="#__codelineno-63-1"></a><span class="n">sql</span> <span class="o">=</span> <span class="n">worker</span><span class="p">:</span><span class="n">sql_connection</span><span class="p">()</span>
+</span></code></pre></div>
+<h3 id="calculate_database_checksums">calculate_database_checksums</h3>
+<p>Calculates SHA-256 checksums for all metadata tables in the database and writes the results to a specified file.</p>
+<p>This function iterates through all tables tracked in the metadata system, calculates a checksum of their contents using SHA-256 hashing, and outputs the results in CSV format. The checksums are deterministic and will produce the same result for identical table contents.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-64-1"><a id="__codelineno-64-1" name="__codelineno-64-1" href="#__codelineno-64-1"></a><span class="n">worker</span><span class="p">:</span><span class="n">calculate_database_checksums</span><span class="p">(</span><span class="s2">&quot;checksums.csv&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<p><strong>Parameters:</strong>
+- <code>filename</code> (string): Path to the output file where checksums will be written</p>
+<p><strong>Output Format:</strong>
+The output file contains CSV data with the following columns:
+- <code>table_name</code>: Name of the table
+- <code>checksum</code>: SHA-256 hash of the table contents (64-character hex string)
+- <code>row_count</code>: Number of rows in the table</p>
+<p><strong>Example output:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-65-1"><a id="__codelineno-65-1" name="__codelineno-65-1" href="#__codelineno-65-1"></a>table_name,checksum,row_count
+</span><span id="__span-65-2"><a id="__codelineno-65-2" name="__codelineno-65-2" href="#__codelineno-65-2"></a>users,a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456,1500
+</span><span id="__span-65-3"><a id="__codelineno-65-3" name="__codelineno-65-3" href="#__codelineno-65-3"></a>products,e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855,0
+</span><span id="__span-65-4"><a id="__codelineno-65-4" name="__codelineno-65-4" href="#__codelineno-65-4"></a>orders,f7a8b9c0d1e2f3456789012345678901234567890abcdef1234567890abcdef12,2300
+</span></code></pre></div></p>
+<p><strong>Note:</strong> Empty tables will have the SHA-256 hash of an empty string (<code>e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</code>).</p>
+<p><strong>Error Handling:</strong>
+- Throws a Lua error if the file cannot be opened for writing
+- Throws a Lua error if a table query fails
+- Throws a Lua error if row count retrieval fails</p>
+<h2 id="workload">Workload</h2>
+<p>Represents a testrun, it is created by <code>Node</code> using <code>initRandomWorkload</code>.</p>
+<h3 id="run_1">run</h3>
+<p>Starts the workload.</p>
+<p>The workload is executed in the background, this functions returns immediately after starting.
+This allows the script to modify the workload, or interact with the SQL servers while the workload is running.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-66-1"><a id="__codelineno-66-1" name="__codelineno-66-1" href="#__codelineno-66-1"></a><span class="n">workload</span><span class="p">:</span><span class="n">run</span><span class="p">()</span>
+</span></code></pre></div>
+<h3 id="wait_completion">wait_completion</h3>
+<p>Waits until the currently running workload is completed.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-67-1"><a id="__codelineno-67-1" name="__codelineno-67-1" href="#__codelineno-67-1"></a><span class="n">workload</span><span class="p">:</span><span class="n">wait_completion</span><span class="p">()</span>
+</span></code></pre></div>
+<h3 id="worker_1">worker</h3>
+<p>Returns the Worker with the specified index.</p>
+<p>Indexing starts with 1.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-68-1"><a id="__codelineno-68-1" name="__codelineno-68-1" href="#__codelineno-68-1"></a><span class="n">workload</span><span class="p">:</span><span class="n">worker</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="worker_count">worker_count</h3>
+<p>Returns the number of workers.</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-69-1"><a id="__codelineno-69-1" name="__codelineno-69-1" href="#__codelineno-69-1"></a><span class="n">workload</span><span class="p">:</span><span class="n">worker_count</span><span class="p">()</span>
+</span></code></pre></div>
+<h3 id="reconnect_workers">reconnect_workers</h3>
+<p>Reconnects any workers that lots their connection because of a restart.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.1e8ae164.min.js"></script>
+      
+    
+  </body>
+</html>

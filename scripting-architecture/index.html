@@ -1,0 +1,897 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../building/">
+      
+      
+        <link rel="next" href="../randomized-testing-concepts/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.17">
+    
+    
+      
+        <title>Scripting architecture - StormWeaver Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.bcfcd587.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#scripting-architecture" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="StormWeaver Documentation" class="md-header__button md-logo" aria-label="StormWeaver Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            StormWeaver Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Scripting architecture
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="StormWeaver Documentation" class="md-nav__button md-logo" aria-label="StormWeaver Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    StormWeaver Documentation
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../building/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Building from source
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Scripting architecture
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Scripting architecture
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#folder-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Folder structure
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Folder structure">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#module-search-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      Module Search Path
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#third-party-libraries" class="md-nav__link">
+    <span class="md-ellipsis">
+      Third-party libraries
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Third-party libraries">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#automatically-available-libraries" class="md-nav__link">
+    <span class="md-ellipsis">
+      Automatically Available Libraries
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#manually-loaded-libraries" class="md-nav__link">
+    <span class="md-ellipsis">
+      Manually Loaded Libraries
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage Examples
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#c-binding" class="md-nav__link">
+    <span class="md-ellipsis">
+      C++ binding
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scenario-configuration-and-entry-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      Scenario configuration and entry point
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Scenario configuration and entry point">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#script-entry-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      Script Entry Point
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#argument-parsing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Argument Parsing
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-adding-custom-arguments" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example: Adding Custom Arguments
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multi-threaded-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Multi-threaded structure
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Multi-threaded structure">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../randomized-testing-concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Randomized testing concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-examples/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Scripting examples
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../config-parameters/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Config parameters
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lua-cpp-reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Lua C++ API reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../extensibility-workflow/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Extensibility workflow
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../code-architecture/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Code architecture
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#folder-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Folder structure
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Folder structure">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#module-search-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      Module Search Path
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#third-party-libraries" class="md-nav__link">
+    <span class="md-ellipsis">
+      Third-party libraries
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Third-party libraries">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#automatically-available-libraries" class="md-nav__link">
+    <span class="md-ellipsis">
+      Automatically Available Libraries
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#manually-loaded-libraries" class="md-nav__link">
+    <span class="md-ellipsis">
+      Manually Loaded Libraries
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage Examples
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#c-binding" class="md-nav__link">
+    <span class="md-ellipsis">
+      C++ binding
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scenario-configuration-and-entry-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      Scenario configuration and entry point
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Scenario configuration and entry point">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#script-entry-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      Script Entry Point
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#argument-parsing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Argument Parsing
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-adding-custom-arguments" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example: Adding Custom Arguments
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multi-threaded-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Multi-threaded structure
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Multi-threaded structure">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+<h1 id="scripting-architecture">Scripting architecture</h1>
+<p>StormWeaver relies on scripts written in Lua for test scenarios and utility code for the scenarios.</p>
+<p>The C++ code is just a framework that provides a helper architecture and executes a main Lua script.
+If that script does nothing, the program just exits after startup.</p>
+<p>There are also helper functions/classes written in Lua, using the C++ code.
+The goal of these is to simplify the development of test scenarios, while also allowing easy modification without rebuilding the main executable.</p>
+<h2 id="folder-structure">Folder structure</h2>
+<p>Lua scripts are stored in three directories:</p>
+<ul>
+<li><code>scenarios</code> is intended for specific test scenarios</li>
+<li><code>scripts</code> is intended for helper functions/classes usable by multiple scenarios</li>
+<li><code>scripts_3p/</code> contains third-party Lua libraries using git submodules</li>
+</ul>
+<h3 id="module-search-path">Module Search Path</h3>
+<p>The following directories are automatically added to the Lua package search path:</p>
+<ul>
+<li><code>scripts/</code> - Helper functions and utilities (relative to executable and working directory)</li>
+<li><code>scripts_3p/</code> - Third-party Lua modules (relative to executable and working directory)</li>
+<li>Current working directory</li>
+</ul>
+<h2 id="third-party-libraries">Third-party libraries</h2>
+<p>StormWeaver automatically loads several third-party Lua libraries and makes them available to scripts and scenarios:</p>
+<h3 id="automatically-available-libraries">Automatically Available Libraries</h3>
+<ul>
+<li><strong>toml</strong> - TOML parsing library, automatically injected into the global namespace (no require needed)</li>
+</ul>
+<h3 id="manually-loaded-libraries">Manually Loaded Libraries</h3>
+<ul>
+<li><strong><a href="https://github.com/mpeterv/argparse">argparse</a></strong> - Command-line argument parsing, available via <code>require("argparse")</code></li>
+<li><strong><a href="https://github.com/kikito/inspect.lua">inspect.lua</a></strong> - Object inspection and pretty-printing, available via <code>require("inspect")</code></li>
+<li><strong>lfs</strong> - Lua File System library for advanced file operations, available via <code>require("lfs")</code></li>
+</ul>
+<h3 id="usage-examples">Usage Examples</h3>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1">-- TOML is automatically available globally</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kd">local</span> <span class="n">config_data</span> <span class="o">=</span> <span class="n">toml</span><span class="p">.</span><span class="n">parse</span><span class="p">(</span><span class="n">config_text</span><span class="p">)</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1">-- Other libraries require explicit loading</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="kd">local</span> <span class="n">lfs</span> <span class="o">=</span> <span class="nb">require</span><span class="p">(</span><span class="s2">&quot;lfs&quot;</span><span class="p">)</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="kd">local</span> <span class="n">inspect</span> <span class="o">=</span> <span class="nb">require</span><span class="p">(</span><span class="s2">&quot;inspect&quot;</span><span class="p">)</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="kd">local</span> <span class="n">argparse</span> <span class="o">=</span> <span class="nb">require</span><span class="p">(</span><span class="s2">&quot;argparse&quot;</span><span class="p">)</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="c1">-- Access files from the automatic search paths</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="nb">require</span><span class="p">(</span><span class="s2">&quot;common&quot;</span><span class="p">)</span>     <span class="c1">-- Loads scripts/common.lua</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="nb">require</span><span class="p">(</span><span class="s2">&quot;PgManager&quot;</span><span class="p">)</span>  <span class="c1">-- Loads scripts/PgManager.lua</span>
+</span></code></pre></div>
+<h2 id="c-binding">C++ binding</h2>
+<p>StormWeaver includes several classes/functions implemented in C++, which are usable in Lua scripts.
+The complete list of these functions is available in the <a href="../lua-cpp-reference/">Lua C++ reference</a>.</p>
+<h2 id="scenario-configuration-and-entry-point">Scenario configuration and entry point</h2>
+<h3 id="script-entry-point">Script Entry Point</h3>
+<p>Every scenario script must define a <code>main</code> function that serves as the entry point:</p>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">require</span><span class="p">(</span><span class="s2">&quot;common&quot;</span><span class="p">)</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kr">function</span> <span class="nf">main</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  <span class="c1">-- argv contains all command-line arguments passed to the script</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>  <span class="c1">-- argv[1] is the script filename</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>  <span class="c1">-- argv[2], argv[3], etc. are additional arguments</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>  <span class="kd">local</span> <span class="n">args</span> <span class="o">=</span> <span class="n">argparser</span><span class="p">:</span><span class="n">parse</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>  <span class="c1">-- Parse using argparse</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>  <span class="kd">local</span> <span class="n">conffile</span> <span class="o">=</span> <span class="n">parse_config</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="c1">-- loads stormweaver.toml based on the --config argument</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>  <span class="c1">-- Your scenario logic here</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="kr">end</span>
+</span></code></pre></div>
+<p>The <code>main</code> function receives command-line arguments and is called automatically when the script is executed.</p>
+<h3 id="argument-parsing">Argument Parsing</h3>
+<p>The <code>argparse</code> library is included, and the C++ runner forwards all arguments to the script, including the scenario filename.</p>
+<p>The Lua helpers already create a default parser using the global variable <code>argparser</code>, which includes handling the common arguments, so scenarios only have to set up additional scenario-specific arguments.</p>
+<h3 id="example-adding-custom-arguments">Example: Adding Custom Arguments</h3>
+<div class="language-lua highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">require</span><span class="p">(</span><span class="s2">&quot;common&quot;</span><span class="p">)</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1">-- Add scenario-specific arguments (can be done at global scope)</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">argparser</span><span class="p">:</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;-t --timeout&quot;</span><span class="p">,</span> <span class="s2">&quot;Test timeout in seconds&quot;</span><span class="p">,</span> <span class="mi">30</span><span class="p">)</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">argparser</span><span class="p">:</span><span class="n">flag</span><span class="p">(</span><span class="s2">&quot;--skip-cleanup&quot;</span><span class="p">,</span> <span class="s2">&quot;Skip cleanup after test&quot;</span><span class="p">)</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="kr">function</span> <span class="nf">main</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>  <span class="kd">local</span> <span class="n">args</span> <span class="o">=</span> <span class="n">argparser</span><span class="p">:</span><span class="n">parse</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>  <span class="kd">local</span> <span class="n">timeout</span> <span class="o">=</span> <span class="n">args</span><span class="p">.</span><span class="n">timeout</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>  <span class="kd">local</span> <span class="n">skip_cleanup</span> <span class="o">=</span> <span class="n">args</span><span class="p">.</span><span class="n">skip_cleanup</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>  <span class="n">info</span><span class="p">(</span><span class="s2">&quot;Running with timeout: &quot;</span> <span class="o">..</span> <span class="n">timeout</span> <span class="o">..</span> <span class="s2">&quot; seconds&quot;</span><span class="p">)</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>  <span class="kr">if</span> <span class="n">skip_cleanup</span> <span class="kr">then</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>    <span class="n">info</span><span class="p">(</span><span class="s2">&quot;Cleanup will be skipped&quot;</span><span class="p">)</span>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>  <span class="kr">end</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>  <span class="c1">-- Rest of scenario logic</span>
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="kr">end</span>
+</span></code></pre></div>
+<h2 id="multi-threaded-structure">Multi-threaded structure</h2>
+<p>StormWeaver is a multithreaded, concurrent test framework, while Lua is a single-threaded scripting language.
+To make the two work together, it uses multiple Lua instances:</p>
+<ul>
+<li>There's one "main" instance used for the scenario startup and setup</li>
+<li>There's one instance per worker thread when running workloads</li>
+<li>And any of the above threads also might start background workers, resulting in additional Lua threads</li>
+</ul>
+<p>The main thread and background workers are Lua-first:
+there's a Lua function (<code>main</code> in case of the main thread, user specified for background workers) that gets executed, and when this function ends, the thread also exits.</p>
+<p>The worker threads are however C++-first:
+the random workload is generated by a C++ runner, and it only executes Lua functions when it is necessary.</p>
+<h3 id="limitations">Limitations</h3>
+<p>To ensure that all threads have access to the same functions, the scenario file is loaded for all Lua states.</p>
+<p>This results in the following limitations:</p>
+<ul>
+<li>the scenario script, and included other scripts get processed multiple times</li>
+<li>anything that is executed directly by the script will be executed by all threads</li>
+<li>while global variables will be available in all threads, their values will be different and won't be synced</li>
+</ul>
+<p>In line with this, it is recommended that script/scenario files:</p>
+<ul>
+<li>shouldn't rely on mutable global variables</li>
+<li>shouldn't execute code directly in the source file, instead everything should go into the <code>main</code> function or other callable functions</li>
+<li>should define functions and constants at global scope, but defer execution to the <code>main</code> function</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.1e8ae164.min.js"></script>
+      
+    
+  </body>
+</html>
