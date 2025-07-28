@@ -287,6 +287,9 @@ LuaContext::LuaContext(std::shared_ptr<spdlog::logger> logger)
     return std::filesystem::copy(from, to,
                                  std::filesystem::copy_options::recursive);
   };
+  fs_usertype["absolute"] = [](std::string const &path) {
+    return std::filesystem::absolute(path).string();
+  };
   fs_usertype["delete_directory"] = [](std::string const &dir) {
     return std::filesystem::remove_all(dir);
   };
