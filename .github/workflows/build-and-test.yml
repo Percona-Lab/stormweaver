@@ -13,7 +13,7 @@ on:
         type: string
 env:
   CC: ${{ inputs.compiler }}
-  CXX: ${{ inputs.compiler == 'clang-19' && 'clang++-19' || 'g++' }}
+  CXX: ${{ inputs.compiler == 'clang-20' && 'clang++-20' || 'g++' }}
       
 jobs:
   build:
@@ -29,7 +29,7 @@ jobs:
           pipx ensurepath
           sudo pipx install conan
           sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
-          sudo apt install clang-tools-19
+          sudo apt install clang-tools-20 clang-20 
 
       - name: Setup conan
         run: |
