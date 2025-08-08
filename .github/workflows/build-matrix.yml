@@ -19,7 +19,7 @@ jobs:
       matrix:
         ubuntu_version: [22,24]
         build_type: [Debug,RelWithDebInfo]
-        compiler: [gcc, clang-19]
+        compiler: [gcc, clang-20]
       fail-fast: false
     uses: ./.github/workflows/build-and-test.yml
     with:
