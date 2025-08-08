@@ -1,5 +1,15 @@
 require("pg_simple")
 
+function tail_grep(pattern, file, timeout)
+	for s = 1, timeout do
+		if os.execute("grep '" .. pattern .. "' '" .. file .. "'") then
+			return true
+		end
+		sleep(1000)
+	end
+	return false
+end
+
 function main(argv)
 	if fs.is_directory("backups") then
 		warning("Deleting old stormweaver run backups")
@@ -57,16 +67,7 @@ function main(argv)
 
 			pgm:start(1)
 
-			recovered = false
-			for s = 1, 200 do
-				if os.execute("grep 'pausing at the end of recovery' datadirs/datadir_pr/logs/server.log") then
-					recovered = true
-					break
-				end
-				sleep(1000)
-			end
-
-			if not recovered then
+			if not tail_grep("pausing at the end of recovery", "datadirs/datadir_pr/logs/server.log", 200) then
 				error("Couldn't complete PITR")
 			end
 
@@ -79,7 +80,7 @@ function main(argv)
 			w:discover_existing_schema()
 			w:calculate_database_checksums(checksumFile)
 
-			ret = os.execute("/usr/bin/diff " .. checksumFile .. " " .. backupChecksumFile)
+			ret = os.execute("diff " .. checksumFile .. " " .. backupChecksumFile)
 			if not ret then
 				error("Backup checksum verification failed with incremental #" .. tostring(workloadIdx))
 			end
