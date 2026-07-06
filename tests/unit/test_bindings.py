@@ -59,3 +59,7 @@ def test_config_roundtrip():
 def test_connect_mysql_exists_and_fails_cleanly():
     with pytest.raises(RuntimeError):
         sw.connect_mysql(host="127.0.0.1", port=1, log_name="mysql-nope")
+
+
+def test_worker_exposes_checksums():
+    assert callable(getattr(sw.Worker, "calculate_database_checksums", None))

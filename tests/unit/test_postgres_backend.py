@@ -1,5 +1,6 @@
 import subprocess
 
+import pytest
 import stormweaver as sw
 
 
@@ -87,3 +88,58 @@ def test_connection_params(monkeypatch):
     assert params["dbname"] == "mydb"
     assert params["user"] == "tester"
     assert params["host"] == "localhost"
+
+
+def test_basebackup_incremental_flag(tmp_path, monkeypatch):
+    pg = sw.Postgres(
+        install_dir="/opt/pg", datadir=str(tmp_path / "d"), port=26100, init=False
+    )
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        return FakeCompleted(returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    pg.basebackup(str(tmp_path / "b1"), incremental="b0/backup_manifest")
+
+    cmd = calls[0]
+    idx = cmd.index("-i")
+    assert cmd[idx + 1] == "b0/backup_manifest"
+
+
+def test_combinebackup_command(tmp_path, monkeypatch):
+    pg = sw.Postgres(
+        install_dir="/opt/pg", datadir=str(tmp_path / "d"), port=26100, init=False
+    )
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        return FakeCompleted(returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    pg.combinebackup(["b0", "b1"], str(tmp_path / "out"))
+
+    cmd = calls[0]
+    assert cmd[0].endswith("pg_combinebackup")
+    assert cmd[1:3] == ["b0", "b1"]
+    assert cmd[cmd.index("-o") + 1] == str(tmp_path / "out")
+
+
+def test_combinebackup_raises_on_failure(tmp_path, monkeypatch):
+    pg = sw.Postgres(
+        install_dir="/opt/pg", datadir=str(tmp_path / "d"), port=26100, init=False
+    )
+    monkeypatch.setattr(
+        subprocess, "run", lambda *a, **k: FakeCompleted(returncode=1, stderr="boom")
+    )
+    with pytest.raises(RuntimeError, match="pg_combinebackup"):
+        pg.combinebackup(["b0"], str(tmp_path / "out"))
+
+
+def test_server_log_path_is_public(tmp_path):
+    pg = sw.Postgres(
+        install_dir="/opt/pg", datadir=str(tmp_path / "d"), port=26100, init=False
+    )
+    assert pg.server_log_path.name.startswith("server-")

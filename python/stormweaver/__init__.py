@@ -6,6 +6,7 @@ if not sysconfig.get_config_var("Py_GIL_DISABLED"):
         "install one with: uv python install 3.14t"
     )
 
+from stormweaver import scenario
 from stormweaver._stormweaver import (
     ActionFactory,
     ActionRegistry,
@@ -58,4 +59,5 @@ __all__ = [
     "connect_mysql",
     "connect_pg",
     "default_action_registry",
+    "scenario",
 ]

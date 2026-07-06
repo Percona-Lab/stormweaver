@@ -1,71 +1,25 @@
-import logging
-import shutil
+# Basic CI scenario: randomized workload cycles against a single mysql
+# server (no restarts).
 
-import stormweaver as sw
+import logging
+
+from stormweaver import scenario
 
 logger = logging.getLogger("scenario.basic_mysql")
 
 
 def main(args):
-    config = sw.Config.load(args.config)
-    install_dir = args.install_dir or config.pgroot
+    opts = scenario.parse(
+        args, extend=lambda p: p.set_defaults(duration=30, workers=4, repeat=2)
+    )
 
-    if not install_dir:
-        raise RuntimeError("MySQL install dir required: use -i")
+    with scenario.single_mysql(opts) as ctx:
+        for cycle in range(opts.repeat):
+            ctx.workload.run()
+            logger.info("cycle %d/%d done", cycle + 1, opts.repeat)
 
-    datadir = config.datadir("primary_mysql")
+        ctx.workload.print_report()
 
-    shutil.rmtree(datadir, ignore_errors=True)
-
-    my = sw.MySQL(install_dir=install_dir, datadir=datadir, port=config.free_port())
-    my.add_config({"max_connections": "200"})
-    my.start()
-    try:
-        assert my.wait_ready(), "mysqld did not become ready"
-        my.createdb("testdb")
-
-        metadata = sw.Metadata()
-        registry = sw.default_action_registry("mysql")
-
-        # Remove partition actions for simplicity
-        for action_name in ["create_partition", "drop_partition"]:
-            if registry.has(action_name):
-                registry.remove(action_name)
-
-        action_config = sw.AllConfig()
-        action_config.ddl.access_methods = ["InnoDB"]
-
-        def make_connection():
-            return sw.connect_mysql(
-                host="127.0.0.1", port=my.port, dbname="testdb", user="root"
-            )
-
-        # Create initial tables
-        worker = sw.Worker("setup", make_connection, sw.WorkloadParams(), metadata)
-        worker.create_random_tables(5)
-
-        workload = sw.Workload(
-            workers=4,
-            duration=30,
-            repeat=2,
-            registry=registry,
-            metadata=metadata,
-            node_factory=make_connection,
-            action_config=action_config,
-        )
-        workload.run()
-        workload.print_report()
-
-        # Validate metadata
-        validator = sw.Worker(
-            "validator", make_connection, sw.WorkloadParams(), metadata
-        )
-        valid = validator.validate_metadata()
-        if not valid:
-            # Known limitation: metadata may diverge under concurrent DDL until
-            # the metadata rework; do not fail the scenario on this.
-            logger.warning("metadata validation failed (known limitation, ignored)")
-    finally:
-        my.stop()
+        ctx.validate_metadata_or_warn()
 
     print("Scenario completed successfully")

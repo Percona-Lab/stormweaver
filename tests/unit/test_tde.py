@@ -43,7 +43,7 @@ def test_init_tde_only_for_db_statements():
 def test_init_tde_globally_statements():
     conn = FakeConn()
     tde.init_tde_globally(conn, "/tmp/g.per")
-    assert len(conn.queries) == 8
+    assert len(conn.queries) == 9
     assert conn.queries[0].startswith("CREATE EXTENSION")
     assert "default_table_access_method = tde_heap" in conn.queries[1]
     assert (
@@ -54,9 +54,12 @@ def test_init_tde_globally_statements():
     assert "'server-principal-key'" in conn.queries[3]
     assert "pg_tde_set_key_using_global_key_provider" in conn.queries[4]
     assert "pg_tde_set_server_key_using_global_key_provider" in conn.queries[5]
-    assert "pg_tde_set_default_key_using_global_key_provider" in conn.queries[6]
+    # default key must exist before it can be set as default
+    assert "pg_tde_create_key_using_global_key_provider" in conn.queries[6]
     assert "'def-principal-key'" in conn.queries[6]
-    assert "pg_tde.wal_encrypt" in conn.queries[7]
+    assert "pg_tde_set_default_key_using_global_key_provider" in conn.queries[7]
+    assert "'def-principal-key'" in conn.queries[7]
+    assert "pg_tde.wal_encrypt" in conn.queries[8]
 
 
 def test_failure_raises():

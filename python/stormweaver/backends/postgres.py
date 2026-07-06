@@ -36,7 +36,11 @@ class Postgres(DatabaseBackend):
         run_dir = swlog.log_dir()
         if run_dir is not None:
             return run_dir / f"server-{self.datadir.name}.log"
-        return self.datadir / "server.log"
+        return self.datadir / f"server-{self.datadir.name}.log"
+
+    @property
+    def server_log_path(self) -> Path:
+        return self._server_log_path()
 
     def initialize(self) -> None:
         logger.info("Initializing datadir at %s", self.datadir)
@@ -176,7 +180,10 @@ class Postgres(DatabaseBackend):
         )
 
     def basebackup(
-        self, target_datadir: str | Path, extra_args: list[str] | None = None
+        self,
+        target_datadir: str | Path,
+        extra_args: list[str] | None = None,
+        incremental: str | Path | None = None,
     ) -> None:
         args = [
             self._bin("pg_basebackup"),
@@ -188,11 +195,24 @@ class Postgres(DatabaseBackend):
             str(self._port),
             "--no-sync",
         ]
+        if incremental:
+            args.extend(["-i", str(incremental)])
         if extra_args:
             args.extend(extra_args)
         result = subprocess.run(args, capture_output=True, text=True)
         if result.returncode != 0:
             raise RuntimeError(f"pg_basebackup failed: {result.stderr}")
+
+    def combinebackup(self, backups: list[str | Path], output: str | Path) -> None:
+        args = [
+            self._bin("pg_combinebackup"),
+            *[str(b) for b in backups],
+            "-o",
+            str(output),
+        ]
+        result = subprocess.run(args, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise RuntimeError(f"pg_combinebackup failed: {result.stderr}")
 
     def connection_params(self, dbname: str) -> dict[str, Any]:
         user = os.environ.get("PGUSER") or getpass.getuser()

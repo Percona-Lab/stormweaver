@@ -18,6 +18,15 @@ requires_pg = pytest.mark.skipif(
     not (PG_DIR / "bin" / "initdb").exists(), reason="no postgres installation"
 )
 
+PG_TDE_DIR = Path(
+    os.environ.get("STORMWEAVER_PG_TDE_DIR", "/storage/tdework/inst/psp_rel_18_stable")
+)
+
+requires_pg_tde = pytest.mark.skipif(
+    not (PG_TDE_DIR / "bin" / "initdb").exists(),
+    reason="no pg_tde postgres installation",
+)
+
 
 def pg_user() -> str:
     return os.environ.get("PGUSER") or getpass.getuser()

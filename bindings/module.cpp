@@ -281,6 +281,8 @@ NB_MODULE(_stormweaver, m) {
       .def("discover_existing_schema", &Worker::discover_existing_schema)
       .def("reset_metadata", &Worker::reset_metadata)
       .def("validate_metadata", &Worker::validate_metadata)
+      .def("calculate_database_checksums",
+           &Worker::calculate_database_checksums)
       .def("reconnect", &Worker::reconnect);
 
   nb::class_<RandomWorker, Worker>(m, "RandomWorker")

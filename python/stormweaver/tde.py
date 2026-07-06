@@ -52,6 +52,11 @@ def init_tde_globally(conn: Any, keyring_path: str) -> None:
     )
     _execute(
         conn,
+        "SELECT pg_tde_create_key_using_global_key_provider("
+        "'def-principal-key', 'reg_file');",
+    )
+    _execute(
+        conn,
         "SELECT pg_tde_set_default_key_using_global_key_provider("
         "'def-principal-key', 'reg_file');",
     )
