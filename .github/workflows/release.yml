@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  wheels:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      # v4.1 builds cp314t by default, config lives in pyproject.toml [tool.cibuildwheel]
+      - uses: pypa/cibuildwheel@v4.1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels
+          path: wheelhouse/*.whl
+
+  bundle:
+    needs: wheels
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: wheels, path: wheelhouse }
+      - run: |
+          curl -fsSL https://github.com/goreleaser/nfpm/releases/download/v2.47.0/nfpm_2.47.0_Linux_x86_64.tar.gz \
+            | sudo tar -xz -C /usr/local/bin nfpm
+      - run: |
+          # assumes v-prefixed tags (push trigger is v* only); a dispatch on a
+          # v-prefixed branch name would mis-derive - known, accepted
+          VERSION="${GITHUB_REF_NAME#v}"
+          [ "$GITHUB_REF_NAME" = "$VERSION" ] && VERSION="0.0.0-dev"
+          mapfile -t W < <(ls wheelhouse/*.whl)
+          [ "${#W[@]}" -eq 1 ] || { echo "expected exactly 1 wheel, got ${#W[@]}"; exit 1; }
+          packaging/build-bundle.sh "${W[0]}" "$VERSION"
+      - run: |
+          mkdir -p /tmp/swb && tar -xzf dist/stormweaver-*.tar.gz -C /tmp/swb
+          /tmp/swb/stormweaver/bin/stormweaver --help
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundles
+          path: dist/*

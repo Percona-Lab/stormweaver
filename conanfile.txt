@@ -1,0 +1,13 @@
+[generators]
+CMakeDeps
+
+[requires]
+boost/1.86.0
+reflect-cpp/0.17.0
+libpqxx/7.9.2
+nlohmann_json/3.11.3
+spdlog/1.15.1
+catch2/3.7.0
+fmt/11.1.3
+magic_enum/0.9.7
+cryptopp/8.9.0

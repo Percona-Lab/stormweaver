@@ -1,0 +1,15 @@
+name: stormweaver
+arch: amd64
+platform: linux
+version: "${VERSION}"
+maintainer: Percona
+description: Concurrent database testing tool (self-contained bundle)
+license: MIT
+contents:
+  - src: "${STAGE}/stormweaver"
+    dst: /opt/stormweaver
+    type: tree
+    expand: true
+  - src: /opt/stormweaver/bin/stormweaver
+    dst: /usr/bin/stormweaver
+    type: symlink

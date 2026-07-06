@@ -1,0 +1,74 @@
+[build-system]
+requires = ["scikit-build-core>=0.11", "nanobind>=2.7"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "stormweaver"
+version = "0.1.0"
+description = "Concurrent database testing tool"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.14"
+
+[project.scripts]
+stormweaver = "stormweaver.cli:main"
+
+[project.entry-points.pytest11]
+stormweaver = "stormweaver.pytest_plugin"
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+cmake.version = ">=3.30"
+wheel.packages = ["python/stormweaver"]
+
+[tool.scikit-build.cmake.define]
+CMAKE_PROJECT_TOP_LEVEL_INCLUDES = "cmake/conan_setup.cmake"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "mypy>=1.14",
+    "ruff>=0.9",
+    "pre-commit>=4",
+]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+files = ["python/stormweaver"]
+
+[[tool.mypy.overrides]]
+module = "stormweaver._stormweaver"
+ignore_missing_imports = true
+
+[tool.cibuildwheel]
+# cibuildwheel 4.x builds cp314t by default (the old cpython-freethreading
+# enable flag was removed in 4.0, using it now is a schema error) - the
+# build selector below is what actually restricts us to just this one target.
+build = ["cp314t-manylinux_x86_64"]
+manylinux-x86_64-image = "manylinux_2_28"
+build-frontend = "build[uv]"
+test-command = "python -c 'import stormweaver; print(stormweaver.__version__)'"
+
+[tool.cibuildwheel.linux]
+# runs as sh -c inside the container, no CONAN_HOME set there so conan lands
+# under $HOME/.conan2. cppstd/cflags fix now lives in conan/host.profile,
+# wired in via cmake/conan_setup.cmake - just need conan installed and a
+# default profile to compose against.
+# ninja: not installed here on purpose - scikit-build-core pulls the ninja
+# wheel from PyPI into the build venv when no system ninja is found, and
+# that venv's bin dir is on PATH for the rest of the build (conan included).
+# set -e is load-bearing: sh -c only reports the LAST command's status, so
+# without it a failed step in the middle would be silently swallowed.
+before-all = """
+set -e
+pipx install conan || pip install conan
+conan profile detect --exist-ok
+"""

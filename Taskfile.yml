@@ -1,0 +1,95 @@
+version: "3"
+
+# PG_DIR (PostgreSQL install dir with bin/initdb) is required by scenario
+# tasks. Set it per invocation (task test:scenario:basic PG_DIR=/path)
+# or once in a gitignored .env file (PG_DIR=/path).
+dotenv: [".env"]
+
+tasks:
+  setup:
+    desc: One-time dev setup
+    cmds:
+      - uv python install 3.14t
+      - uv venv --allow-existing
+      - uv pip install -e . --group dev
+      - uv run pre-commit install
+
+  build:
+    desc: Rebuild the extension + package
+    cmds:
+      - uv pip install -e .
+
+  cpp:build:
+    desc: Pure C++ build (no python), PRESET=debug|asan-ubsan|tsan
+    cmds:
+      - cmake --preset {{.PRESET | default "debug"}}
+      - cmake --build --preset {{.PRESET | default "debug"}}
+
+  cpp:test:
+    desc: C++ tests
+    deps: ["cpp:build"]
+    cmds:
+      - ctest --preset {{.PRESET | default "debug"}}
+
+  test:py:
+    desc: Python unit tests
+    cmds:
+      - uv run pytest tests/unit -v
+
+  test:scenario:basic:
+    desc: Run the basic CI scenario (scenarios/ci/basic.py), needs PG_DIR
+    preconditions:
+      - sh: test -x "{{.PG_DIR}}/bin/initdb"
+        msg: "PG_DIR must point to a PostgreSQL install with bin/initdb (arg or .env), see docs/building.md"
+    cmds:
+      - uv run stormweaver scenarios/ci/basic.py -i "{{.PG_DIR}}"
+
+  test:
+    desc: Everything local (the scenario part needs PG_DIR)
+    cmds:
+      - task: cpp:test
+      - task: test:py
+      - task: test:scenario:basic
+
+  fmt:
+    desc: Autofix formatting (C++ and python)
+    cmds:
+      - find core bindings -name '*.cpp' -o -name '*.hpp' | xargs clang-format -i
+      - uv run ruff format python tests scenarios
+      - uv run ruff check --fix python tests scenarios
+
+  fmt:check:
+    desc: Check-only formatting
+    cmds:
+      - find core bindings -name '*.cpp' -o -name '*.hpp' | xargs clang-format --dry-run --Werror
+      - uv run ruff format --check python tests scenarios
+      - uv run ruff check python tests scenarios
+
+  tidy:
+    desc: clang-tidy over core/src (bindings/module.cpp not in this compile db - see comment below)
+    deps: ["cpp:build"]
+    cmds:
+      # bindings/module.cpp is only built by the pip/scikit-build path (WITH_PYTHON),
+      # not by the cpp:build preset (WITH_PYTHON=OFF), so the preset build dir's
+      # compile_commands.json has no entry for it and clang-tidy can't resolve its
+      # includes (nanobind headers, module flags). Scoped to core/src only.
+      # mysql.cpp is also excluded - not in LIBRARY_SOURCES yet (mysql.h not vendored),
+      # same compile-db problem.
+      # -p uses the same PRESET expression as the cpp:build dep so they can't mismatch
+      - find core/src -name '*.cpp' -not -name 'mysql.cpp' | xargs clang-tidy -p build/{{.PRESET | default "debug"}} --warnings-as-errors='*'
+
+  tidy:fix:
+    desc: clang-tidy autofix
+    deps: ["cpp:build"]
+    cmds:
+      - find core/src -name '*.cpp' -not -name 'mysql.cpp' | xargs clang-tidy -p build/{{.PRESET | default "debug"}} --fix
+
+  lint:
+    desc: All check-only linters
+    cmds:
+      - task: fmt:check
+      - uv run mypy python/stormweaver
+
+  clean:
+    cmds:
+      - rm -rf build dist

@@ -4,42 +4,45 @@ StormWeaver is a concurrent database testing tool, inspired by [PStress](https:/
 
 It has two goals:
 
-* Provide a framework for writing highly concurrent, somewhat randomized tests to stress the database server and uncover synchronization/locking/memory management issues
-* Provide a framework for writing complex test scenarios in a user-friendly format (TODO)
+* Randomized, highly concurrent stress testing to uncover synchronization/locking/memory management issues in the database server
+* Stable, deterministic product tests you can run in CI (a pytest plugin, see [Stable tests](stable-tests.md))
 
-Currently it works with PostgreSQL and is used for testing `pg_tde`.
+The core engine (metadata, actions, workers, SQL) is C++23, driven from Python 3.14t (free-threaded) scenarios through nanobind bindings. PostgreSQL is supported today, MySQL support is planned next.
 
 ## Installation
 
-For now, there are no prebuilt packages. StormWeaver has to be built from source.
+Installing builds the C++ extension, so the first time on a machine you need a [Conan 2](https://docs.conan.io/2/installation.html) profile: `conan profile detect` - see [Conan profile](building.md#conan-profile). Then:
 
-See [Building from source](building.md) for details.
+```bash
+uv python install 3.14t
+uv venv
+uv pip install -e . --group dev
+```
+
+Or simply `task setup`. See [Building from source](building.md) for details, the pure C++ (no Python) build, and sanitizer presets.
 
 ## A first scenario
 
-StormWeaver stores test scenarios in the `scenarios` folder, written in Lua.
-There is a scenario called `basic` with lots of comments intended as a first example.
-To run it, execute the following command:
+Scenarios are Python files with a `main(args)` function. `scenarios/ci/basic.py` is a small, commented example: it starts PostgreSQL, creates some tables, runs a randomized workload, and validates the metadata. Run it with:
 
 ```bash
-cd stormweaver
-bin/stormweaver scenarios/basic.lua [-c config/stormweaver.toml] [-i /path/to/the/pg/folder/] [scenario specific arguments...]
+uv run stormweaver scenarios/ci/basic.py -i /path/to/postgres/install
 ```
 
-This script will:
+This will:
 
-1. Set up a new data directory in `datadirs/datadir_pr/...`
-2. Start PostgreSQL with this data directory
-3. Unless the `WITHOUT_TDE` environment variable is defined, configure `pg_tde`
-4. Start the server instance
-5. Create normal or encrypted tables based on the above setting
-6. Run a 20-second workload on the server, repeating 10 times.
-   Each time it randomly restarts the server or sends a `kill -9` signal.
+1. Load `config/stormweaver.toml` (or the file passed via `-c`) and create a fresh data directory under `datadirs/`
+2. Start PostgreSQL and create a test database
+3. Create a handful of random tables
+4. Run a 4-worker, 30-second randomized workload, twice
+5. Print the per-worker statistics report
+6. Validate the in-memory metadata against the live schema (see the known limitation in [Determinism](determinism.md))
 
 ## What's next?
 
-More details about the use of StormWeaver can be found in the following sections:
-
-1. A quick high-level overview of how the project is constructed from a user's perspective
-2. The configuration options supported by the default scripting framework
-3. What functions are available in the scenario scripts
+* [Writing scenarios](writing-scenarios.md) - scenario anatomy and the `sw` API
+* [Python actions](python-actions.md) - registering custom actions
+* [Stable tests](stable-tests.md) - the pytest plugin for deterministic CI tests
+* [Determinism](determinism.md) - what replays and what doesn't
+* [Randomized testing concepts](randomized-testing-concepts.md) - Workload/Worker/Action/ActionRegistry
+* [Config parameters](config-parameters.md) - the TOML config file and CLI flags

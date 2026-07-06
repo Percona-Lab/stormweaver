@@ -8,3 +8,10 @@
 /logs/
 /datadirs/
 /backups/
+__pycache__
+/.task
+.venv/
+*.egg-info/
+dist/
+.env
+site/

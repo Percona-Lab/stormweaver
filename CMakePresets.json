@@ -1,0 +1,31 @@
+{
+  "version": 8,
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": "${sourceDir}/cmake/conan_setup.cmake",
+        "WITH_PYTHON": "OFF"
+      }
+    },
+    { "name": "debug", "inherits": "base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" } },
+    { "name": "asan-ubsan", "inherits": "base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "WITH_ASAN": "ON", "WITH_UBSAN": "ON" } },
+    { "name": "tsan", "inherits": "base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "WITH_TSAN": "ON" } }
+  ],
+  "buildPresets": [
+    { "name": "debug", "configurePreset": "debug" },
+    { "name": "asan-ubsan", "configurePreset": "asan-ubsan" },
+    { "name": "tsan", "configurePreset": "tsan" }
+  ],
+  "testPresets": [
+    { "name": "debug", "configurePreset": "debug", "output": {"outputOnFailure": true} },
+    { "name": "asan-ubsan", "configurePreset": "asan-ubsan", "output": {"outputOnFailure": true} },
+    { "name": "tsan", "configurePreset": "tsan", "output": {"outputOnFailure": true} }
+  ]
+}

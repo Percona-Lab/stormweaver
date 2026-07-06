@@ -37,4 +37,3 @@ Other than the action definition itself, each Action in a Registry also has a we
 
 For each random action selection, the sum of all weights is calculated, and then a random number is chosen in the (0, sumOfWeights) range.
 Then the action is determined based on where this number lands in the list of actions.
-

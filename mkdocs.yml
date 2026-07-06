@@ -4,16 +4,19 @@ theme:
   features:
     - content.code.copy
     - content.code.annotate
+exclude_docs: |
+  superpowers/**
 nav:
   - Getting started: index.md
   - Building from source: building.md
-  - Scripting architecture: scripting-architecture.md
+  - Writing scenarios: writing-scenarios.md
+  - Python actions: python-actions.md
+  - Stable tests: stable-tests.md
+  - Determinism: determinism.md
   - Randomized testing concepts: randomized-testing-concepts.md
-  - Scripting examples: scripting-examples.md
   - Config parameters: config-parameters.md
-  - Lua C++ API reference: lua-cpp-reference.md
-  - Extensibility workflow: extensibility-workflow.md
-  - Code architecture: code-architecture.md
+  - Design notes:
+      - Enhanced statistics ADR: adr-enhanced-statistics.md
 
 markdown_extensions:
   - admonition

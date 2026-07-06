@@ -1,0 +1,163 @@
+name: CI
+
+on:
+  push:
+    branches: [main, newpython]
+  pull_request:
+
+env:
+  CONAN_HOME: ${{ github.workspace }}/.conan2
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv python install 3.14t && uv venv
+      # no editable install here on purpose:
+      # mypy has ignore_missing_imports for stormweaver._stormweaver and typechecks
+      # python/stormweaver by path, so it never needs the compiled extension. Doing
+      # `uv pip install -e .` would drag in conan+cmake just for this job, so we
+      # install the lint tools directly and always pass --no-sync to uv run so it
+      # never tries to build/sync the stormweaver project itself.
+      # pytest itself needed too - pytest_plugin.py imports it, mypy needs the
+      # types or it cascades into untyped-decorator/return-type errors on every
+      # fixture in that file
+      - run: uv pip install ruff mypy pre-commit pytest
+      - run: uv run --no-sync ruff check python tests scenarios
+      - run: uv run --no-sync ruff format --check python tests scenarios
+      # mypy local hook shells out to `uv run mypy ...` (no --no-sync), which would
+      # trigger a full project sync/build. Skip it here and run mypy ourselves below.
+      - run: SKIP=mypy uv run --no-sync pre-commit run --all-files --show-diff-on-failure
+      - run: uv run --no-sync mypy python/stormweaver
+
+  cpp-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [debug, asan-ubsan, tsan]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ${{ env.CONAN_HOME }}
+          key: conan-${{ matrix.preset }}-${{ hashFiles('conanfile.txt') }}
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build postgresql-16
+      - run: pipx install conan
+      - run: conan profile detect --exist-ok
+      - run: cmake --preset ${{ matrix.preset }} -DTEST_PG_DIR=/usr/lib/postgresql/16
+      - run: cmake --build --preset ${{ matrix.preset }}
+      - run: ctest --preset ${{ matrix.preset }} --output-on-failure
+
+  clang-tidy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CC: clang-22
+      CXX: clang++-22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ${{ env.CONAN_HOME }}
+          key: conan-clang-${{ hashFiles('conanfile.txt') }}
+      - run: |
+          wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 22
+          sudo apt-get install -y clang-tidy-22 ninja-build
+      - run: pipx install conan
+      - run: conan profile detect --exist-ok
+      - run: cmake --preset debug
+      - run: cmake --build --preset debug
+      # mysql.cpp is not built, no compile command for it
+      - run: |
+          find core/src -name '*.cpp' -not -name 'mysql.cpp' \
+            | xargs clang-tidy-22 -p build/debug --warnings-as-errors='*'
+
+  python-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/cache@v4
+        with:
+          path: ${{ env.CONAN_HOME }}
+          key: conan-py-${{ hashFiles('conanfile.txt') }}
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build postgresql-16
+      - run: pipx install conan
+      - run: conan profile detect --exist-ok
+      - run: uv python install 3.14t && uv venv && uv pip install -e . pytest
+      # --no-sync: don't let uv resync/rebuild the project before running, the
+      # editable install above already built it, resync would just redo it slower
+      - run: uv run --no-sync pytest tests/unit tests/stable -v
+        env:
+          STORMWEAVER_PG_DIR: /usr/lib/postgresql/16
+
+  scenario:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/cache@v4
+        with:
+          path: ${{ env.CONAN_HOME }}
+          key: conan-py-${{ hashFiles('conanfile.txt') }}
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build postgresql-16
+      - run: pipx install conan
+      - run: conan profile detect --exist-ok
+      - run: uv python install 3.14t && uv venv && uv pip install -e . pytest
+      - run: uv run --no-sync stormweaver scenarios/ci/basic.py -i /usr/lib/postgresql/16
+
+  scenario-asan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/cache@v4
+        with:
+          path: ${{ env.CONAN_HOME }}
+          key: conan-py-asan-${{ hashFiles('conanfile.txt') }}
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build postgresql-16
+      - run: pipx install conan
+      - run: conan profile detect --exist-ok
+      - run: uv python install 3.14t && uv venv
+      - run: CMAKE_ARGS="-DWITH_ASAN=ON -DWITH_UBSAN=ON" uv pip install -e .
+      # --no-sync here matters more than it looks: scikit-build-core's editable
+      # rebuild-on-import only reruns `cmake --build` (incremental, same cache,
+      # ASAN flags stick) - but a `uv run` project resync could redo the PEP 660
+      # build_editable hook from scratch without CMAKE_ARGS set, silently losing
+      # the sanitizer flags. --no-sync keeps the ASAN build we just made.
+      # libstdc++ must be preloaded too: python3.14t doesn't link it, so
+      # without it ASan can't resolve the real __cxa_throw at startup and
+      # aborts on the first C++ exception ("real___cxa_throw != 0" CHECK)
+      - run: |
+          LIBASAN=$(gcc -print-file-name=libasan.so)
+          LIBSTDCPP=$(gcc -print-file-name=libstdc++.so.6)
+          LD_PRELOAD="$LIBASAN $LIBSTDCPP" ASAN_OPTIONS=detect_leaks=0 \
+            uv run --no-sync stormweaver scenarios/ci/basic.py -i /usr/lib/postgresql/16
+
+  determinism:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/cache@v4
+        with:
+          path: ${{ env.CONAN_HOME }}
+          key: conan-py-${{ hashFiles('conanfile.txt') }}
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build postgresql-16
+      - run: pipx install conan
+      - run: conan profile detect --exist-ok
+      - run: uv python install 3.14t && uv venv && uv pip install -e . pytest
+      - run: uv run --no-sync stormweaver scenarios/ci/determinism.py -i /usr/lib/postgresql/16

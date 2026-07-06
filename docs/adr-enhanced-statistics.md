@@ -65,11 +65,11 @@ struct ActionStatistics {
     uint64_t actionFailureCount = 0;     // ActionException
     uint64_t sqlFailureCount = 0;        // SqlException
     uint64_t otherFailureCount = 0;      // Any other exception
-    
+
     // Error categorization (separate maps for different error types)
     std::map<std::string, uint64_t> actionErrorNames;  // ActionException error names
     std::map<std::string, uint64_t> sqlErrorCodes;     // SQL error codes
-    
+
     // Timing statistics
     uint64_t totalExecutionTimeNs = 0;
     uint64_t totalSqlTimeNs = 0;
@@ -84,7 +84,7 @@ struct WorkerStatistics {
     std::unordered_map<std::string, ActionStatistics> actionStats;
     std::chrono::steady_clock::time_point startTime;
     std::chrono::steady_clock::time_point endTime;
-    
+
     // Methods for updating and reporting
     void recordSuccess(const std::string& actionName, uint64_t execTimeNs, uint64_t sqlTimeNs);
     void recordActionFailure(const std::string& actionName, const std::string& errorName, uint64_t execTimeNs);

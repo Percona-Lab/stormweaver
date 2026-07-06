@@ -1,0 +1,5 @@
+# Known metadata locking issues, parked for the metadata rework milestone.
+# Remove when Metadata::Reservation locking is redesigned.
+deadlock:metadata::Metadata::Reservation::complete
+race:metadata::Metadata::Reservation::open
+race:metadata::Metadata::Reservation::operator=
