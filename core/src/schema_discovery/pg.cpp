@@ -7,14 +7,14 @@
 
 namespace schema_discovery {
 
-SchemaDiscovery::SchemaDiscovery(sql_variant::LoggedSQL *connection)
+PgSchemaDiscovery::PgSchemaDiscovery(sql_variant::LoggedSQL *connection)
     : connection_(connection) {
   if (connection_ == nullptr) {
     throw std::invalid_argument("Connection cannot be null");
   }
 }
 
-std::vector<DiscoveredTable> SchemaDiscovery::discoverTables() {
+std::vector<DiscoveredTable> PgSchemaDiscovery::discoverTables() {
   std::vector<DiscoveredTable> tables;
 
   const std::string query = R"(
@@ -69,7 +69,7 @@ std::vector<DiscoveredTable> SchemaDiscovery::discoverTables() {
 }
 
 std::vector<DiscoveredColumn>
-SchemaDiscovery::discoverColumns(const std::string &table_name) {
+PgSchemaDiscovery::discoverColumns(const std::string &table_name) {
   std::vector<DiscoveredColumn> columns;
 
   const std::string query = fmt::format(R"(
@@ -150,7 +150,7 @@ SchemaDiscovery::discoverColumns(const std::string &table_name) {
 }
 
 std::vector<DiscoveredIndex>
-SchemaDiscovery::discoverIndexes(const std::string &table_name) {
+PgSchemaDiscovery::discoverIndexes(const std::string &table_name) {
   std::vector<DiscoveredIndex> indexes;
 
   const std::string query = fmt::format(R"(
@@ -223,7 +223,7 @@ SchemaDiscovery::discoverIndexes(const std::string &table_name) {
 }
 
 std::vector<DiscoveredConstraint>
-SchemaDiscovery::discoverConstraints(const std::string &table_name) {
+PgSchemaDiscovery::discoverConstraints(const std::string &table_name) {
   std::vector<DiscoveredConstraint> constraints;
 
   const std::string query = fmt::format(R"(
@@ -318,7 +318,7 @@ SchemaDiscovery::discoverConstraints(const std::string &table_name) {
 }
 
 std::vector<DiscoveredPartition>
-SchemaDiscovery::discoverPartitions(const std::string &table_name) {
+PgSchemaDiscovery::discoverPartitions(const std::string &table_name) {
   std::vector<DiscoveredPartition> partitions;
 
   const std::string query = fmt::format(R"(
@@ -367,7 +367,7 @@ SchemaDiscovery::discoverPartitions(const std::string &table_name) {
 }
 
 std::vector<std::string>
-SchemaDiscovery::discoverPartitionKeys(const std::string &table_name) {
+PgSchemaDiscovery::discoverPartitionKeys(const std::string &table_name) {
   std::vector<std::string> partition_keys;
 
   const std::string query = fmt::format(R"(
@@ -410,16 +410,16 @@ SchemaDiscovery::discoverPartitionKeys(const std::string &table_name) {
   return partition_keys;
 }
 
-std::string SchemaDiscovery::parseAccessMethod(const std::string &am_name) {
+std::string PgSchemaDiscovery::parseAccessMethod(const std::string &am_name) {
   return am_name;
 }
 
-std::string SchemaDiscovery::parseTablespace(const std::string &ts_name) {
+std::string PgSchemaDiscovery::parseTablespace(const std::string &ts_name) {
   return (ts_name == "pg_default") ? "" : ts_name;
 }
 
-int SchemaDiscovery::parseTypeModifier(const std::string &type_name,
-                                       int type_modifier) {
+int PgSchemaDiscovery::parseTypeModifier(const std::string &type_name,
+                                         int type_modifier) {
   if ((type_name == "varchar" || type_name == "bpchar") && type_modifier >= 4) {
     return type_modifier - 4; // PostgreSQL stores length + 4 in type modifier
   }
@@ -427,7 +427,7 @@ int SchemaDiscovery::parseTypeModifier(const std::string &type_name,
 }
 
 metadata::Table::Type
-SchemaDiscovery::parseTableType(const std::string &type_char) {
+PgSchemaDiscovery::parseTableType(const std::string &type_char) {
   if (type_char == "r") {
     return metadata::Table::Type::normal;
   }
@@ -438,7 +438,7 @@ SchemaDiscovery::parseTableType(const std::string &type_char) {
 }
 
 PartitionType
-SchemaDiscovery::parsePartitionType(const std::string &partition_type_str) {
+PgSchemaDiscovery::parsePartitionType(const std::string &partition_type_str) {
   if (partition_type_str == "RANGE") {
     return PartitionType::range;
   }
@@ -452,7 +452,7 @@ SchemaDiscovery::parsePartitionType(const std::string &partition_type_str) {
 }
 
 metadata::ColumnType
-SchemaDiscovery::parseDataType(const std::string &type_name) {
+PgSchemaDiscovery::parseDataType(const std::string &type_name) {
   if (type_name == "int2" || type_name == "int4" || type_name == "int8") {
     return metadata::ColumnType::INT;
   }
@@ -479,7 +479,7 @@ SchemaDiscovery::parseDataType(const std::string &type_name) {
 }
 
 metadata::Generated
-SchemaDiscovery::parseGeneratedType(const std::string &generated_str) {
+PgSchemaDiscovery::parseGeneratedType(const std::string &generated_str) {
   if (generated_str == "stored") {
     return metadata::Generated::stored;
   }
@@ -490,7 +490,7 @@ SchemaDiscovery::parseGeneratedType(const std::string &generated_str) {
 }
 
 metadata::IndexOrdering
-SchemaDiscovery::parseIndexOrdering(const std::string &ordering_str) {
+PgSchemaDiscovery::parseIndexOrdering(const std::string &ordering_str) {
   if (ordering_str == "desc") {
     return metadata::IndexOrdering::desc;
   }
@@ -498,7 +498,7 @@ SchemaDiscovery::parseIndexOrdering(const std::string &ordering_str) {
 }
 
 ConstraintType
-SchemaDiscovery::parseConstraintType(const std::string &type_char) {
+PgSchemaDiscovery::parseConstraintType(const std::string &type_char) {
   if (type_char == "p") {
     return ConstraintType::primary_key;
   }

@@ -12,8 +12,9 @@ public:
   MySQL(ServerParams const &params);
   ~MySQL() override;
 
-  MySQL(MySQL &&) noexcept = default;
-  MySQL &operator=(MySQL &&) noexcept = default;
+  // connection is a raw owning handle, default move would double mysql_close
+  MySQL(MySQL &&) = delete;
+  MySQL &operator=(MySQL &&) = delete;
 
   void logError(std::ostream &ostream) const override;
 

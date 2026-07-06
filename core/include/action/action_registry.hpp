@@ -2,6 +2,7 @@
 #pragma once
 
 #include "action/all.hpp"
+#include "sql_variant/generic.hpp"
 
 #include <mutex>
 
@@ -53,5 +54,6 @@ private:
 };
 
 ActionRegistry &default_registy();
+ActionRegistry &default_registry(sql_variant::flavor flav);
 
 }; // namespace action

@@ -223,19 +223,17 @@ void MetadataPopulator::applyPartitioning(
 
   for (const auto &partition : partitions) {
     metadata::RangePartition range_partition{0};
-    // Extract range base from partition name (format: "table_name_p0",
-    // "table_name_p1", etc.)
+    // partition name is "table_name_p0" on pg, "p0" on mysql
     std::size_t pos = partition.name.rfind('_');
-    if (pos != std::string::npos && pos + 1 < partition.name.length()) {
+    std::string range_str = pos == std::string::npos
+                                ? partition.name
+                                : partition.name.substr(pos + 1);
+    if (!range_str.empty() && range_str[0] == 'p') {
       try {
-        std::string range_str = partition.name.substr(pos + 1);
-        if (range_str[0] == 'p') {
-          range_partition.rangebase = std::stoull(range_str.substr(1));
-        }
+        range_partition.rangebase = std::stoull(range_str.substr(1));
       } catch (const std::exception &e) {
         spdlog::warn("Could not parse range base from partition name {}: {}",
                      partition.name, e.what());
-        range_partition.rangebase = 0;
       }
     }
 

@@ -311,9 +311,18 @@ void ActionRegistry::makeCustomTableSqlAction(std::string const &name,
                        .weight = weight});
 }
 
+ActionRegistry &default_registry(sql_variant::flavor flav) {
+  // pg and mysql sets are identical today: every default action renders
+  // through the dialect layer. Flavor-specific actions get registered on
+  // exactly one of these once they show up.
+  static ActionRegistry pgInstance = initializeDefaultRegisty();
+  static ActionRegistry mysqlInstance = initializeDefaultRegisty();
+  sql_variant::ServerInfo const info{.flavor_ = flav, .version = 0};
+  return info.is_mysql_like() ? mysqlInstance : pgInstance;
+}
+
 ActionRegistry &default_registy() {
-  static ActionRegistry instance = initializeDefaultRegisty();
-  return instance;
+  return default_registry(sql_variant::flavor::ANY_PG);
 }
 
 void ActionRegistry::use(ActionRegistry const &other) { *this = other; }

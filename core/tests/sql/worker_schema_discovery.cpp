@@ -1,22 +1,17 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
+#include <fmt/format.h>
 #include <spdlog/spdlog.h>
 
 #include "sql.hpp"
+#include "sql_variant/mysql.hpp"
 #include "sql_variant/postgresql.hpp"
 #include "workload.hpp"
 
 // Fixture to ensure clean database state for each test
 class WorkerSchemaDiscoveryFixture {
 public:
-  WorkerSchemaDiscoveryFixture() {
-    // Recreate public schema to ensure clean state
-    sqlConnection->executeQuery("DROP SCHEMA IF EXISTS public CASCADE")
-        .maybeThrow();
-    sqlConnection->executeQuery("CREATE SCHEMA public").maybeThrow();
-    sqlConnection->executeQuery("GRANT ALL ON SCHEMA public TO public")
-        .maybeThrow();
-  }
+  WorkerSchemaDiscoveryFixture() { testutil::resetTestSchema(); }
 
   ~WorkerSchemaDiscoveryFixture() {
     // Clean up is automatic via schema recreation in next test
@@ -24,12 +19,17 @@ public:
 };
 
 static Worker::sql_connector_t make_connector(const std::string &conn_name) {
-  sql_variant::ServerParams params{"sql_tests",   "127.0.0.1", "",
-                                   "stormweaver", "",          25432};
-  return [params, conn_name]() {
-    return std::make_unique<sql_variant::LoggedSQL>(
-        std::make_unique<sql_variant::PostgreSQL>(params), conn_name);
-  };
+  sql_variant::ServerParams params = globalConnParams;
+  bool mysql = testutil::isMysql();
+  return
+      [params, mysql, conn_name]() -> std::unique_ptr<sql_variant::LoggedSQL> {
+        if (mysql) {
+          return std::make_unique<sql_variant::LoggedSQL>(
+              std::make_unique<sql_variant::MySQL>(params), conn_name);
+        }
+        return std::make_unique<sql_variant::LoggedSQL>(
+            std::make_unique<sql_variant::PostgreSQL>(params), conn_name);
+      };
 }
 
 TEST_CASE_METHOD(WorkerSchemaDiscoveryFixture,
@@ -38,25 +38,29 @@ TEST_CASE_METHOD(WorkerSchemaDiscoveryFixture,
   REQUIRE(sqlConnection != nullptr);
 
   sqlConnection
-      ->executeQuery(R"(
+      ->executeQuery(fmt::format(
+          R"(
         CREATE TABLE test_worker_basic (
-            id SERIAL PRIMARY KEY,
+            id {} PRIMARY KEY,
             name VARCHAR(100) NOT NULL,
             price REAL,
             active BOOLEAN DEFAULT TRUE
         )
-    )")
+    )",
+          testutil::autoIncPk()))
       .maybeThrow();
 
   sqlConnection
-      ->executeQuery(R"(
+      ->executeQuery(fmt::format(
+          R"(
         CREATE TABLE test_worker_indexed (
-            id SERIAL PRIMARY KEY,
+            id {} PRIMARY KEY,
             email VARCHAR(255) UNIQUE,
             name VARCHAR(100),
             age INT
         )
-    )")
+    )",
+          testutil::autoIncPk()))
       .maybeThrow();
 
   sqlConnection
@@ -137,29 +141,44 @@ TEST_CASE_METHOD(WorkerSchemaDiscoveryFixture,
                  "[worker_schema_discovery]") {
   REQUIRE(sqlConnection != nullptr);
 
-  sqlConnection
-      ->executeQuery(R"(
+  if (testutil::isMysql()) {
+    sqlConnection
+        ->executeQuery(R"(
+        CREATE TABLE test_worker_partitioned (
+            id INT,
+            partition_key INT,
+            data TEXT
+        ) PARTITION BY RANGE (partition_key) (
+            PARTITION test_worker_partitioned_p0 VALUES LESS THAN (1000),
+            PARTITION test_worker_partitioned_p1 VALUES LESS THAN (2000)
+        )
+    )")
+        .maybeThrow();
+  } else {
+    sqlConnection
+        ->executeQuery(R"(
         CREATE TABLE test_worker_partitioned (
             id SERIAL,
             partition_key INT,
             data TEXT
         ) PARTITION BY RANGE (partition_key)
     )")
-      .maybeThrow();
+        .maybeThrow();
 
-  sqlConnection
-      ->executeQuery(R"(
+    sqlConnection
+        ->executeQuery(R"(
         CREATE TABLE test_worker_partitioned_p0 PARTITION OF test_worker_partitioned
         FOR VALUES FROM (0) TO (1000)
     )")
-      .maybeThrow();
+        .maybeThrow();
 
-  sqlConnection
-      ->executeQuery(R"(
+    sqlConnection
+        ->executeQuery(R"(
         CREATE TABLE test_worker_partitioned_p1 PARTITION OF test_worker_partitioned
         FOR VALUES FROM (1000) TO (2000)
     )")
-      .maybeThrow();
+        .maybeThrow();
+  }
 
   auto metadata = std::make_shared<metadata::TableRegistry>();
   WorkloadParams wp;
@@ -214,12 +233,14 @@ TEST_CASE_METHOD(WorkerSchemaDiscoveryFixture,
   REQUIRE(sqlConnection != nullptr);
 
   sqlConnection
-      ->executeQuery(R"(
+      ->executeQuery(fmt::format(
+          R"(
         CREATE TABLE test_worker_simple (
-            id SERIAL PRIMARY KEY,
+            id {} PRIMARY KEY,
             name VARCHAR(100)
         )
-    )")
+    )",
+          testutil::autoIncPk()))
       .maybeThrow();
 
   auto metadata = std::make_shared<metadata::TableRegistry>();
@@ -249,12 +270,14 @@ TEST_CASE("Worker - Reset metadata functionality", "[worker_reset_metadata]") {
   REQUIRE(connection != nullptr);
 
   connection
-      ->executeQuery(R"(
+      ->executeQuery(fmt::format(
+          R"(
         CREATE TABLE IF NOT EXISTS test_reset_table (
-            id SERIAL PRIMARY KEY,
+            id {} PRIMARY KEY,
             name VARCHAR(100)
         )
-    )")
+    )",
+          testutil::autoIncPk()))
       .maybeThrow();
 
   worker->discover_existing_schema();
@@ -280,12 +303,14 @@ TEST_CASE("Worker - Metadata validation functionality",
   REQUIRE(connection != nullptr);
 
   connection
-      ->executeQuery(R"(
+      ->executeQuery(fmt::format(
+          R"(
         CREATE TABLE IF NOT EXISTS test_validation_table (
-            id SERIAL PRIMARY KEY,
+            id {} PRIMARY KEY,
             name VARCHAR(100) NOT NULL
         )
-    )")
+    )",
+          testutil::autoIncPk()))
       .maybeThrow();
 
   worker->discover_existing_schema();

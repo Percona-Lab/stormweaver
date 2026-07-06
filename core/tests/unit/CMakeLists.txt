@@ -1,4 +1,4 @@
-set(UNITTEST_SOURCES main.cpp statistics_test.cpp random_test.cpp logging_test.cpp catalog_test.cpp table_test.cpp catalog_stress_test.cpp)
+set(UNITTEST_SOURCES main.cpp statistics_test.cpp random_test.cpp logging_test.cpp catalog_test.cpp table_test.cpp catalog_stress_test.cpp dialect_test.cpp)
 add_executable(test-stormweaver-unit ${UNITTEST_SOURCES})
 target_link_libraries(test-stormweaver-unit Catch2::Catch2 stormweaver_core)
 add_test(NAME test-stormweaver-unit COMMAND test-stormweaver-unit)

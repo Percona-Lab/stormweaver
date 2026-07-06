@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
+#include <fmt/format.h>
 
 #include "schema_discovery.hpp"
 #include "sql.hpp"
@@ -9,14 +10,7 @@ using namespace schema_discovery;
 // Fixture to ensure clean database state for each test
 class SchemaDiscoveryFixture {
 public:
-  SchemaDiscoveryFixture() {
-    // Recreate public schema to ensure clean state
-    sqlConnection->executeQuery("DROP SCHEMA IF EXISTS public CASCADE")
-        .maybeThrow();
-    sqlConnection->executeQuery("CREATE SCHEMA public").maybeThrow();
-    sqlConnection->executeQuery("GRANT ALL ON SCHEMA public TO public")
-        .maybeThrow();
-  }
+  SchemaDiscoveryFixture() { testutil::resetTestSchema(); }
 };
 
 TEST_CASE_METHOD(SchemaDiscoveryFixture,
@@ -25,25 +19,27 @@ TEST_CASE_METHOD(SchemaDiscoveryFixture,
   REQUIRE(sqlConnection != nullptr);
 
   sqlConnection
-      ->executeQuery(R"(
+      ->executeQuery(fmt::format(
+          R"(
         CREATE TABLE test_basic_table (
-            id SERIAL PRIMARY KEY,
+            id {} PRIMARY KEY,
             name VARCHAR(50) NOT NULL,
             age INT,
             active BOOLEAN DEFAULT TRUE
         )
-    )")
+    )",
+          testutil::autoIncPk()))
       .maybeThrow();
 
-  SchemaDiscovery discovery(sqlConnection.get());
-  auto tables = discovery.discoverTables();
+  auto discovery = make_schema_discovery(sqlConnection.get());
+  auto tables = discovery->discoverTables();
 
   bool found_test_table = false;
   for (const auto &table : tables) {
     if (table.name == "test_basic_table") {
       found_test_table = true;
       REQUIRE(table.table_type == metadata::Table::Type::normal);
-      REQUIRE(table.access_method == "heap");
+      REQUIRE(table.access_method == (testutil::isMysql() ? "InnoDB" : "heap"));
       REQUIRE_FALSE(table.is_partition);
       break;
     }
@@ -57,21 +53,23 @@ TEST_CASE_METHOD(SchemaDiscoveryFixture, "SchemaDiscovery - Column discovery",
   REQUIRE(sqlConnection != nullptr);
 
   sqlConnection
-      ->executeQuery(R"(
+      ->executeQuery(fmt::format(
+          R"(
         CREATE TABLE test_columns (
-            id SERIAL PRIMARY KEY,
+            id {} PRIMARY KEY,
             name VARCHAR(100) NOT NULL,
             description TEXT,
             price REAL,
             active BOOLEAN DEFAULT TRUE,
-            data BYTEA,
+            data {},
             fixed_char CHAR(10)
         )
-    )")
+    )",
+          testutil::autoIncPk(), testutil::blobType()))
       .maybeThrow();
 
-  SchemaDiscovery discovery(sqlConnection.get());
-  auto columns = discovery.discoverColumns("test_columns");
+  auto discovery = make_schema_discovery(sqlConnection.get());
+  auto columns = discovery->discoverColumns("test_columns");
 
   REQUIRE(columns.size() == 7);
 
@@ -107,8 +105,9 @@ TEST_CASE_METHOD(SchemaDiscoveryFixture, "SchemaDiscovery - Column discovery",
   auto active_col = find_column("active");
   REQUIRE(active_col != nullptr);
   REQUIRE(active_col->data_type == metadata::ColumnType::BOOL);
-  REQUIRE_THAT(active_col->default_value,
-               Catch::Matchers::ContainsSubstring("true"));
+  REQUIRE_THAT(
+      active_col->default_value,
+      Catch::Matchers::ContainsSubstring(testutil::isMysql() ? "1" : "true"));
 
   auto data_col = find_column("data");
   REQUIRE(data_col != nullptr);
@@ -125,14 +124,16 @@ TEST_CASE_METHOD(SchemaDiscoveryFixture, "SchemaDiscovery - Index discovery",
   REQUIRE(sqlConnection != nullptr);
 
   sqlConnection
-      ->executeQuery(R"(
+      ->executeQuery(fmt::format(
+          R"(
         CREATE TABLE test_indexes (
-            id SERIAL PRIMARY KEY,
+            id {} PRIMARY KEY,
             email VARCHAR(255) UNIQUE,
             name VARCHAR(100),
             age INT
         )
-    )")
+    )",
+          testutil::autoIncPk()))
       .maybeThrow();
 
   sqlConnection->executeQuery("CREATE INDEX idx_name ON test_indexes (name)")
@@ -142,8 +143,8 @@ TEST_CASE_METHOD(SchemaDiscoveryFixture, "SchemaDiscovery - Index discovery",
           "CREATE INDEX idx_name_age_desc ON test_indexes (name, age DESC)")
       .maybeThrow();
 
-  SchemaDiscovery discovery(sqlConnection.get());
-  auto indexes = discovery.discoverIndexes("test_indexes");
+  auto discovery = make_schema_discovery(sqlConnection.get());
+  auto indexes = discovery->discoverIndexes("test_indexes");
 
   // Should have 3 indexes (unique constraint creates an index, plus our 2)
   REQUIRE(indexes.size() == 3);
@@ -156,7 +157,10 @@ TEST_CASE_METHOD(SchemaDiscoveryFixture, "SchemaDiscovery - Index discovery",
     return it != indexes.end() ? &(*it) : nullptr;
   };
 
-  auto unique_idx = find_index("test_indexes_email_key");
+  // mysql names the auto-created unique index after the column, pg after
+  // "table_column_key"
+  auto unique_idx =
+      find_index(testutil::isMysql() ? "email" : "test_indexes_email_key");
   REQUIRE(unique_idx != nullptr);
   REQUIRE(unique_idx->is_unique == true);
   REQUIRE(unique_idx->column_names.size() == 1);
@@ -184,18 +188,20 @@ TEST_CASE_METHOD(SchemaDiscoveryFixture,
   REQUIRE(sqlConnection != nullptr);
 
   sqlConnection
-      ->executeQuery(R"(
+      ->executeQuery(fmt::format(
+          R"(
         CREATE TABLE test_constraints (
-            id SERIAL PRIMARY KEY,
+            id {} PRIMARY KEY,
             email VARCHAR(255) UNIQUE,
             age INT CHECK (age >= 0 AND age <= 150),
             status VARCHAR(20) CHECK (status IN ('active', 'inactive'))
         )
-    )")
+    )",
+          testutil::autoIncPk()))
       .maybeThrow();
 
-  SchemaDiscovery discovery(sqlConnection.get());
-  auto constraints = discovery.discoverConstraints("test_constraints");
+  auto discovery = make_schema_discovery(sqlConnection.get());
+  auto constraints = discovery->discoverConstraints("test_constraints");
 
   // Should have primary key, unique, and check constraints
   REQUIRE(constraints.size() >= 3);
@@ -233,33 +239,48 @@ TEST_CASE_METHOD(SchemaDiscoveryFixture,
                  "[schema_discovery]") {
   REQUIRE(sqlConnection != nullptr);
 
-  sqlConnection
-      ->executeQuery(R"(
+  if (testutil::isMysql()) {
+    sqlConnection
+        ->executeQuery(R"(
+        CREATE TABLE test_partitioned (
+            id INT,
+            partition_key INT,
+            data TEXT
+        ) PARTITION BY RANGE (partition_key) (
+            PARTITION test_partitioned_p0 VALUES LESS THAN (1000),
+            PARTITION test_partitioned_p1 VALUES LESS THAN (2000)
+        )
+    )")
+        .maybeThrow();
+  } else {
+    sqlConnection
+        ->executeQuery(R"(
         CREATE TABLE test_partitioned (
             id SERIAL,
             partition_key INT,
             data TEXT
         ) PARTITION BY RANGE (partition_key)
     )")
-      .maybeThrow();
+        .maybeThrow();
 
-  sqlConnection
-      ->executeQuery(R"(
+    sqlConnection
+        ->executeQuery(R"(
         CREATE TABLE test_partitioned_p0 PARTITION OF test_partitioned
         FOR VALUES FROM (0) TO (1000)
     )")
-      .maybeThrow();
+        .maybeThrow();
 
-  sqlConnection
-      ->executeQuery(R"(
+    sqlConnection
+        ->executeQuery(R"(
         CREATE TABLE test_partitioned_p1 PARTITION OF test_partitioned
         FOR VALUES FROM (1000) TO (2000)
     )")
-      .maybeThrow();
+        .maybeThrow();
+  }
 
-  SchemaDiscovery discovery(sqlConnection.get());
+  auto discovery = make_schema_discovery(sqlConnection.get());
 
-  auto tables = discovery.discoverTables();
+  auto tables = discovery->discoverTables();
   bool found_partitioned = false;
   for (const auto &table : tables) {
     if (table.name == "test_partitioned") {
@@ -271,7 +292,7 @@ TEST_CASE_METHOD(SchemaDiscoveryFixture,
   }
   REQUIRE(found_partitioned);
 
-  auto partitions = discovery.discoverPartitions("test_partitioned");
+  auto partitions = discovery->discoverPartitions("test_partitioned");
   REQUIRE(partitions.size() == 2);
 
   auto find_partition =
@@ -284,13 +305,19 @@ TEST_CASE_METHOD(SchemaDiscoveryFixture,
 
   auto p0 = find_partition("test_partitioned_p0");
   REQUIRE(p0 != nullptr);
-  REQUIRE_THAT(p0->partition_bound, Catch::Matchers::ContainsSubstring("0"));
   REQUIRE_THAT(p0->partition_bound, Catch::Matchers::ContainsSubstring("1000"));
 
   auto p1 = find_partition("test_partitioned_p1");
   REQUIRE(p1 != nullptr);
-  REQUIRE_THAT(p1->partition_bound, Catch::Matchers::ContainsSubstring("1000"));
   REQUIRE_THAT(p1->partition_bound, Catch::Matchers::ContainsSubstring("2000"));
+
+  if (!testutil::isMysql()) {
+    // pg range partitions carry both bounds in the definition, mysql's
+    // VALUES LESS THAN only carries the upper one
+    REQUIRE_THAT(p0->partition_bound, Catch::Matchers::ContainsSubstring("0"));
+    REQUIRE_THAT(p1->partition_bound,
+                 Catch::Matchers::ContainsSubstring("1000"));
+  }
 }
 
 TEST_CASE_METHOD(SchemaDiscoveryFixture,
@@ -299,23 +326,27 @@ TEST_CASE_METHOD(SchemaDiscoveryFixture,
   REQUIRE(sqlConnection != nullptr);
 
   sqlConnection
-      ->executeQuery(R"(
+      ->executeQuery(fmt::format(
+          R"(
         CREATE TABLE parent_table (
-            id SERIAL PRIMARY KEY,
+            id {} PRIMARY KEY,
             name VARCHAR(100) NOT NULL
         )
-    )")
+    )",
+          testutil::autoIncPk()))
       .maybeThrow();
 
   sqlConnection
-      ->executeQuery(R"(
+      ->executeQuery(fmt::format(
+          R"(
         CREATE TABLE child_table (
-            id SERIAL PRIMARY KEY,
+            id {} PRIMARY KEY,
             parent_id INT NOT NULL,
             description TEXT,
             FOREIGN KEY (parent_id) REFERENCES parent_table(id)
         )
-    )")
+    )",
+          testutil::autoIncPk()))
       .maybeThrow();
 
   sqlConnection
@@ -330,20 +361,22 @@ TEST_CASE_METHOD(SchemaDiscoveryFixture,
       .maybeThrow();
 
   sqlConnection
-      ->executeQuery(R"(
+      ->executeQuery(fmt::format(
+          R"(
         CREATE TABLE child_composite (
-            id SERIAL PRIMARY KEY,
+            id {} PRIMARY KEY,
             parent_tenant_id INT NOT NULL,
             parent_entity_id INT NOT NULL,
             description TEXT,
             FOREIGN KEY (parent_tenant_id, parent_entity_id) REFERENCES parent_composite(tenant_id, entity_id)
         )
-    )")
+    )",
+          testutil::autoIncPk()))
       .maybeThrow();
 
-  SchemaDiscovery discovery(sqlConnection.get());
+  auto discovery = make_schema_discovery(sqlConnection.get());
 
-  auto child_constraints = discovery.discoverConstraints("child_table");
+  auto child_constraints = discovery->discoverConstraints("child_table");
   REQUIRE(child_constraints.size() >= 2); // at least PK and FK
 
   auto find_constraint =
@@ -364,7 +397,8 @@ TEST_CASE_METHOD(SchemaDiscoveryFixture,
   REQUIRE(fk_constraint->referenced_columns.size() == 1);
   REQUIRE(fk_constraint->referenced_columns[0] == "id");
 
-  auto composite_constraints = discovery.discoverConstraints("child_composite");
+  auto composite_constraints =
+      discovery->discoverConstraints("child_composite");
   REQUIRE(composite_constraints.size() >= 2); // at least PK and FK
 
   auto composite_fk = std::find_if(
@@ -392,8 +426,8 @@ TEST_CASE_METHOD(SchemaDiscoveryFixture, "SchemaDiscovery - Empty database",
                  "[schema_discovery]") {
   REQUIRE(sqlConnection != nullptr);
 
-  SchemaDiscovery discovery(sqlConnection.get());
-  auto tables = discovery.discoverTables();
+  auto discovery = make_schema_discovery(sqlConnection.get());
+  auto tables = discovery->discoverTables();
 
   REQUIRE(tables.empty());
 }

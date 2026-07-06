@@ -85,10 +85,10 @@ void Worker::discover_existing_schema() {
                name);
 
   try {
-    schema_discovery::SchemaDiscovery discovery(sql_conn.get());
+    auto discovery = schema_discovery::make_schema_discovery(sql_conn.get());
     metadata_populator::MetadataPopulator populator(*metadata);
 
-    populator.populateFromExistingDatabase(discovery);
+    populator.populateFromExistingDatabase(*discovery);
 
     logger->info("Worker {} completed schema discovery, found {} tables", name,
                  metadata->get<metadata::Table>().size());

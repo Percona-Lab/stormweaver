@@ -1,6 +1,6 @@
 ## StormWeaver
 
-StormWeaver is a concurrent database testing tool inspired by [PStress](https://github.com/Percona-QA/pstress). It has two jobs: randomized concurrent stress testing to shake out synchronization/locking/memory bugs in the server, and stable, deterministic product tests you can run in CI. The core is C++23 (metadata/actions/workers/SQL), driven from free-threaded Python 3.14t scenarios via nanobind. PostgreSQL is supported today, MySQL is next.
+StormWeaver is a concurrent database testing tool inspired by [PStress](https://github.com/Percona-QA/pstress). It has two jobs: randomized concurrent stress testing to shake out synchronization/locking/memory bugs in the server, and stable, deterministic product tests you can run in CI. The core is C++23 (metadata/actions/workers/SQL), driven from free-threaded Python 3.14t scenarios via nanobind. PostgreSQL and MySQL (community, Percona Server, PXC) are supported.
 
 ### Quickstart
 

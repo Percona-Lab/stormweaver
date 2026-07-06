@@ -82,6 +82,10 @@ struct ServerParams {
   std::string password;
 
   std::uint16_t port;
+
+  // mysql only: MYSQL_OPT_MAX_ALLOWED_PACKET, default value keeps client
+  // default
+  unsigned long maxpacket = 67108864;
 };
 
 struct QueryResult;

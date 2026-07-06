@@ -5,7 +5,7 @@ from typing import Any
 class DatabaseBackend(ABC):
     """Server lifecycle for one database node.
 
-    Implementations: Postgres (now), MySQL (next).
+    Implementations: Postgres, MySQL.
     """
 
     @abstractmethod

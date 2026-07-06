@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
+#include <fmt/format.h>
 
 #include "metadata_populator.hpp"
 #include "schema_discovery.hpp"
@@ -11,14 +12,7 @@ using namespace schema_discovery;
 // Fixture to ensure clean database state for each test
 class MetadataPopulatorFixture {
 public:
-  MetadataPopulatorFixture() {
-    // Recreate public schema to ensure clean state
-    sqlConnection->executeQuery("DROP SCHEMA IF EXISTS public CASCADE")
-        .maybeThrow();
-    sqlConnection->executeQuery("CREATE SCHEMA public").maybeThrow();
-    sqlConnection->executeQuery("GRANT ALL ON SCHEMA public TO public")
-        .maybeThrow();
-  }
+  MetadataPopulatorFixture() { testutil::resetTestSchema(); }
 };
 
 TEST_CASE_METHOD(MetadataPopulatorFixture,
@@ -27,21 +21,23 @@ TEST_CASE_METHOD(MetadataPopulatorFixture,
   REQUIRE(sqlConnection != nullptr);
 
   sqlConnection
-      ->executeQuery(R"(
+      ->executeQuery(fmt::format(
+          R"(
         CREATE TABLE test_populator_basic (
-            id SERIAL PRIMARY KEY,
+            id {} PRIMARY KEY,
             name VARCHAR(100) NOT NULL,
             price REAL,
             active BOOLEAN DEFAULT TRUE
         )
-    )")
+    )",
+          testutil::autoIncPk()))
       .maybeThrow();
 
   metadata::TableRegistry registry;
-  SchemaDiscovery discovery(sqlConnection.get());
+  auto discovery = make_schema_discovery(sqlConnection.get());
   MetadataPopulator populator(registry);
 
-  populator.populateFromExistingDatabase(discovery);
+  populator.populateFromExistingDatabase(*discovery);
 
   REQUIRE(registry.get<metadata::Table>().size() == 1);
 
@@ -95,14 +91,16 @@ TEST_CASE_METHOD(MetadataPopulatorFixture,
   REQUIRE(sqlConnection != nullptr);
 
   sqlConnection
-      ->executeQuery(R"(
+      ->executeQuery(fmt::format(
+          R"(
         CREATE TABLE test_populator_indexes (
-            id SERIAL PRIMARY KEY,
+            id {} PRIMARY KEY,
             email VARCHAR(255) UNIQUE,
             name VARCHAR(100),
             age INT
         )
-    )")
+    )",
+          testutil::autoIncPk()))
       .maybeThrow();
 
   sqlConnection
@@ -114,10 +112,10 @@ TEST_CASE_METHOD(MetadataPopulatorFixture,
       .maybeThrow();
 
   metadata::TableRegistry registry;
-  SchemaDiscovery discovery(sqlConnection.get());
+  auto discovery = make_schema_discovery(sqlConnection.get());
   MetadataPopulator populator(registry);
 
-  populator.populateFromExistingDatabase(discovery);
+  populator.populateFromExistingDatabase(*discovery);
 
   REQUIRE(registry.get<metadata::Table>().size() == 1);
 
@@ -135,7 +133,8 @@ TEST_CASE_METHOD(MetadataPopulatorFixture,
     return it != table->indexes.end() ? &(*it) : nullptr;
   };
 
-  auto unique_idx = find_index("test_populator_indexes_email_key");
+  auto unique_idx = find_index(
+      testutil::isMysql() ? "email" : "test_populator_indexes_email_key");
   REQUIRE(unique_idx != nullptr);
   REQUIRE(unique_idx->unique == true);
   REQUIRE(unique_idx->fields.size() == 1);
@@ -161,7 +160,8 @@ TEST_CASE_METHOD(MetadataPopulatorFixture, "MetadataPopulator - Type mapping",
   REQUIRE(sqlConnection != nullptr);
 
   sqlConnection
-      ->executeQuery(R"(
+      ->executeQuery(fmt::format(
+          R"(
         CREATE TABLE test_populator_types (
             int_col INT,
             bigint_col BIGINT,
@@ -171,16 +171,17 @@ TEST_CASE_METHOD(MetadataPopulatorFixture, "MetadataPopulator - Type mapping",
             real_col REAL,
             double_col DOUBLE PRECISION,
             bool_col BOOLEAN,
-            bytea_col BYTEA
+            bytea_col {}
         )
-    )")
+    )",
+          testutil::blobType()))
       .maybeThrow();
 
   metadata::TableRegistry registry;
-  SchemaDiscovery discovery(sqlConnection.get());
+  auto discovery = make_schema_discovery(sqlConnection.get());
   MetadataPopulator populator(registry);
 
-  populator.populateFromExistingDatabase(discovery);
+  populator.populateFromExistingDatabase(*discovery);
 
   REQUIRE(registry.get<metadata::Table>().size() == 1);
 
@@ -217,35 +218,50 @@ TEST_CASE_METHOD(MetadataPopulatorFixture,
                  "[metadata_populator]") {
   REQUIRE(sqlConnection != nullptr);
 
-  sqlConnection
-      ->executeQuery(R"(
+  if (testutil::isMysql()) {
+    sqlConnection
+        ->executeQuery(R"(
+        CREATE TABLE test_populator_partitioned (
+            id INT,
+            partition_key INT,
+            data TEXT
+        ) PARTITION BY RANGE (partition_key) (
+            PARTITION test_populator_partitioned_p0 VALUES LESS THAN (1000),
+            PARTITION test_populator_partitioned_p1 VALUES LESS THAN (2000)
+        )
+    )")
+        .maybeThrow();
+  } else {
+    sqlConnection
+        ->executeQuery(R"(
         CREATE TABLE test_populator_partitioned (
             id SERIAL,
             partition_key INT,
             data TEXT
         ) PARTITION BY RANGE (partition_key)
     )")
-      .maybeThrow();
+        .maybeThrow();
 
-  sqlConnection
-      ->executeQuery(R"(
+    sqlConnection
+        ->executeQuery(R"(
         CREATE TABLE test_populator_partitioned_p0 PARTITION OF test_populator_partitioned
         FOR VALUES FROM (0) TO (1000)
     )")
-      .maybeThrow();
+        .maybeThrow();
 
-  sqlConnection
-      ->executeQuery(R"(
+    sqlConnection
+        ->executeQuery(R"(
         CREATE TABLE test_populator_partitioned_p1 PARTITION OF test_populator_partitioned
         FOR VALUES FROM (1000) TO (2000)
     )")
-      .maybeThrow();
+        .maybeThrow();
+  }
 
   metadata::TableRegistry registry;
-  SchemaDiscovery discovery(sqlConnection.get());
+  auto discovery = make_schema_discovery(sqlConnection.get());
   MetadataPopulator populator(registry);
 
-  populator.populateFromExistingDatabase(discovery);
+  populator.populateFromExistingDatabase(*discovery);
 
   REQUIRE(registry.get<metadata::Table>().size() == 1);
 
@@ -296,29 +312,33 @@ TEST_CASE_METHOD(MetadataPopulatorFixture,
   REQUIRE(sqlConnection != nullptr);
 
   sqlConnection
-      ->executeQuery(R"(
+      ->executeQuery(fmt::format(
+          R"(
         CREATE TABLE test_multi_1 (
-            id SERIAL PRIMARY KEY,
+            id {} PRIMARY KEY,
             name VARCHAR(50)
         )
-    )")
+    )",
+          testutil::autoIncPk()))
       .maybeThrow();
 
   sqlConnection
-      ->executeQuery(R"(
+      ->executeQuery(fmt::format(
+          R"(
         CREATE TABLE test_multi_2 (
-            id SERIAL PRIMARY KEY,
+            id {} PRIMARY KEY,
             description TEXT,
             price REAL
         )
-    )")
+    )",
+          testutil::autoIncPk()))
       .maybeThrow();
 
   metadata::TableRegistry registry;
-  SchemaDiscovery discovery(sqlConnection.get());
+  auto discovery = make_schema_discovery(sqlConnection.get());
   MetadataPopulator populator(registry);
 
-  populator.populateFromExistingDatabase(discovery);
+  populator.populateFromExistingDatabase(*discovery);
 
   REQUIRE(registry.get<metadata::Table>().size() == 2);
   bool found_table1 = false, found_table2 = false;
@@ -342,32 +362,36 @@ TEST_CASE_METHOD(MetadataPopulatorFixture,
   REQUIRE(sqlConnection != nullptr);
 
   sqlConnection
-      ->executeQuery(R"(
+      ->executeQuery(fmt::format(
+          R"(
         CREATE TABLE orders (
-            id SERIAL PRIMARY KEY,
+            id {} PRIMARY KEY,
             customer_name VARCHAR(100) NOT NULL,
             total REAL
         )
-    )")
+    )",
+          testutil::autoIncPk()))
       .maybeThrow();
 
   sqlConnection
-      ->executeQuery(R"(
+      ->executeQuery(fmt::format(
+          R"(
         CREATE TABLE order_items (
-            id SERIAL PRIMARY KEY,
+            id {} PRIMARY KEY,
             order_id INT NOT NULL,
             product_name VARCHAR(200),
             quantity INT DEFAULT 1,
             FOREIGN KEY (order_id) REFERENCES orders(id)
         )
-    )")
+    )",
+          testutil::autoIncPk()))
       .maybeThrow();
 
   metadata::TableRegistry registry;
   MetadataPopulator populator(registry);
-  SchemaDiscovery discovery(sqlConnection.get());
+  auto discovery = make_schema_discovery(sqlConnection.get());
 
-  populator.populateFromExistingDatabase(discovery);
+  populator.populateFromExistingDatabase(*discovery);
 
   auto &catalog = registry.get<metadata::Table>();
   REQUIRE(catalog.size() == 2);
@@ -401,7 +425,9 @@ TEST_CASE_METHOD(MetadataPopulatorFixture,
 
 TEST_CASE_METHOD(MetadataPopulatorFixture,
                  "MetadataPopulator - Foreign key to partitioned table",
-                 "[metadata_populator]") {
+                 "[metadata_populator][pg]") {
+  // mysql/InnoDB doesn't support FKs referencing partitioned tables at all
+  // (see sql_dialect::supportsFkOnPartitionedTables), nothing to verify there
   REQUIRE(sqlConnection != nullptr);
 
   sqlConnection
@@ -421,20 +447,22 @@ TEST_CASE_METHOD(MetadataPopulatorFixture,
       .maybeThrow();
 
   sqlConnection
-      ->executeQuery(R"(
+      ->executeQuery(fmt::format(
+          R"(
         CREATE TABLE order_details (
-            id SERIAL PRIMARY KEY,
+            id {} PRIMARY KEY,
             order_id INT REFERENCES partitioned_orders(id),
             product_name VARCHAR(100)
         )
-    )")
+    )",
+          testutil::autoIncPk()))
       .maybeThrow();
 
   metadata::TableRegistry registry;
-  SchemaDiscovery discovery(sqlConnection.get());
+  auto discovery = make_schema_discovery(sqlConnection.get());
   MetadataPopulator populator(registry);
 
-  populator.populateFromExistingDatabase(discovery);
+  populator.populateFromExistingDatabase(*discovery);
 
   auto &catalog = registry.get<metadata::Table>();
   REQUIRE(catalog.size() == 2);
@@ -465,10 +493,10 @@ TEST_CASE_METHOD(MetadataPopulatorFixture, "MetadataPopulator - Empty database",
   REQUIRE(sqlConnection != nullptr);
 
   metadata::TableRegistry registry;
-  SchemaDiscovery discovery(sqlConnection.get());
+  auto discovery = make_schema_discovery(sqlConnection.get());
   MetadataPopulator populator(registry);
 
-  populator.populateFromExistingDatabase(discovery);
+  populator.populateFromExistingDatabase(*discovery);
 
   REQUIRE(registry.get<metadata::Table>().size() == 0);
 }

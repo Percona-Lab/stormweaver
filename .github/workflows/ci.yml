@@ -53,8 +53,14 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y ninja-build postgresql-16
       - run: pipx install conan
       - run: conan profile detect --exist-ok
-      - run: cmake --preset ${{ matrix.preset }} -DTEST_PG_DIR=/usr/lib/postgresql/16
+      - run: cmake --preset ${{ matrix.preset }} -DTEST_PG_DIR=/usr/lib/postgresql/16 -DTEST_MYSQL_DIR=/usr
       - run: cmake --build --preset ${{ matrix.preset }}
+      # ubuntu confines /usr/sbin/mysqld with apparmor to /var/lib/mysql, which
+      # blocks mysqld --initialize in our own test datadir - drop the profile.
+      # also stop the preinstalled mysql service, our test uses its own port/socket
+      # so no real conflict, just freeing resources.
+      - run: sudo aa-remove-unknown || true; sudo ln -sf /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/ 2>/dev/null || true; sudo apparmor_parser -R /etc/apparmor.d/usr.sbin.mysqld 2>/dev/null || true
+      - run: sudo systemctl stop mysql || true
       - run: ctest --preset ${{ matrix.preset }} --output-on-failure
 
   clang-tidy:
@@ -116,6 +122,25 @@ jobs:
       - run: conan profile detect --exist-ok
       - run: uv python install 3.14t && uv venv && uv pip install -e . pytest
       - run: uv run --no-sync stormweaver scenarios/ci/basic.py -i /usr/lib/postgresql/16
+
+  scenario-mysql:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/cache@v4
+        with:
+          path: ${{ env.CONAN_HOME }}
+          key: conan-py-${{ hashFiles('conanfile.txt') }}
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build postgresql-16
+      - run: pipx install conan
+      - run: conan profile detect --exist-ok
+      - run: uv python install 3.14t && uv venv && uv pip install -e . pytest
+      # same apparmor/service dance as the sql-test mysql leg, see cpp-tests job
+      - run: sudo aa-remove-unknown || true; sudo ln -sf /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/ 2>/dev/null || true; sudo apparmor_parser -R /etc/apparmor.d/usr.sbin.mysqld 2>/dev/null || true
+      - run: sudo systemctl stop mysql || true
+      - run: uv run --no-sync stormweaver scenarios/ci/basic_mysql.py -i /usr
 
   scenario-asan:
     runs-on: ubuntu-24.04

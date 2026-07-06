@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -62,16 +63,36 @@ struct DiscoveredPartition {
 
 class SchemaDiscovery {
 public:
-  explicit SchemaDiscovery(sql_variant::LoggedSQL *connection);
+  virtual ~SchemaDiscovery() = default;
 
-  std::vector<DiscoveredTable> discoverTables();
-  std::vector<DiscoveredColumn> discoverColumns(const std::string &table_name);
-  std::vector<DiscoveredIndex> discoverIndexes(const std::string &table_name);
+  virtual std::vector<DiscoveredTable> discoverTables() = 0;
+  virtual std::vector<DiscoveredColumn>
+  discoverColumns(const std::string &table_name) = 0;
+  virtual std::vector<DiscoveredIndex>
+  discoverIndexes(const std::string &table_name) = 0;
+  virtual std::vector<DiscoveredConstraint>
+  discoverConstraints(const std::string &table_name) = 0;
+  virtual std::vector<DiscoveredPartition>
+  discoverPartitions(const std::string &table_name) = 0;
+  virtual std::vector<std::string>
+  discoverPartitionKeys(const std::string &table_name) = 0;
+};
+
+class PgSchemaDiscovery final : public SchemaDiscovery {
+public:
+  explicit PgSchemaDiscovery(sql_variant::LoggedSQL *connection);
+
+  std::vector<DiscoveredTable> discoverTables() override;
+  std::vector<DiscoveredColumn>
+  discoverColumns(const std::string &table_name) override;
+  std::vector<DiscoveredIndex>
+  discoverIndexes(const std::string &table_name) override;
   std::vector<DiscoveredConstraint>
-  discoverConstraints(const std::string &table_name);
+  discoverConstraints(const std::string &table_name) override;
   std::vector<DiscoveredPartition>
-  discoverPartitions(const std::string &table_name);
-  std::vector<std::string> discoverPartitionKeys(const std::string &table_name);
+  discoverPartitions(const std::string &table_name) override;
+  std::vector<std::string>
+  discoverPartitionKeys(const std::string &table_name) override;
 
 private:
   sql_variant::LoggedSQL *connection_;
@@ -90,5 +111,38 @@ private:
   parseIndexOrdering(const std::string &ordering_str);
   static ConstraintType parseConstraintType(const std::string &type_char);
 };
+
+class MySqlSchemaDiscovery final : public SchemaDiscovery {
+public:
+  explicit MySqlSchemaDiscovery(sql_variant::LoggedSQL *connection);
+
+  std::vector<DiscoveredTable> discoverTables() override;
+  std::vector<DiscoveredColumn>
+  discoverColumns(const std::string &table_name) override;
+  std::vector<DiscoveredIndex>
+  discoverIndexes(const std::string &table_name) override;
+  std::vector<DiscoveredConstraint>
+  discoverConstraints(const std::string &table_name) override;
+  std::vector<DiscoveredPartition>
+  discoverPartitions(const std::string &table_name) override;
+  std::vector<std::string>
+  discoverPartitionKeys(const std::string &table_name) override;
+
+private:
+  sql_variant::LoggedSQL *connection_;
+
+  static metadata::Table::Type parseTableType(const std::string &type_char);
+  static PartitionType
+  parsePartitionType(const std::string &partition_type_str);
+  static metadata::ColumnType parseDataType(const std::string &type_name);
+  static metadata::Generated
+  parseGeneratedType(const std::string &generated_str);
+  static metadata::IndexOrdering
+  parseIndexOrdering(const std::string &ordering_str);
+  static ConstraintType parseConstraintType(const std::string &type_str);
+};
+
+std::unique_ptr<SchemaDiscovery>
+make_schema_discovery(sql_variant::LoggedSQL *connection);
 
 } // namespace schema_discovery

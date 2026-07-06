@@ -86,6 +86,20 @@ struct MySQLSpecificResult : sql_variant::QuerySpecificResult {
     return ret;
   }
 };
+
+unsigned long parseVersionComponent(std::string const &s) {
+  try {
+    return std::stoul(s);
+  } catch (...) {
+    return 0;
+  }
+}
+
+sql_variant::SqlStatus statusForError(unsigned int errCode) {
+  return (errCode == CR_SERVER_GONE_ERROR || errCode == CR_SERVER_LOST)
+             ? sql_variant::SqlStatus::serverGone
+             : sql_variant::SqlStatus::error;
+}
 } // namespace
 
 namespace sql_variant {
@@ -98,6 +112,10 @@ MySQL::MySQL(ServerParams const &params) {
     std::lock_guard<std::mutex> guard(mysql_init_mutex);
 
     connection = mysql_init(nullptr);
+  }
+
+  if (connection == nullptr) {
+    throw SqlException("mysql-init-failed", "mysql_init failed");
   }
 
   if (params.maxpacket != MAX_PACKET_DEFAULT) {
@@ -116,13 +134,19 @@ MySQL::MySQL(ServerParams const &params) {
     throw SqlException("mysql-connection-failed", ss.str());
   }
 
-  if (connection == nullptr) {
-    throw SqlException("mysql-init-failed", "mysql_init failed");
+  // anything past this point must not leak the live handle on throw
+  try {
+    serverInfo_ = calculateServerInfo();
+  } catch (...) {
+    mysql_close(connection);
+    mysql_thread_end();
+    throw;
   }
-
-  serverInfo_ = calculateServerInfo();
 }
 
+// mysql_thread_end cleans up TLS for the thread calling close, not the
+// thread that ran the queries; Worker currently connects and closes on
+// the owning thread while queries run on the worker thread.
 MySQL::~MySQL() {
   if (connection != nullptr) {
     mysql_close(connection);
@@ -144,56 +168,54 @@ QueryResult MySQL::executeQuery(std::string const &query) const {
 
   result.executionTime = end - result.executedAt;
 
-  const auto errCode = mysql_errno(connection);
+  auto errCode = mysql_errno(connection);
   result.errorInfo.errorCode = std::to_string(errCode);
   result.errorInfo.errorMessage = mysql_error(connection);
 
   if (qres == 1) { // failure
 
-    result.errorInfo.errorStatus =
-        (errCode == CR_SERVER_GONE_ERROR || errCode == CR_SERVER_LOST)
-            ? SqlStatus::serverGone
-            : SqlStatus::error;
-  } else { // success
-    result.errorInfo.errorStatus = SqlStatus::success;
+    result.errorInfo.errorStatus = statusForError(errCode);
+  } else {
+    auto *res = mysql_store_result(connection);
+    errCode = mysql_errno(connection);
 
-    result.data =
-        std::make_unique<MySQLSpecificResult>(mysql_store_result(connection));
-    result.affectedRows = mysql_affected_rows(connection);
+    if (res == nullptr && errCode != 0) {
+      // server may have died between mysql_real_query and mysql_store_result
+      result.errorInfo.errorCode = std::to_string(errCode);
+      result.errorInfo.errorMessage = mysql_error(connection);
+      result.errorInfo.errorStatus = statusForError(errCode);
+    } else { // success, res == nullptr here is normal for DML
+      result.errorInfo.errorStatus = SqlStatus::success;
+      result.data = std::make_unique<MySQLSpecificResult>(res);
+      result.affectedRows = mysql_affected_rows(connection);
+    }
   }
 
   return result;
 }
 
-std::string MySQL::serverInfoString() const {
-  /*std::string versionInfo = mysql_get_server_info(connection);
-
-  auto extendedInfo = querySingleValue("select @@version_comment limit 1");
-
-  if (extendedInfo) {
-    versionInfo += " ";
-    versionInfo += extendedInfo.value();
-  }
-*/
-  return "TODO";
-}
+std::string MySQL::serverInfoString() const { return "TODO"; }
 
 ServerInfo MySQL::calculateServerInfo() const {
   std::string versionInfo = mysql_get_server_info(connection);
   unsigned long major = 0, minor = 0, version = 0;
-  std::size_t major_p = versionInfo.find(".");
-  if (major_p != std::string::npos)
-    major = stoi(versionInfo.substr(0, major_p));
 
-  std::size_t minor_p = versionInfo.find(".", major_p + 1);
-  if (minor_p != std::string::npos)
-    minor = stoi(versionInfo.substr(major_p + 1, minor_p - major_p));
+  std::size_t major_p = versionInfo.find('.');
+  if (major_p != std::string::npos) {
+    major = parseVersionComponent(versionInfo.substr(0, major_p));
 
-  std::size_t version_p = versionInfo.find(".", minor_p + 1);
-  if (version_p != std::string::npos)
-    version = stoi(versionInfo.substr(minor_p + 1, version_p - minor_p));
-  else
-    version = stoi(versionInfo.substr(minor_p + 1));
+    std::size_t minor_p = versionInfo.find('.', major_p + 1);
+    if (minor_p != std::string::npos) {
+      minor = parseVersionComponent(
+          versionInfo.substr(major_p + 1, minor_p - major_p - 1));
+
+      std::size_t version_p = versionInfo.find('.', minor_p + 1);
+      version = parseVersionComponent(
+          version_p != std::string::npos
+              ? versionInfo.substr(minor_p + 1, version_p - minor_p - 1)
+              : versionInfo.substr(minor_p + 1));
+    }
+  }
   auto server_version = major * 10000 + minor * 100 + version;
 
   flavor flav = flavor::mysql;

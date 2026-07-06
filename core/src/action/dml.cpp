@@ -1,8 +1,8 @@
 
 #include "action/dml.hpp"
 #include "action/helper.hpp"
+#include "sql_dialect/dialect.hpp"
 
-#include <boost/algorithm/string/join.hpp>
 #include <fmt/format.h>
 #include <rfl.hpp>
 #include <utility>
@@ -14,7 +14,8 @@ namespace {
 
 std::string generate_value(metadata::Column const &col, ps_random &rand,
                            std::optional<RangePartitioning> const &rp,
-                           metadata::Catalog<metadata::Table> const &tables) {
+                           metadata::Catalog<metadata::Table> const &tables,
+                           sql_dialect::Dialect const &dialect) {
   if (col.partition_key) {
     // Query will fail, but at least we don't crash
     if (rp->ranges.empty()) {
@@ -33,8 +34,7 @@ std::string generate_value(metadata::Column const &col, ps_random &rand,
       return "NULL"; // referenced table dropped meanwhile; tolerated drift
     }
     // TODO: column name is hardcoded
-    return fmt::format("(SELECT id FROM {} ORDER BY random() LIMIT 1)",
-                       target->name);
+    return dialect.randomRowSubquery(target->name, "id", 1);
   }
 
   switch (col.type) {
@@ -65,6 +65,9 @@ InsertData::InsertData(DmlConfig const &config, std::size_t rows,
 
 void InsertData::execute(TableRegistry &metaCtx, ps_random &rand,
                          sql_variant::LoggedSQL *connection) const {
+  auto const serverInfo = connection->serverInfo();
+  auto const &dialect = sql_dialect::dialect_for(serverInfo);
+
   auto const &tables = metaCtx.get<Table>();
 
   table_cptr table = locator ? locator() : find_random_table(metaCtx, rand);
@@ -101,7 +104,7 @@ void InsertData::execute(TableRegistry &metaCtx, ps_random &rand,
         if (!first) {
           sql << ", ";
         }
-        sql << generate_value(f, rand, table->partitioning, tables);
+        sql << generate_value(f, rand, table->partitioning, tables, dialect);
         first = false;
       }
     }
@@ -118,6 +121,8 @@ DeleteData::DeleteData(DmlConfig const &config) : config(config) {}
 
 void DeleteData::execute(TableRegistry &metaCtx, ps_random &rand,
                          sql_variant::LoggedSQL *connection) const {
+  auto const serverInfo = connection->serverInfo();
+  auto const &dialect = sql_dialect::dialect_for(serverInfo);
 
   table_cptr table = find_random_table(metaCtx, rand);
 
@@ -129,9 +134,9 @@ void DeleteData::execute(TableRegistry &metaCtx, ps_random &rand,
   auto const rows = rand.random_number(config.deleteMin, config.deleteMax);
 
   connection
-      ->executeQuery(fmt::format("DELETE FROM {} WHERE {} IN (SELECT {} FROM "
-                                 "{} ORDER BY random() LIMIT {});",
-                                 tableName, pkName, pkName, tableName, rows))
+      ->executeQuery(
+          fmt::format("DELETE FROM {} WHERE {} IN {};", tableName, pkName,
+                      dialect.randomRowSubquery(tableName, pkName, rows)))
       .maybeThrow();
 }
 
@@ -139,6 +144,9 @@ UpdateOneRow::UpdateOneRow(DmlConfig const &config) : config(config) {}
 
 void UpdateOneRow::execute(TableRegistry &metaCtx, ps_random &rand,
                            sql_variant::LoggedSQL *connection) const {
+  auto const serverInfo = connection->serverInfo();
+  auto const &dialect = sql_dialect::dialect_for(serverInfo);
+
   auto const &tables = metaCtx.get<Table>();
 
   table_cptr table = find_random_table(metaCtx, rand);
@@ -161,14 +169,13 @@ void UpdateOneRow::execute(TableRegistry &metaCtx, ps_random &rand,
       }
       sql << f.name;
       sql << " = ";
-      sql << generate_value(f, rand, table->partitioning, tables);
+      sql << generate_value(f, rand, table->partitioning, tables, dialect);
       first = false;
     }
   }
 
-  sql << fmt::format(
-      " WHERE {} IN (SELECT {} FROM {} ORDER BY random() LIMIT 1)", pkName,
-      pkName, tableName);
+  sql << fmt::format(" WHERE {} IN {}", pkName,
+                     dialect.randomRowSubquery(tableName, pkName, 1));
   sql << ";";
 
   connection->executeQuery(sql.str()).maybeThrow();

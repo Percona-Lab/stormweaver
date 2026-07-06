@@ -23,11 +23,12 @@ from stormweaver._stormweaver import (
     WorkerStatistics,
     WorkloadParams,
     __version__,
+    connect_mysql,
     connect_pg,
     default_action_registry,
 )
 from stormweaver.actions import action
-from stormweaver.backends import DatabaseBackend, Postgres
+from stormweaver.backends import DatabaseBackend, MySQL, Postgres
 from stormweaver.config import Config
 from stormweaver.workload import Workload
 
@@ -42,6 +43,7 @@ __all__ = [
     "DmlConfig",
     "LoggedSQL",
     "Metadata",
+    "MySQL",
     "Postgres",
     "QueryResult",
     "Random",
@@ -53,6 +55,7 @@ __all__ = [
     "WorkloadParams",
     "__version__",
     "action",
+    "connect_mysql",
     "connect_pg",
     "default_action_registry",
 ]

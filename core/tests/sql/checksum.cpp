@@ -14,14 +14,7 @@ struct ChecksumFixture {
   mutable ps_random rand;
   action::DdlConfig config;
 
-  ChecksumFixture() {
-    // Recreate public schema to ensure clean state
-    sqlConnection->executeQuery("DROP SCHEMA IF EXISTS public CASCADE")
-        .maybeThrow();
-    sqlConnection->executeQuery("CREATE SCHEMA public").maybeThrow();
-    sqlConnection->executeQuery("GRANT ALL ON SCHEMA public TO public")
-        .maybeThrow();
-  }
+  ChecksumFixture() { testutil::resetTestSchema(); }
 
   void createTestTable(const std::string &tableName) const {
     auto createResult = sqlConnection->executeQuery(

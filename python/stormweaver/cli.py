@@ -21,7 +21,7 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         help="Configuration file",
     )
     parser.add_argument(
-        "-i", "--install-dir", default="", help="PostgreSQL installation directory"
+        "-i", "--install-dir", default="", help="database installation directory"
     )
     verbosity = parser.add_mutually_exclusive_group()
     verbosity.add_argument(

@@ -95,3 +95,73 @@ def sw_connect(
         )
 
     return factory
+
+
+def _detect_mysql_dir() -> str | None:
+    env = os.environ.get("STORMWEAVER_MYSQL_DIR")
+    if env:
+        return env
+    candidates = [
+        Path.home() / ".local/share/stormweaver-mysql",
+        Path("/usr"),
+    ]
+    for c in candidates:
+        if (c / "bin" / "mysqld").exists() or (c / "sbin" / "mysqld").exists():
+            return str(c)
+    return None
+
+
+@pytest.fixture(scope="session")
+def mysql_install_dir() -> str:
+    d = _detect_mysql_dir()
+    if d is None:
+        pytest.skip("no mysql installation (set STORMWEAVER_MYSQL_DIR)")
+    return d
+
+
+def _mysql_server(mysql_install_dir: str) -> Iterator[sw.MySQL]:
+    datadir = tempfile.mkdtemp(prefix="sw-pytest-my-", dir="/tmp")
+    my: sw.MySQL | None = None
+    try:
+        my = sw.MySQL(
+            install_dir=mysql_install_dir,
+            datadir=str(Path(datadir) / "data"),
+            port=next(_ports),
+        )
+        my.start()
+        assert my.wait_ready(), "mysql did not become ready"
+        my.createdb("test")
+        yield my
+    finally:
+        if my is not None:
+            my.stop()
+        shutil.rmtree(datadir, ignore_errors=True)
+
+
+@pytest.fixture
+def mysql_server(mysql_install_dir: str, sw_log_dir: Path) -> Iterator[sw.MySQL]:
+    """Fresh server per test: use when the test needs a pristine instance."""
+    yield from _mysql_server(mysql_install_dir)
+
+
+@pytest.fixture(scope="session")
+def mysql_server_session(
+    mysql_install_dir: str, sw_log_dir: Path
+) -> Iterator[sw.MySQL]:
+    """One server for the whole session: use when createdb isolation is enough."""
+    yield from _mysql_server(mysql_install_dir)
+
+
+@pytest.fixture
+def sw_connect_mysql(
+    mysql_server_session: sw.MySQL,
+) -> Callable[..., sw.LoggedSQL]:
+    """Connection factory; bound to mysql_server_session, not mysql_server."""
+
+    def factory(dbname: str = "test") -> sw.LoggedSQL:
+        return sw.connect_mysql(
+            log_name=f"pytest-my-{next(_log_ids)}",
+            **mysql_server_session.connection_params(dbname),
+        )
+
+    return factory

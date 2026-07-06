@@ -1,6 +1,7 @@
 
 #include "action/ddl.hpp"
 #include "action/helper.hpp"
+#include "sql_dialect/dialect.hpp"
 
 #include <algorithm>
 #include <boost/algorithm/string/join.hpp>
@@ -45,23 +46,6 @@ Column randomColumn(ps_random &rand, bool forceInt = false) {
   return col;
 }
 
-std::string columnDefinition(Column const &col,
-                             std::string const &fkTargetName = "") {
-  if (col.auto_increment) {
-    // assert that this is an int type
-    return fmt::format("{} {}", col.name, "SERIAL");
-  }
-  std::string def =
-      fmt::format("{} {}", col.name, rfl::enum_to_string(col.type));
-  if (col.length > 0) {
-    def += fmt::format("({})", col.length);
-  }
-  if (!fkTargetName.empty()) {
-    def += fmt::format(" REFERENCES {} ON DELETE CASCADE", fkTargetName);
-  }
-  return def;
-}
-
 table_cptr findPartitionedTable(Catalog<Table> const &tables, ps_random &rand,
                                 DdlConfig const &config) {
   for (std::size_t i = 0; i < 10; ++i) {
@@ -95,6 +79,9 @@ void CreateTable::setSuccessCallback(TableCallback const &cb) {
 
 void CreateTable::execute(TableRegistry &metaCtx, ps_random &rand,
                           sql_variant::LoggedSQL *connection) const {
+  auto const serverInfo = connection->serverInfo();
+  auto const &dialect = sql_dialect::dialect_for(serverInfo);
+
   auto &tables = metaCtx.get<Table>();
 
   if (tables.size() >= config.max_table_count) {
@@ -126,19 +113,20 @@ void CreateTable::execute(TableRegistry &metaCtx, ps_random &rand,
   table.columns[0].name = "id";
   table.columns[0].primary_key = true;
   table.columns[0].nullable = false;
-  if (partitioned) {
-    // with partitioned tables, the primary key won't be a serial as we want
-    // to generate random numbers to evenly distribute the partitions
-    table.columns[0].partition_key = true;
 
+  if (partitioned) {
+    table.columns[0].partition_key = true;
     table.partitioning = RangePartitioning{};
     table.partitioning->rangeSize = 10000000;
+    // range count rolled below, after the fk pick - see comment there
   } else {
     table.columns[0].auto_increment = true;
   }
 
+  const bool fkAllowed =
+      !partitioned || dialect.supportsFkOnPartitionedTables();
   std::string fkTargetName;
-  if (add_foreign_key) {
+  if (add_foreign_key && fkAllowed) {
     // Foreign keys are always added to the second column (index 1) as a
     // simplification for now
     try {
@@ -151,58 +139,37 @@ void CreateTable::execute(TableRegistry &metaCtx, ps_random &rand,
     }
   }
 
+  // decide partition layout before SQL: inline-partition dialects need it
+  // in the CREATE statement. rolled after the fk pick to keep the legacy
+  // rand draw order
+  if (partitioned) {
+    const auto cnt = rand.random_number(config.min_partition_count,
+                                        config.max_partition_count);
+    for (std::size_t i = 0; i < cnt; ++i) {
+      table.partitioning->ranges.push_back(RangePartition{i});
+    }
+  }
+
   // 2: build & execute SQL statement - no lock held anywhere here
 
-  std::vector<std::string> defs;
-  std::vector<std::string> pk_columns;
-
-  for (std::size_t idx = 0; idx < table.columns.size(); ++idx) {
-    auto const &col = table.columns[idx];
-    if (col.primary_key) {
-      pk_columns.push_back(col.name);
-    }
-    defs.push_back(columnDefinition(col, idx == 1 ? fkTargetName : ""));
-  }
-
-  if (!pk_columns.empty()) {
-    defs.push_back(fmt::format("PRIMARY KEY ({})",
-                               boost::algorithm::join(pk_columns, ", ")));
-  }
-
-  std::string partitionClause;
-
-  if (partitioned) {
-    partitionClause =
-        fmt::format(" PARTITION BY RANGE ({})", table.columns[0].name);
-  }
-
-  connection
-      ->executeQuery(fmt::format("CREATE TABLE {} ({}) {};", table.name,
-                                 boost::algorithm::join(defs, ",\n"),
-                                 partitionClause))
+  connection->executeQuery(dialect.createTable(table, fkTargetName))
       .maybeThrow();
 
-  if (partitioned) {
-    auto cnt = rand.random_number(config.min_partition_count,
-                                  config.max_partition_count);
-    const auto partitionSize = table.partitioning->rangeSize;
-    for (std::size_t i = 0; i < cnt; ++i) {
-      for (std::size_t tries = 0; tries < 3; ++tries) {
-        const auto res = connection->executeQuery(
-            fmt::format("CREATE TABLE {}_p{} PARTITION OF {} "
-                        "FOR VALUES FROM ({}) TO ({});",
-                        table.name, i, table.name, partitionSize * i,
-                        partitionSize * (i + 1)));
-
-        if (!res) {
-          continue;
-        }
-
-        table.partitioning->ranges.push_back(RangePartition{i});
-
-        break;
+  if (partitioned && !dialect.partitionsInlineInCreate()) {
+    std::vector<std::size_t> failed;
+    for (auto const &range : table.partitioning->ranges) {
+      bool ok = false;
+      for (std::size_t tries = 0; tries < 3 && !ok; ++tries) {
+        ok = static_cast<bool>(connection->executeQuery(
+            dialect.addPartition(table, range.rangebase)));
+      }
+      if (!ok) {
+        failed.push_back(range.rangebase);
       }
     }
+    std::erase_if(table.partitioning->ranges, [&](RangePartition const &r) {
+      return std::ranges::find(failed, r.rangebase) != failed.end();
+    });
   }
 
   // 3: publish
@@ -239,8 +206,29 @@ void DropTable::execute(TableRegistry &metaCtx, ps_random &rand,
     return;
   }
 
-  connection->executeQuery(fmt::format("DROP TABLE {} CASCADE;", snap->name))
-      .maybeThrow();
+  // mysql doesn't cascade-drop through FKs like pg's CASCADE does, disable
+  // the check around the drop instead
+  const bool mysqlLike = connection->serverInfo().is_mysql_like();
+  if (mysqlLike) {
+    connection->executeQuery("SET FOREIGN_KEY_CHECKS=0;").maybeThrow();
+  }
+
+  // no dialect: valid on both pg and mysql (mysql parses and ignores CASCADE)
+  try {
+    connection->executeQuery(fmt::format("DROP TABLE {} CASCADE;", snap->name))
+        .maybeThrow();
+  } catch (...) {
+    if (mysqlLike) {
+      // best effort: the session survives a failed DROP and would keep
+      // running with FK checks off otherwise
+      std::ignore = connection->executeQuery("SET FOREIGN_KEY_CHECKS=1;");
+    }
+    throw;
+  }
+
+  if (mysqlLike) {
+    connection->executeQuery("SET FOREIGN_KEY_CHECKS=1;").maybeThrow();
+  }
 
   tables.erase(snap->id);
 
@@ -259,6 +247,9 @@ AlterTable::AlterTable(DdlConfig config,
 
 void AlterTable::execute(TableRegistry &metaCtx, ps_random &rand,
                          sql_variant::LoggedSQL *connection) const {
+  auto const serverInfo = connection->serverInfo();
+  auto const &dialect = sql_dialect::dialect_for(serverInfo);
+
   auto &tables = metaCtx.get<Table>();
 
   auto snap = tables.randomPick(rand);
@@ -303,7 +294,7 @@ void AlterTable::execute(TableRegistry &metaCtx, ps_random &rand,
       case AlterSubcommand::addColumn: {
         const auto column = randomColumn(rand);
         alterSubcommands.emplace_back(
-            fmt::format("ADD COLUMN {}", columnDefinition(column)));
+            fmt::format("ADD COLUMN {}", dialect.columnDefinition(column)));
         // we can't accidentally modify / drop new columns in the same
         // statement
         newColumns.push_back(column);
@@ -320,6 +311,10 @@ void AlterTable::execute(TableRegistry &metaCtx, ps_random &rand,
         const auto columnIndex = availableColumns[columnIndexIndex];
         if (columnIndex == 0) {
           break; // do not try to drop the primary key
+        }
+        if (!dialect.canDropFkColumn() &&
+            working.columns[columnIndex].foreign_key_references) {
+          break;
         }
         alterSubcommands.emplace_back(
             fmt::format("DROP COLUMN {}", working.columns[columnIndex].name));
@@ -341,7 +336,7 @@ void AlterTable::execute(TableRegistry &metaCtx, ps_random &rand,
           if (numericColumn && !col.foreign_key_references &&
               !col.primary_key) {
             alterSubcommands.emplace_back(
-                fmt::format("ALTER COLUMN {} TYPE VARCHAR(32)", col.name));
+                dialect.alterColumnType(col.name, ColumnType::VARCHAR, 32));
             availableColumns.erase(availableColumns.begin() +
                                    static_cast<std::ptrdiff_t>(colIdx));
             addedSubcommand = true;
@@ -358,8 +353,8 @@ void AlterTable::execute(TableRegistry &metaCtx, ps_random &rand,
         }
         const auto amIndex = rand.random_number(
             static_cast<std::size_t>(0), config.access_methods.size() - 1);
-        alterSubcommands.emplace_back(fmt::format(
-            "SET ACCESS METHOD {}", config.access_methods[amIndex]));
+        alterSubcommands.emplace_back(
+            dialect.alterStorage(config.access_methods[amIndex]));
         changingAm = true;
         addedSubcommand = true;
       }
@@ -409,6 +404,7 @@ void RenameTable::execute(TableRegistry &metaCtx, ps_random &rand,
 
   connection
       ->executeQuery(
+          // no dialect: RENAME TO is portable across pg and mysql
           fmt::format("ALTER TABLE {} RENAME TO {};", snap->name, newName))
       .maybeThrow();
 
@@ -424,9 +420,25 @@ void CreateIndex::execute(TableRegistry &metaCtx, ps_random &rand,
                           sql_variant::LoggedSQL *connection) const {
   // TODO: support partial / functional indexes, and the missing parameters,
   // like null distinct
+  auto const serverInfo = connection->serverInfo();
+  auto const &dialect = sql_dialect::dialect_for(serverInfo);
+
   auto &tables = metaCtx.get<Table>();
 
-  auto snap = tables.randomPick(rand);
+  const std::size_t maxTableIndexes = dialect.maxIndexesPerTable();
+
+  metadata::table_cptr snap;
+  for (int remainingTries = 10; remainingTries > 0; remainingTries--) {
+    auto candidate = tables.randomPick(rand);
+    if (candidate == nullptr) {
+      return;
+    }
+    if (candidate->indexes.size() >= maxTableIndexes) {
+      continue;
+    }
+    snap = candidate;
+    break;
+  }
   if (snap == nullptr) {
     return;
   }
@@ -438,16 +450,14 @@ void CreateIndex::execute(TableRegistry &metaCtx, ps_random &rand,
   std::ranges::iota(availableColumns, 0);
   rand.shuffle(availableColumns);
 
-  const auto columnCount = rand.random_number(
-      static_cast<std::size_t>(1),
-      std::min<std::size_t>(availableColumns.size() - 1, 32));
+  const auto columnCount =
+      rand.random_number(static_cast<std::size_t>(1),
+                         std::min<std::size_t>(availableColumns.size() - 1,
+                                               dialect.maxIndexColumns()));
 
-  std::vector<std::string> indexColumns;
   for (std::size_t i = 0; i < columnCount; ++i) {
     const std::string columnName = snap->columns[availableColumns[i]].name;
     const bool ascending = rand.random_bool();
-    indexColumns.emplace_back(
-        fmt::format("{} {}", columnName, ascending ? "ASC" : "DESC"));
     newIndex.fields.emplace_back(metadata::IndexColumn{
         .column_name = columnName,
         .ordering = ascending ? metadata::IndexOrdering::asc
@@ -455,15 +465,10 @@ void CreateIndex::execute(TableRegistry &metaCtx, ps_random &rand,
   }
 
   newIndex.unique = rand.random_bool();
-  const std::string_view unique = newIndex.unique ? "UNIQUE" : "";
-  const std::string_view concurrently =
-      rand.random_bool() ? "CONCURRENTLY" : "";
-  const std::string_view only = rand.random_bool() ? "ONLY" : "";
+  sql_dialect::IndexOptions opts{.concurrent = rand.random_bool(),
+                                 .only = rand.random_bool()};
 
-  connection
-      ->executeQuery(fmt::format("CREATE {} INDEX {} {} ON {} {} ({});", unique,
-                                 concurrently, newIndex.name, only, snap->name,
-                                 boost::algorithm::join(indexColumns, ", ")))
+  connection->executeQuery(dialect.createIndex(*snap, newIndex, opts))
       .maybeThrow();
 
   tables.update(snap->id, [&](Table &t) {
@@ -480,6 +485,9 @@ DropIndex::DropIndex(DdlConfig config) : config(std::move(config)) {}
 
 void DropIndex::execute(TableRegistry &metaCtx, ps_random &rand,
                         sql_variant::LoggedSQL *connection) const {
+  auto const serverInfo = connection->serverInfo();
+  auto const &dialect = sql_dialect::dialect_for(serverInfo);
+
   auto &tables = metaCtx.get<Table>();
 
   for (int remainingTries = 10; remainingTries > 0; remainingTries--) {
@@ -493,8 +501,16 @@ void DropIndex::execute(TableRegistry &metaCtx, ps_random &rand,
                                        snap->indexes.size() - 1);
     const std::string indexName = snap->indexes[indexIdx].name;
 
-    connection->executeQuery(fmt::format("DROP INDEX {};", indexName))
-        .maybeThrow();
+    auto result =
+        connection->executeQuery(dialect.dropIndex(snap->name, indexName));
+    if (!result.success()) {
+      // mysql: index backs a FK constraint, can't drop standalone, try
+      // another index instead of failing the whole action
+      if (serverInfo.is_mysql_like() && result.errorInfo.errorCode == "1553") {
+        continue;
+      }
+      result.maybeThrow();
+    }
 
     tables.update(snap->id, [&](Table &t) {
       auto it = std::ranges::find_if(
@@ -514,6 +530,9 @@ CreatePartition::CreatePartition(DdlConfig config)
 
 void CreatePartition::execute(TableRegistry &metaCtx, ps_random &rand,
                               sql_variant::LoggedSQL *connection) const {
+  auto const serverInfo = connection->serverInfo();
+  auto const &dialect = sql_dialect::dialect_for(serverInfo);
+
   auto &tables = metaCtx.get<Table>();
 
   auto snap = findPartitionedTable(tables, rand, config);
@@ -522,14 +541,8 @@ void CreatePartition::execute(TableRegistry &metaCtx, ps_random &rand,
   }
 
   std::size_t partIdx = rand.random_number(1, 100000000);
-  const auto partitionSize = snap->partitioning->rangeSize;
 
-  connection
-      ->executeQuery(fmt::format(
-          "CREATE TABLE {}_p{} PARTITION OF {} FOR VALUES FROM ({}) TO ({});",
-          snap->name, partIdx, snap->name, partitionSize * partIdx,
-          partitionSize * (partIdx + 1)))
-      .maybeThrow();
+  connection->executeQuery(dialect.addPartition(*snap, partIdx)).maybeThrow();
 
   tables.update(snap->id, [&](Table &t) {
     if (!t.partitioning.has_value()) {
@@ -550,6 +563,9 @@ DropPartition::DropPartition(DdlConfig config) : config(std::move(config)) {}
 
 void DropPartition::execute(TableRegistry &metaCtx, ps_random &rand,
                             sql_variant::LoggedSQL *connection) const {
+  auto const serverInfo = connection->serverInfo();
+  auto const &dialect = sql_dialect::dialect_for(serverInfo);
+
   auto &tables = metaCtx.get<Table>();
 
   auto snap = findPartitionedTable(tables, rand, config);
@@ -561,10 +577,7 @@ void DropPartition::execute(TableRegistry &metaCtx, ps_random &rand,
       static_cast<std::size_t>(0), snap->partitioning->ranges.size() - 1);
   std::size_t partIdx = snap->partitioning->ranges[partId].rangebase;
 
-  connection
-      ->executeQuery(
-          fmt::format("DROP TABLE {}_p{} CASCADE;", snap->name, partIdx))
-      .maybeThrow();
+  connection->executeQuery(dialect.dropPartition(*snap, partIdx)).maybeThrow();
 
   tables.update(snap->id, [&](Table &t) {
     if (!t.partitioning.has_value()) {

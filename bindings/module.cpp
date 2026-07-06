@@ -14,6 +14,7 @@
 #include "py_action.hpp"
 #include "random.hpp"
 #include "sql_variant/generic.hpp"
+#include "sql_variant/mysql.hpp"
 #include "sql_variant/postgresql.hpp"
 #include "statistics.hpp"
 #include "workload.hpp"
@@ -26,6 +27,15 @@ connect_pg(std::string host, uint16_t port, std::string dbname,
            std::string user, std::string password, std::string log_name) {
   ServerParams params{dbname, host, "", user, password, port};
   auto sql = std::make_unique<sql_variant::PostgreSQL>(params);
+  return std::make_unique<LoggedSQL>(std::move(sql), log_name);
+}
+
+static std::unique_ptr<LoggedSQL>
+connect_mysql(std::string host, uint16_t port, std::string dbname,
+              std::string user, std::string password, std::string socket,
+              std::string log_name) {
+  ServerParams params{dbname, host, socket, user, password, port};
+  auto sql = std::make_unique<sql_variant::MySQL>(params);
   return std::make_unique<LoggedSQL>(std::move(sql), log_name);
 }
 
@@ -98,6 +108,11 @@ NB_MODULE(_stormweaver, m) {
         nb::arg("user") = "postgres", nb::arg("password") = "",
         nb::arg("log_name") = "python");
 
+  m.def("connect_mysql", &connect_mysql, nb::arg("host") = "localhost",
+        nb::arg("port") = 3306, nb::arg("dbname") = "test",
+        nb::arg("user") = "root", nb::arg("password") = "",
+        nb::arg("socket") = "", nb::arg("log_name") = "python");
+
   // --- Metadata ---
 
   nb::class_<metadata::TableRegistry>(m, "Metadata")
@@ -167,8 +182,14 @@ NB_MODULE(_stormweaver, m) {
           },
           nb::arg("name"), nb::arg("weight"), nb::arg("fn"));
 
-  m.def("default_action_registry", &action::default_registy,
-        nb::rv_policy::reference);
+  m.def(
+      "default_action_registry",
+      [](std::string const &flavor) -> action::ActionRegistry & {
+        return action::default_registry(flavor == "mysql"
+                                            ? sql_variant::flavor::ANY_MYSQL
+                                            : sql_variant::flavor::ANY_PG);
+      },
+      nb::arg("flavor") = "pg", nb::rv_policy::reference);
 
   // --- Configs ---
 

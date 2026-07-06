@@ -11,11 +11,17 @@ set(LIBRARY_SOURCES
     metadata/table.cpp
     statistics.cpp
     workload.cpp
-    schema_discovery.cpp
+    schema_discovery/pg.cpp
+    schema_discovery/mysql.cpp
+    schema_discovery/factory.cpp
     metadata_populator.cpp
     sql_variant/generic.cpp
     sql_variant/postgresql.cpp
+    sql_variant/mysql.cpp
     sql_variant/sql_variant.cpp
+    sql_dialect/pg.cpp
+    sql_dialect/mysql.cpp
+    sql_dialect/dialect.cpp
 )
 
 add_library(stormweaver_core STATIC ${LIBRARY_SOURCES})
@@ -25,6 +31,7 @@ target_compile_options(stormweaver_core PRIVATE
 target_link_libraries(stormweaver_core PUBLIC
     Threads::Threads
     libpqxx::pqxx
+    libmysqlclient::libmysqlclient
     boost::boost
     reflectcpp::reflectcpp
     spdlog::spdlog
