@@ -44,7 +44,7 @@ def main(args):
         pg.stop()
 ```
 
-(trimmed from `scenarios/ci/basic.py` - see that file for the full, runnable version, including trimming partition actions and validating metadata after the run)
+(trimmed from `scenarios/ci/basic.py` - see that file for the full, runnable version. For a guided tour of the whole feature set - custom actions, per-worker registries, mid-run changes, restarts, pg_tde encryption verification - read `scenarios/basic.py`.)
 
 ## Backend lifecycle
 
@@ -62,8 +62,21 @@ def main(args):
 * `node_factory` - zero-arg or one-arg (worker name) callable returning a fresh connection; one-arg form gets a per-worker SQL log file
 * `action_config` - an `sw.AllConfig()` (`.ddl.*`, `.dml.*`) to tune what actions can do, e.g. restrict DDL to `access_methods = ["heap"]`
 * `worker_name_prefix` - required if you run more than one `Workload` in the same process (worker names double as spdlog logger names, which are get-or-create per process - a clash silently makes two workloads append to the same log file)
+* `worker_setup` - optional callable `(worker, index)` invoked for each worker after construction, before its thread starts, every cycle; use it to customize individual workers' action registries (`worker.possible_actions()`)
 
 `workload.print_report()` prints each worker's statistics; `workload.worker_statistics()` returns the `WorkerStatistics` objects for programmatic checks.
+
+`workload.run()` blocks for all cycles. For finer control, `workload.start()` launches one cycle's threads and returns immediately, `workload.workers` exposes the live workers (e.g. to modify a registry mid-run), and `workload.wait()` joins them. Worker names never repeat across cycles or calls on the same instance.
+
+## Scenario arguments
+
+Anything the stormweaver CLI doesn't recognize is passed through as `args.extra` (a list of strings); parse it with your own `argparse.ArgumentParser`. See `scenarios/basic.py` (`--repeat`).
+
+## pg_tde helpers
+
+`stormweaver.tde` sets up encryption (against a pg_tde-enabled server): `init_tde_only_for_db(conn, keyring_path)` for per-database keys, `init_tde_globally(conn, keyring_path)` for global keys + WAL encryption. Pass an absolute keyring path - the server resolves relative paths against the data directory.
+
+`stormweaver.entropy` verifies it: `db_files_entropy(conn, datadir)` walks every user table/matview and its dependent objects (indexes, toast) and raises `EncryptionMismatchError` if a file's on-disk state contradicts its access method (`tde_heap` must be encrypted, everything else must not be). `calculate_entropy(path)` / `verify_entropy(...)` are the building blocks.
 
 ## Seeds
 

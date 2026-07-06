@@ -137,6 +137,10 @@ struct QuerySpecificResult {
   [[nodiscard]] virtual std::size_t numRows() const = 0;
 
   [[nodiscard]] virtual RowView nextRow() const = 0;
+
+  // random access; implementations must not depend on nextRow() cursor state
+  // (mysql impl does seek the underlying cursor); throws on index >= numRows
+  [[nodiscard]] virtual RowView rowAt(std::size_t index) const = 0;
 };
 
 struct QueryResult {

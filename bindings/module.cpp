@@ -63,8 +63,30 @@ NB_MODULE(_stormweaver, m) {
       .def_ro("affected_rows", &QueryResult::affectedRows)
       .def_prop_ro("error_code",
                    [](const QueryResult &r) { return r.errorInfo.errorCode; })
-      .def_prop_ro("error_message", [](const QueryResult &r) {
-        return r.errorInfo.errorMessage;
+      .def_prop_ro(
+          "error_message",
+          [](const QueryResult &r) { return r.errorInfo.errorMessage; })
+      .def("rows", [](const QueryResult &r) {
+        std::vector<std::vector<std::optional<std::string>>> rows;
+        if (!r.data) {
+          return rows;
+        }
+        const std::size_t count = r.data->numRows();
+        rows.reserve(count);
+        for (std::size_t i = 0; i < count; ++i) {
+          auto row = r.data->rowAt(i);
+          std::vector<std::optional<std::string>> fields;
+          fields.reserve(row.rowData.size());
+          for (auto const &field : row.rowData) {
+            if (field) {
+              fields.emplace_back(*field);
+            } else {
+              fields.emplace_back(std::nullopt);
+            }
+          }
+          rows.push_back(std::move(fields));
+        }
+        return rows;
       });
 
   nb::class_<LoggedSQL>(m, "LoggedSQL")

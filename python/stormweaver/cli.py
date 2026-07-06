@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(prog="stormweaver")
+    parser = argparse.ArgumentParser(prog="stormweaver", allow_abbrev=False)
     parser.add_argument("scenario", help="Scenario file to execute")
     parser.add_argument(
         "-c",
@@ -36,7 +36,12 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         action="store_true",
         help="Only log warnings and errors",
     )
-    return parser.parse_args(argv)
+    # unknown args go to the scenario (args.extra), scenarios parse them
+    # themselves; the cost is that a typo in a stormweaver flag is no longer
+    # rejected here
+    args, extra = parser.parse_known_args(argv)
+    args.extra = extra
+    return args
 
 
 def main(argv: Sequence[str] | None = None) -> int:

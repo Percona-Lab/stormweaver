@@ -21,6 +21,7 @@ class Workload:
         action_config: _stormweaver.AllConfig | None = None,
         seed: int = 0,
         worker_name_prefix: str = "",
+        worker_setup: Callable[[_stormweaver.RandomWorker, int], None] | None = None,
     ) -> None:
         if workers < 1:
             raise ValueError("workers must be >= 1")
@@ -43,6 +44,11 @@ class Workload:
         # in the same process a unique prefix or their workers will silently
         # share (append to) each other's log files.
         self.worker_name_prefix = worker_name_prefix
+        self.worker_setup = worker_setup
+        # persists across run()/start() calls: worker names double as spdlog
+        # logger names, get-or-create per process, so they must never repeat
+        self._cycle = 0
+        self._live: list[_stormweaver.RandomWorker] = []
         self._worker_stats: list[_stormweaver.WorkerStatistics] = []
         # node_factory can take the worker name (for per-worker SQL logs), or
         # nothing, for backwards compat with existing zero-arg factories
@@ -56,70 +62,94 @@ class Workload:
             self._factory_wants_name = False
         self._reports: list[str] = []
 
+    @property
+    def workers(self) -> list[_stormweaver.RandomWorker]:
+        """Live workers of the running cycle (between start() and wait())."""
+        return list(self._live)
+
+    def start(self) -> None:
+        """Launch one cycle's worker threads and return immediately."""
+        if self._live:
+            raise RuntimeError("a workload cycle is already running")
+        self._cycle += 1
+        workers: list[_stormweaver.RandomWorker] = []
+        started: list[_stormweaver.RandomWorker] = []
+
+        try:
+            for i in range(self.num_workers):
+                # one params object per worker, allows per-worker settings
+                params = _stormweaver.WorkloadParams()
+                params.max_reconnect_attempts = self.max_reconnect_attempts
+                if self.action_config:
+                    params.action_config = self.action_config
+                # same scenario seed everywhere, C++ derives a distinct
+                # per-worker stream by mixing in the worker name
+                params.seed = self.seed
+
+                name = f"{self.worker_name_prefix}worker-{self._cycle}-{i + 1}"
+                connector = (
+                    (lambda n=name: self.node_factory(n))
+                    if self._factory_wants_name
+                    else self.node_factory
+                )
+                worker = _stormweaver.RandomWorker(
+                    name,
+                    connector,
+                    params,
+                    self.metadata,
+                    self.registry,
+                )
+                workers.append(worker)
+
+            if self.worker_setup:
+                for i, worker in enumerate(workers):
+                    self.worker_setup(worker, i)
+
+            # run_thread spawns a C++ std::thread internally;
+            # its duration argument is the single source of truth
+            for w in workers:
+                w.run_thread(self.duration)
+                started.append(w)
+        except BaseException:
+            # workers cannot be cancelled, wait for them before unwinding
+            if started:
+                logger.warning(
+                    "waiting for %d running workers to finish (up to %ss)",
+                    len(started),
+                    self.duration,
+                )
+                for w in started:
+                    w.join()
+            raise
+
+        self._live = workers
+
+    def wait(self) -> None:
+        """Join the running cycle's workers and capture their statistics."""
+        workers, self._live = self._live, []
+        if not workers:
+            raise RuntimeError("no workload cycle is running")
+
+        # join waits for each C++ thread to finish
+        for w in workers:
+            w.join()
+
+        # Capture reports as strings while workers are still alive.
+        # statistics() ties the worker's lifetime to the returned
+        # object (reference_internal), so keeping it here keeps the
+        # worker's stats readable after the cycle ends.
+        for w in workers:
+            stats = w.statistics()
+            self._reports.append(stats.report())
+            self._worker_stats.append(stats)
+
     def run(self) -> None:
         self._reports = []
         self._worker_stats = []
         for cycle in range(self.repeat):
             logger.info("Workload cycle %d/%d", cycle + 1, self.repeat)
-            workers: list[_stormweaver.RandomWorker] = []
-            started: list[_stormweaver.RandomWorker] = []
-
-            try:
-                for i in range(self.num_workers):
-                    # one params object per worker, allows per-worker settings
-                    params = _stormweaver.WorkloadParams()
-                    params.max_reconnect_attempts = self.max_reconnect_attempts
-                    if self.action_config:
-                        params.action_config = self.action_config
-                    # same scenario seed everywhere, C++ derives a distinct
-                    # per-worker stream by mixing in the worker name
-                    params.seed = self.seed
-
-                    name = f"{self.worker_name_prefix}worker-{cycle + 1}-{i + 1}"
-                    connector = (
-                        (lambda n=name: self.node_factory(n))
-                        if self._factory_wants_name
-                        else self.node_factory
-                    )
-                    worker = _stormweaver.RandomWorker(
-                        name,
-                        connector,
-                        params,
-                        self.metadata,
-                        self.registry,
-                    )
-                    workers.append(worker)
-
-                # run_thread spawns a C++ std::thread internally;
-                # its duration argument is the single source of truth
-                for w in workers:
-                    w.run_thread(self.duration)
-                    started.append(w)
-
-                # join waits for each C++ thread to finish
-                for w in workers:
-                    w.join()
-            except BaseException:
-                # workers cannot be cancelled, wait for them before unwinding
-                if started:
-                    logger.warning(
-                        "waiting for %d running workers to finish (up to %ss)",
-                        len(started),
-                        self.duration,
-                    )
-                    for w in started:
-                        w.join()
-                raise
-
-            # Capture reports as strings while workers are still alive.
-            # statistics() ties the worker's lifetime to the returned
-            # object (reference_internal), so keeping it here keeps the
-            # worker's stats readable after the cycle ends.
-            for w in workers:
-                stats = w.statistics()
-                self._reports.append(stats.report())
-                self._worker_stats.append(stats)
-
+            self.start()
+            self.wait()
             logger.info("Workload cycle %d complete", cycle + 1)
 
     def worker_statistics(self) -> list[_stormweaver.WorkerStatistics]:

@@ -4,6 +4,7 @@
 #include <mutex>
 #include <pqxx/pqxx>
 #include <sstream>
+#include <stdexcept>
 
 #include <iostream>
 #include <utility>
@@ -29,6 +30,26 @@ struct PostgreSQLSpecificResult : sql_variant::QuerySpecificResult {
 
     pqxx::row row = result[static_cast<int>(rowIdx)];
     rowIdx++;
+
+    for (std::size_t colnum = 0U; colnum < numFields(); ++colnum) {
+      auto col = static_cast<int>(colnum);
+      if (!row[col].is_null()) {
+        rowResult.rowData[colnum] = row[col].view();
+      }
+    }
+
+    return rowResult;
+  }
+
+  sql_variant::RowView rowAt(std::size_t index) const override {
+    if (index >= numRows()) {
+      throw std::out_of_range("row index out of range");
+    }
+
+    sql_variant::RowView rowResult;
+    rowResult.rowData.resize(numFields());
+
+    pqxx::row row = result[static_cast<int>(index)];
 
     for (std::size_t colnum = 0U; colnum < numFields(); ++colnum) {
       auto col = static_cast<int>(colnum);

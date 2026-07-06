@@ -4,6 +4,7 @@
 #include <mutex>
 #include <mysql.h>
 #include <sstream>
+#include <stdexcept>
 
 // #include "common.hpp"
 #ifndef MAX_PACKET_DEFAULT
@@ -34,6 +35,37 @@ struct MySQLSpecificResult : sql_variant::QuerySpecificResult {
       throw sql_variant::SqlException("mysql-no-select",
                                       "Not a SELECT-like statement!");
     }
+
+    sql_variant::RowView ret;
+    const auto mdata = mysql_fetch_row(res);
+    const auto lengths = mysql_fetch_lengths(res);
+
+    if (mdata == nullptr) {
+      throw sql_variant::SqlException("mysql-no-more-rows", "No more rows");
+    }
+
+    ret.rowData.resize(num_fields);
+
+    for (std::size_t i = 0; i < num_fields; ++i) {
+      if (mdata[i] != nullptr) {
+        ret.rowData[i] = std::string_view(mdata[i], lengths[i]);
+      }
+    }
+
+    return ret;
+  }
+
+  sql_variant::RowView rowAt(std::size_t index) const override {
+    if (res == nullptr) {
+      throw sql_variant::SqlException("mysql-no-select",
+                                      "Not a SELECT-like statement!");
+    }
+
+    if (index >= numRows()) {
+      throw std::out_of_range("row index out of range");
+    }
+
+    mysql_data_seek(res, index);
 
     sql_variant::RowView ret;
     const auto mdata = mysql_fetch_row(res);
