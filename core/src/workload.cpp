@@ -35,13 +35,13 @@ std::string generate_timestamp() {
   return timestamp_ss.str();
 }
 
-void write_metadata_file(const metadata::Metadata &metadata,
+void write_metadata_file(const metadata::TableRegistry &registry,
                          const std::string &timestamp,
                          const std::string &suffix) {
   std::string filename =
       logging::log_path(fmt::format("metadata_{}.{}.txt", timestamp, suffix));
   std::ofstream file(filename);
-  file << metadata.debug_dump();
+  file << metadata::debug_dump(registry);
   file.close();
 }
 
@@ -91,7 +91,7 @@ void Worker::discover_existing_schema() {
     populator.populateFromExistingDatabase(discovery);
 
     logger->info("Worker {} completed schema discovery, found {} tables", name,
-                 metadata->size());
+                 metadata->get<metadata::Table>().size());
   } catch (const std::exception &e) {
     logger->error("Worker {} schema discovery failed: {}", name, e.what());
     throw;
@@ -102,16 +102,20 @@ void Worker::reset_metadata() { (*metadata).reset(); }
 
 bool Worker::validate_metadata() {
   try {
-    metadata::Metadata original_metadata(*metadata);
+    const auto original = metadata::normalize(*metadata);
+    const auto originalDump = metadata::debug_dump(*metadata);
 
     reset_metadata();
     discover_existing_schema();
 
-    bool is_valid = (*metadata == original_metadata);
+    const bool is_valid = original == metadata::normalize(*metadata);
 
     if (!is_valid) {
       std::string timestamp = generate_timestamp();
-      write_metadata_file(original_metadata, timestamp, "orig");
+      std::ofstream file(
+          logging::log_path(fmt::format("metadata_{}.orig.txt", timestamp)));
+      file << originalDump;
+      file.close();
       write_metadata_file(*metadata, timestamp, "new");
       logger->error("Metadata validation failed - reloaded metadata differs "
                     "from original. Debug files written with timestamp {}",

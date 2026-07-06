@@ -1,5 +1,6 @@
 
 #include "action/custom.hpp"
+#include "action/helper.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <utility>
@@ -19,7 +20,7 @@ CustomSql::CustomSql(CustomConfig const & /*unused*/, std::string sqlStatement,
   }
 }
 
-void CustomSql::execute(metadata::Metadata &metaCtx, ps_random &rand,
+void CustomSql::execute(metadata::TableRegistry &metaCtx, ps_random &rand,
                         sql_variant::LoggedSQL *connection) const {
   std::string statementCopy = sqlStatement;
 
@@ -33,16 +34,11 @@ void CustomSql::execute(metadata::Metadata &metaCtx, ps_random &rand,
   connection->executeQuery(statementCopy).maybeThrow();
 }
 
-std::string CustomSql::doInject(metadata::Metadata &metaCtx, ps_random &rand,
+std::string CustomSql::doInject(metadata::TableRegistry &metaCtx,
+                                ps_random &rand,
                                 std::string const &injectionPoint) {
   if (injectionPoint == "table") {
-    metadata::table_cptr table;
-    while (table == nullptr) {
-      // select a random table from metadata
-      auto idx = rand.random_number<std::size_t>(0, metaCtx.size() - 1);
-      table = metaCtx[idx];
-    }
-    return table->name;
+    return find_random_table(metaCtx, rand)->name;
   }
 
   throw std::runtime_error(

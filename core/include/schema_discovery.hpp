@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "metadata.hpp"
+#include "metadata/table.hpp"
 #include "sql_variant/generic.hpp"
 
 namespace schema_discovery {

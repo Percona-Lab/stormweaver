@@ -5,11 +5,12 @@
 
 #include "action/ddl.hpp"
 #include "checksum.hpp"
+#include "metadata/table.hpp"
 #include "sql.hpp"
 
 namespace {
 struct ChecksumFixture {
-  mutable metadata::Metadata metaCtx;
+  mutable metadata::TableRegistry metaCtx;
   mutable ps_random rand;
   action::DdlConfig config;
 
@@ -27,27 +28,26 @@ struct ChecksumFixture {
         "CREATE TABLE " + tableName + " (id INTEGER, name TEXT, value REAL)");
     REQUIRE(createResult.success());
 
-    metaCtx.createTable([&](metadata::Metadata::Reservation &res) {
-      auto table = res.table();
-      table->name = tableName;
+    metadata::Table table;
+    table.id = metaCtx.nextId();
+    table.name = tableName;
 
-      metadata::Column idCol;
-      idCol.name = "id";
-      idCol.type = metadata::ColumnType::INT;
-      table->columns.push_back(idCol);
+    metadata::Column idCol;
+    idCol.name = "id";
+    idCol.type = metadata::ColumnType::INT;
+    table.columns.push_back(idCol);
 
-      metadata::Column nameCol;
-      nameCol.name = "name";
-      nameCol.type = metadata::ColumnType::TEXT;
-      table->columns.push_back(nameCol);
+    metadata::Column nameCol;
+    nameCol.name = "name";
+    nameCol.type = metadata::ColumnType::TEXT;
+    table.columns.push_back(nameCol);
 
-      metadata::Column valueCol;
-      valueCol.name = "value";
-      valueCol.type = metadata::ColumnType::REAL;
-      table->columns.push_back(valueCol);
+    metadata::Column valueCol;
+    valueCol.name = "value";
+    valueCol.type = metadata::ColumnType::REAL;
+    table.columns.push_back(valueCol);
 
-      res.complete();
-    });
+    REQUIRE(metaCtx.get<metadata::Table>().insert(std::move(table)));
   }
 
   void insertLargeTestData(const std::string &tableName,

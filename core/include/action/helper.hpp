@@ -1,12 +1,11 @@
-
 #pragma once
 
 #include "action/action.hpp"
-#include "metadata.hpp"
 
 namespace action {
 
-metadata::table_cptr find_random_table(metadata::Metadata const &metaCtx,
+// Throws ActionException("empty-metadata") when there are no tables.
+metadata::table_cptr find_random_table(metadata::TableRegistry const &metaCtx,
                                        ps_random &rand);
 
-}
+} // namespace action

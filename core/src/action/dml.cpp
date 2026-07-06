@@ -13,7 +13,8 @@ using namespace action;
 namespace {
 
 std::string generate_value(metadata::Column const &col, ps_random &rand,
-                           std::optional<RangePartitioning> const &rp) {
+                           std::optional<RangePartitioning> const &rp,
+                           metadata::Catalog<metadata::Table> const &tables) {
   if (col.partition_key) {
     // Query will fail, but at least we don't crash
     if (rp->ranges.empty()) {
@@ -26,10 +27,14 @@ std::string generate_value(metadata::Column const &col, ps_random &rand,
     return std::to_string((rp->ranges[range].rangebase * rp->rangeSize) +
                           (num % rp->rangeSize));
   }
-  if (!col.foreign_key_references.empty()) {
+  if (col.foreign_key_references) {
+    auto target = tables.byId(col.foreign_key_references.id);
+    if (target == nullptr) {
+      return "NULL"; // referenced table dropped meanwhile; tolerated drift
+    }
     // TODO: column name is hardcoded
     return fmt::format("(SELECT id FROM {} ORDER BY random() LIMIT 1)",
-                       col.foreign_key_references);
+                       target->name);
   }
 
   switch (col.type) {
@@ -58,10 +63,14 @@ InsertData::InsertData(DmlConfig const &config, std::size_t rows,
                        TableLocator locator)
     : config(config), locator(std::move(locator)), rows(rows) {}
 
-void InsertData::execute(Metadata &metaCtx, ps_random &rand,
+void InsertData::execute(TableRegistry &metaCtx, ps_random &rand,
                          sql_variant::LoggedSQL *connection) const {
+  auto const &tables = metaCtx.get<Table>();
 
-  table_cptr table = find_random_table(metaCtx, rand);
+  table_cptr table = locator ? locator() : find_random_table(metaCtx, rand);
+  if (table == nullptr) {
+    return; // locator target vanished (e.g. created table already dropped)
+  }
 
   std::stringstream sql;
   sql << "INSERT INTO ";
@@ -92,7 +101,7 @@ void InsertData::execute(Metadata &metaCtx, ps_random &rand,
         if (!first) {
           sql << ", ";
         }
-        sql << generate_value(f, rand, table->partitioning);
+        sql << generate_value(f, rand, table->partitioning, tables);
         first = false;
       }
     }
@@ -107,7 +116,7 @@ void InsertData::execute(Metadata &metaCtx, ps_random &rand,
 
 DeleteData::DeleteData(DmlConfig const &config) : config(config) {}
 
-void DeleteData::execute(Metadata &metaCtx, ps_random &rand,
+void DeleteData::execute(TableRegistry &metaCtx, ps_random &rand,
                          sql_variant::LoggedSQL *connection) const {
 
   table_cptr table = find_random_table(metaCtx, rand);
@@ -128,8 +137,9 @@ void DeleteData::execute(Metadata &metaCtx, ps_random &rand,
 
 UpdateOneRow::UpdateOneRow(DmlConfig const &config) : config(config) {}
 
-void UpdateOneRow::execute(Metadata &metaCtx, ps_random &rand,
+void UpdateOneRow::execute(TableRegistry &metaCtx, ps_random &rand,
                            sql_variant::LoggedSQL *connection) const {
+  auto const &tables = metaCtx.get<Table>();
 
   table_cptr table = find_random_table(metaCtx, rand);
 
@@ -151,7 +161,7 @@ void UpdateOneRow::execute(Metadata &metaCtx, ps_random &rand,
       }
       sql << f.name;
       sql << " = ";
-      sql << generate_value(f, rand, table->partitioning);
+      sql << generate_value(f, rand, table->partitioning, tables);
       first = false;
     }
   }

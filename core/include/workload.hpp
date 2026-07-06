@@ -6,13 +6,13 @@
 
 #include "action/action_registry.hpp"
 #include "checksum.hpp"
-#include "metadata.hpp"
+#include "metadata/table.hpp"
 #include "sql_variant/generic.hpp"
 #include "statistics.hpp"
 
 using logged_sql_ptr = std::unique_ptr<sql_variant::LoggedSQL>;
 
-using metadata_ptr = std::shared_ptr<metadata::Metadata>;
+using metadata_ptr = std::shared_ptr<metadata::TableRegistry>;
 
 struct WorkloadParams {
   action::AllConfig actionConfig;

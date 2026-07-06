@@ -6,7 +6,7 @@
 
 namespace {
 struct Fixture {
-  mutable metadata::Metadata metaCtx;
+  mutable metadata::TableRegistry metaCtx;
   mutable ps_random rand;
   action::DdlConfig config;
 };

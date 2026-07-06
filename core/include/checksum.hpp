@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include "metadata.hpp"
+#include "metadata/table.hpp"
 #include "sql_variant/sql_variant.hpp"
 
 namespace CryptoPP {
@@ -24,7 +24,7 @@ struct ChecksumResult {
 class DatabaseChecksum {
 public:
   DatabaseChecksum(sql_variant::LoggedSQL &connection,
-                   const metadata::Metadata &metadata);
+                   const metadata::TableRegistry &metadata);
 
   void calculateAllTableChecksums();
   void writeResultsToFile(const std::string &filename);
@@ -36,7 +36,7 @@ public:
 
 private:
   sql_variant::LoggedSQL &connection_;
-  const metadata::Metadata &metadata_;
+  const metadata::TableRegistry &metadata_;
   std::vector<ChecksumResult> results_;
 
   void processAllRows(const metadata::Table &table, CryptoPP::SHA256 &hasher);

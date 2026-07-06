@@ -17,10 +17,10 @@ WORKERS is pinned to 1, found the hard way (see git history / task notes):
   worker, and it's a real logic-level divergence, not just log noise: e.g.
   run1 issues "UPDATE foo49281904 ..." where run2 issues
   "UPDATE foo39841352 ...". Root cause: action::find_random_table()
-  (core/src/action/helper.cpp) draws
-  rand.random_number(0, metaCtx.size() - 1) against the *shared* Metadata
-  object, and ddl.cpp's CreateTable checks metaCtx.size() against
-  max_table_count before consuming further rand draws. metaCtx.size()
+  (core/src/action/helper.cpp) calls metadata::Catalog::randomPick(),
+  which draws rand.random_number(0, size - 1) against the *shared* table
+  catalog, and ddl.cpp's CreateTable checks the catalog size against
+  max_table_count before consuming further rand draws. The catalog size
   changes concurrently as other workers create/drop tables, so the same
   RNG draw picks a different table (or skips/doesn't skip rand draws)
   depending on cross-worker timing. That timing is real wall-clock thread
@@ -50,12 +50,15 @@ INITIAL_TABLES = 3
 # a healthy 10s run produces 500-800+ statements; far fewer means the worker
 # died early (e.g. exhausted reconnects) even though the run exited cleanly
 MIN_STATEMENTS = 50
-# the workload is duration-cut, not count-cut, so the two runs legitimately
-# stop at slightly different statement counts (observed 813 vs 831 on an idle
-# machine, ~7% apart under load) - exact count equality was tried and failed
-# on the first verification run. A worker dying mid-run is a very different
-# magnitude (e.g. 60 vs 815), so cap the allowed count ratio instead.
-MAX_COUNT_RATIO = 2.0
+# the workload is duration-cut, not count-cut, so the two runs stop at
+# different statement counts - the pace depends on machine load and disk
+# speed, and on shared CI runners a 5x+ run-to-run spread was observed
+# (50 vs 278) with both workers alive. Count ratios cannot distinguish "slow"
+# from "died", so a worker death is instead detected from its own log: the
+# only clean mid-run exit is reconnect exhaustion, which always logs
+# "stopping worker". Determinism itself is proven by the common-prefix
+# comparison, which is unaffected by where the duration cut landed.
+WORKER_DIED_MARKER = "stopping worker"
 # hard cap per replay subprocess, generous vs the ~20s a healthy run takes
 RUN_TIMEOUT_SECONDS = 600
 
@@ -102,6 +105,11 @@ def run_once(run_dir: str, install_dir: str, port: int) -> None:
     # autovacuum triggers on wall-clock timing and can shift row placement
     # between runs, which would leak into ORDER BY random() row picks
     pg.add_config({"autovacuum": "off"})
+    # durability off: DDL pace on slow/shared CI disks is fsync-bound and
+    # varies wildly run to run; the instance is throwaway
+    pg.add_config(
+        {"fsync": "off", "synchronous_commit": "off", "full_page_writes": "off"}
+    )
     pg.start()
     try:
         pg.wait_ready()
@@ -199,6 +207,14 @@ def _read_statements(path: str) -> list[str]:
     return lines
 
 
+def _worker_died(run_dir: str, name: str) -> bool:
+    log = os.path.join(run_dir, "logs", f"worker-{name}.log")
+    if not os.path.exists(log):
+        return False
+    with open(log) as f:
+        return any(WORKER_DIED_MARKER in line for line in f)
+
+
 def compare_runs(run1_dir: str, run2_dir: str) -> bool:
     ok = True
     # the setup worker only issues INITIAL_TABLES CREATEs, the 50-statement
@@ -213,6 +229,19 @@ def compare_runs(run1_dir: str, run2_dir: str) -> bool:
             ok = False
             continue
 
+        died = [
+            run
+            for run, run_dir in (("run1", run1_dir), ("run2", run2_dir))
+            if _worker_died(run_dir, name)
+        ]
+        if died:
+            print(
+                f"determinism FAILED: worker '{name}' died mid-run "
+                f"({', '.join(died)}) - see its worker log"
+            )
+            ok = False
+            continue
+
         lines1 = _read_statements(f1)
         lines2 = _read_statements(f2)
 
@@ -222,20 +251,6 @@ def compare_runs(run1_dir: str, run2_dir: str) -> bool:
                 f"determinism FAILED: worker '{name}' produced too few "
                 f"statements (run1={len(lines1)}, run2={len(lines2)}, "
                 f"minimum {floor}) - the worker likely died mid-run"
-            )
-            ok = False
-            continue
-
-        # grossly different counts mean one run's worker stopped early, which
-        # the prefix comparison alone would not catch; small differences are
-        # just the wall-clock duration cut (see MAX_COUNT_RATIO above)
-        if max(len(lines1), len(lines2)) > MAX_COUNT_RATIO * min(
-            len(lines1), len(lines2)
-        ):
-            print(
-                f"determinism FAILED: worker '{name}' statement counts differ "
-                f"too much (run1={len(lines1)}, run2={len(lines2)}, "
-                f"allowed ratio {MAX_COUNT_RATIO}) - one worker died mid-run"
             )
             ok = False
             continue

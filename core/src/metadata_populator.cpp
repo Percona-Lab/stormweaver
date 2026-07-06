@@ -5,8 +5,8 @@
 
 namespace metadata_populator {
 
-MetadataPopulator::MetadataPopulator(metadata::Metadata &metadata)
-    : metadata_(metadata) {}
+MetadataPopulator::MetadataPopulator(metadata::TableRegistry &registry)
+    : registry_(registry) {}
 
 void MetadataPopulator::populateFromExistingDatabase(
     schema_discovery::SchemaDiscovery &discovery) {
@@ -15,18 +15,33 @@ void MetadataPopulator::populateFromExistingDatabase(
   spdlog::info("Starting metadata population for {} discovered tables",
                tables.size());
 
+  struct PendingForeignKey {
+    metadata::ObjectId table;
+    std::string column;
+    std::string referencedTable;
+  };
+  std::vector<PendingForeignKey> pendingFks;
+
+  auto &catalog = registry_.get<metadata::Table>();
+
   for (const auto &discovered_table : tables) {
     try {
-      metadata::Metadata::Reservation res = metadata_.createTable();
-      if (!res.open()) {
-        spdlog::warn("No more table slots available, skipping table {}",
+      fk_list_t fkColumns;
+      auto table = convertCompleteTable(discovery, discovered_table, fkColumns);
+      table.id = registry_.nextId();
+      const auto tableId = table.id;
+
+      if (!catalog.insert(std::move(table))) {
+        spdlog::warn("Duplicate metadata entry for table {}, skipping",
                      discovered_table.name);
         continue;
       }
 
-      auto table = convertCompleteTable(discovery, discovered_table);
-      *res.table() = table;
-      res.complete();
+      for (auto &fk : fkColumns) {
+        pendingFks.push_back({.table = tableId,
+                              .column = std::move(fk.first),
+                              .referencedTable = std::move(fk.second)});
+      }
 
       spdlog::debug("Successfully populated metadata for table {}",
                     discovered_table.name);
@@ -37,12 +52,32 @@ void MetadataPopulator::populateFromExistingDatabase(
     }
   }
 
-  spdlog::info("Metadata population completed for {} tables", metadata_.size());
+  // second pass: names -> ids, now that every table is present
+  for (const auto &fk : pendingFks) {
+    auto target = catalog.byName(fk.referencedTable);
+    if (target == nullptr) {
+      spdlog::warn("Foreign key target {} not found while populating",
+                   fk.referencedTable);
+      continue;
+    }
+    catalog.update(fk.table, [&](metadata::Table &t) {
+      for (auto &col : t.columns) {
+        if (col.name == fk.column) {
+          col.foreign_key_references =
+              metadata::Ref<metadata::Table>{target->id};
+        }
+      }
+      return true;
+    });
+  }
+
+  spdlog::info("Metadata population completed for {} tables", catalog.size());
 }
 
 metadata::Table MetadataPopulator::convertCompleteTable(
     schema_discovery::SchemaDiscovery &discovery,
-    const schema_discovery::DiscoveredTable &discovered_table) {
+    const schema_discovery::DiscoveredTable &discovered_table,
+    fk_list_t &fkColumns) {
   metadata::Table table;
   table.name = discovered_table.name;
   table.tablespace = discovered_table.tablespace;
@@ -66,7 +101,7 @@ metadata::Table MetadataPopulator::convertCompleteTable(
 
   // Apply primary key flags to columns
   auto constraints = discovery.discoverConstraints(discovered_table.name);
-  applyConstraints(table, constraints);
+  applyConstraints(table, constraints, fkColumns);
 
   // Mark columns as partition keys
   auto partition_keys = discovery.discoverPartitionKeys(discovered_table.name);
@@ -130,7 +165,8 @@ metadata::Index MetadataPopulator::convertIndex(
 
 void MetadataPopulator::applyConstraints(
     metadata::Table &table,
-    const std::vector<schema_discovery::DiscoveredConstraint> &constraints) {
+    const std::vector<schema_discovery::DiscoveredConstraint> &constraints,
+    fk_list_t &fkColumns) {
   for (const auto &constraint : constraints) {
     if (constraint.type == schema_discovery::ConstraintType::primary_key) {
       for (const auto &col_name : constraint.columns) {
@@ -146,15 +182,7 @@ void MetadataPopulator::applyConstraints(
     } else if (constraint.type ==
                schema_discovery::ConstraintType::foreign_key) {
       for (const auto &col_name : constraint.columns) {
-        auto it = std::ranges::find_if(
-            table.columns, [&col_name](const metadata::Column &col) {
-              return col.name == col_name;
-            });
-        if (it != table.columns.end()) {
-          it->foreign_key_references = constraint.referenced_table;
-          spdlog::debug("Marked column {} as foreign key referencing {}",
-                        col_name, constraint.referenced_table);
-        }
+        fkColumns.emplace_back(col_name, constraint.referenced_table);
       }
     }
     // Note: Other constraint types (UNIQUE, CHECK) are not currently

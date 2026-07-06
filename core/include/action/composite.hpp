@@ -10,7 +10,7 @@ namespace action {
 
 template <typename T>
 concept usePointerSyntax =
-    requires(T a, metadata::Metadata &metaCtx, ps_random &rand,
+    requires(T a, metadata::TableRegistry &metaCtx, ps_random &rand,
              sql_variant::LoggedSQL *connection) {
       a->execute(metaCtx, rand, connection);
     };
@@ -22,8 +22,8 @@ public:
       : ctx(std::move(ctx)), actions(std::move(actions)...) {}
 
   template <typename ActionT>
-  static void executeHelper(ActionT const &action, metadata::Metadata &metaCtx,
-                            ps_random &rand,
+  static void executeHelper(ActionT const &action,
+                            metadata::TableRegistry &metaCtx, ps_random &rand,
                             sql_variant::LoggedSQL *connection) {
     if constexpr (usePointerSyntax<ActionT>) {
       action->execute(metaCtx, rand, connection);
@@ -32,7 +32,7 @@ public:
     }
   }
 
-  void execute(metadata::Metadata &metaCtx, ps_random &rand,
+  void execute(metadata::TableRegistry &metaCtx, ps_random &rand,
                sql_variant::LoggedSQL *connection) const override {
     std::apply(
         [&](const auto &...tupleArgs) {
@@ -53,7 +53,7 @@ public:
   RepeatAction(ActionT &&action, std::size_t repeatCount)
       : action(std::move(action)), repeatCount(repeatCount) {}
 
-  void execute(metadata::Metadata &metaCtx, ps_random &rand,
+  void execute(metadata::TableRegistry &metaCtx, ps_random &rand,
                sql_variant::LoggedSQL *connection) const override {
     for (std::size_t idx = 0; idx < repeatCount; ++idx) {
       if constexpr (usePointerSyntax<ActionT>) {

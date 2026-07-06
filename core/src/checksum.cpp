@@ -7,18 +7,13 @@
 #include <sstream>
 
 DatabaseChecksum::DatabaseChecksum(sql_variant::LoggedSQL &connection,
-                                   const metadata::Metadata &metadata)
+                                   const metadata::TableRegistry &metadata)
     : connection_(connection), metadata_(metadata) {}
 
 void DatabaseChecksum::calculateAllTableChecksums() {
   results_.clear();
 
-  for (size_t i = 0; i < metadata_.size(); ++i) {
-    auto table = metadata_[i];
-    if (!table) {
-      continue;
-    }
-
+  for (auto const &table : metadata_.get<metadata::Table>().snapshotAll()) {
     ChecksumResult result(table->name);
 
     auto countResult = connection_.querySingleValue(

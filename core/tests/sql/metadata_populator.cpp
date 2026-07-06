@@ -37,15 +37,17 @@ TEST_CASE_METHOD(MetadataPopulatorFixture,
     )")
       .maybeThrow();
 
-  metadata::Metadata metadata;
+  metadata::TableRegistry registry;
   SchemaDiscovery discovery(sqlConnection.get());
-  MetadataPopulator populator(metadata);
+  MetadataPopulator populator(registry);
 
   populator.populateFromExistingDatabase(discovery);
 
-  REQUIRE(metadata.size() == 1);
+  REQUIRE(registry.get<metadata::Table>().size() == 1);
 
-  auto table = metadata[0];
+  auto tables_snapshot = registry.get<metadata::Table>().snapshotAll();
+  REQUIRE(tables_snapshot.size() == 1);
+  auto table = tables_snapshot.at(0);
   REQUIRE(table != nullptr);
   REQUIRE(table->name == "test_populator_basic");
   REQUIRE(table->engine == "");
@@ -111,15 +113,17 @@ TEST_CASE_METHOD(MetadataPopulatorFixture,
                      "(name, age DESC)")
       .maybeThrow();
 
-  metadata::Metadata metadata;
+  metadata::TableRegistry registry;
   SchemaDiscovery discovery(sqlConnection.get());
-  MetadataPopulator populator(metadata);
+  MetadataPopulator populator(registry);
 
   populator.populateFromExistingDatabase(discovery);
 
-  REQUIRE(metadata.size() == 1);
+  REQUIRE(registry.get<metadata::Table>().size() == 1);
 
-  auto table = metadata[0];
+  auto tables_snapshot = registry.get<metadata::Table>().snapshotAll();
+  REQUIRE(tables_snapshot.size() == 1);
+  auto table = tables_snapshot.at(0);
   REQUIRE(table != nullptr);
   REQUIRE(table->indexes.size() == 3); // unique constraint + 2 explicit indexes
 
@@ -172,15 +176,17 @@ TEST_CASE_METHOD(MetadataPopulatorFixture, "MetadataPopulator - Type mapping",
     )")
       .maybeThrow();
 
-  metadata::Metadata metadata;
+  metadata::TableRegistry registry;
   SchemaDiscovery discovery(sqlConnection.get());
-  MetadataPopulator populator(metadata);
+  MetadataPopulator populator(registry);
 
   populator.populateFromExistingDatabase(discovery);
 
-  REQUIRE(metadata.size() == 1);
+  REQUIRE(registry.get<metadata::Table>().size() == 1);
 
-  auto table = metadata[0];
+  auto tables_snapshot = registry.get<metadata::Table>().snapshotAll();
+  REQUIRE(tables_snapshot.size() == 1);
+  auto table = tables_snapshot.at(0);
   REQUIRE(table != nullptr);
   REQUIRE(table->columns.size() == 9);
 
@@ -235,15 +241,17 @@ TEST_CASE_METHOD(MetadataPopulatorFixture,
     )")
       .maybeThrow();
 
-  metadata::Metadata metadata;
+  metadata::TableRegistry registry;
   SchemaDiscovery discovery(sqlConnection.get());
-  MetadataPopulator populator(metadata);
+  MetadataPopulator populator(registry);
 
   populator.populateFromExistingDatabase(discovery);
 
-  REQUIRE(metadata.size() == 1);
+  REQUIRE(registry.get<metadata::Table>().size() == 1);
 
-  auto table = metadata[0];
+  auto tables_snapshot = registry.get<metadata::Table>().snapshotAll();
+  REQUIRE(tables_snapshot.size() == 1);
+  auto table = tables_snapshot.at(0);
   REQUIRE(table != nullptr);
   REQUIRE(table->name == "test_populator_partitioned");
 
@@ -306,16 +314,15 @@ TEST_CASE_METHOD(MetadataPopulatorFixture,
     )")
       .maybeThrow();
 
-  metadata::Metadata metadata;
+  metadata::TableRegistry registry;
   SchemaDiscovery discovery(sqlConnection.get());
-  MetadataPopulator populator(metadata);
+  MetadataPopulator populator(registry);
 
   populator.populateFromExistingDatabase(discovery);
 
-  REQUIRE(metadata.size() == 2);
+  REQUIRE(registry.get<metadata::Table>().size() == 2);
   bool found_table1 = false, found_table2 = false;
-  for (std::size_t i = 0; i < metadata.size(); ++i) {
-    auto table = metadata[i];
+  for (auto const &table : registry.get<metadata::Table>().snapshotAll()) {
     if (table && table->name == "test_multi_1") {
       found_table1 = true;
       REQUIRE(table->columns.size() == 2);
@@ -356,18 +363,18 @@ TEST_CASE_METHOD(MetadataPopulatorFixture,
     )")
       .maybeThrow();
 
-  metadata::Metadata metadata;
-  MetadataPopulator populator(metadata);
+  metadata::TableRegistry registry;
+  MetadataPopulator populator(registry);
   SchemaDiscovery discovery(sqlConnection.get());
 
   populator.populateFromExistingDatabase(discovery);
 
-  REQUIRE(metadata.size() == 2);
-  const metadata::Table *order_items_table = nullptr;
-  for (std::size_t i = 0; i < metadata.size(); ++i) {
-    auto table = metadata[i];
+  auto &catalog = registry.get<metadata::Table>();
+  REQUIRE(catalog.size() == 2);
+  metadata::table_cptr order_items_table;
+  for (auto const &table : catalog.snapshotAll()) {
     if (table && table->name == "order_items") {
-      order_items_table = table.get();
+      order_items_table = table;
       break;
     }
   }
@@ -379,14 +386,16 @@ TEST_CASE_METHOD(MetadataPopulatorFixture,
       order_items_table->columns.begin(), order_items_table->columns.end(),
       [](const metadata::Column &col) { return col.name == "order_id"; });
   REQUIRE(order_id_col != order_items_table->columns.end());
-  REQUIRE(order_id_col->foreign_key_references == "orders");
+  REQUIRE(order_id_col->foreign_key_references);
+  REQUIRE(catalog.byId(order_id_col->foreign_key_references.id)->name ==
+          "orders");
   REQUIRE_FALSE(order_id_col->nullable); // NOT NULL
   REQUIRE(order_id_col->type == metadata::ColumnType::INT);
   auto id_col = std::find_if(
       order_items_table->columns.begin(), order_items_table->columns.end(),
       [](const metadata::Column &col) { return col.name == "id"; });
   REQUIRE(id_col != order_items_table->columns.end());
-  REQUIRE(id_col->foreign_key_references.empty());
+  REQUIRE_FALSE(id_col->foreign_key_references);
   REQUIRE(id_col->primary_key == true);
 }
 
@@ -421,18 +430,18 @@ TEST_CASE_METHOD(MetadataPopulatorFixture,
     )")
       .maybeThrow();
 
-  metadata::Metadata metadata;
+  metadata::TableRegistry registry;
   SchemaDiscovery discovery(sqlConnection.get());
-  MetadataPopulator populator(metadata);
+  MetadataPopulator populator(registry);
 
   populator.populateFromExistingDatabase(discovery);
 
-  REQUIRE(metadata.size() == 2);
-  const metadata::Table *order_details_table = nullptr;
-  for (std::size_t i = 0; i < metadata.size(); ++i) {
-    auto table = metadata[i];
+  auto &catalog = registry.get<metadata::Table>();
+  REQUIRE(catalog.size() == 2);
+  metadata::table_cptr order_details_table;
+  for (auto const &table : catalog.snapshotAll()) {
     if (table && table->name == "order_details") {
-      order_details_table = table.get();
+      order_details_table = table;
       break;
     }
   }
@@ -445,19 +454,21 @@ TEST_CASE_METHOD(MetadataPopulatorFixture,
   REQUIRE(order_id_col != order_details_table->columns.end());
 
   // Foreign key should reference the parent table, not the partition
-  REQUIRE(order_id_col->foreign_key_references == "partitioned_orders");
-  REQUIRE(order_id_col->foreign_key_references != "partitioned_orders_2023");
+  REQUIRE(order_id_col->foreign_key_references);
+  auto fk_target = catalog.byId(order_id_col->foreign_key_references.id);
+  REQUIRE(fk_target->name == "partitioned_orders");
+  REQUIRE(fk_target->name != "partitioned_orders_2023");
 }
 
 TEST_CASE_METHOD(MetadataPopulatorFixture, "MetadataPopulator - Empty database",
                  "[metadata_populator]") {
   REQUIRE(sqlConnection != nullptr);
 
-  metadata::Metadata metadata;
+  metadata::TableRegistry registry;
   SchemaDiscovery discovery(sqlConnection.get());
-  MetadataPopulator populator(metadata);
+  MetadataPopulator populator(registry);
 
   populator.populateFromExistingDatabase(discovery);
 
-  REQUIRE(metadata.size() == 0);
+  REQUIRE(registry.get<metadata::Table>().size() == 0);
 }

@@ -18,7 +18,7 @@ class UpdateOneRow : public Action {
 public:
   UpdateOneRow(DmlConfig const &config);
 
-  void execute(metadata::Metadata &metaCtx, ps_random &rand,
+  void execute(metadata::TableRegistry &metaCtx, ps_random &rand,
                sql_variant::LoggedSQL *connection) const override;
 
 private:
@@ -29,7 +29,7 @@ class DeleteData : public Action {
 public:
   DeleteData(DmlConfig const &config);
 
-  void execute(metadata::Metadata &metaCtx, ps_random &rand,
+  void execute(metadata::TableRegistry &metaCtx, ps_random &rand,
                sql_variant::LoggedSQL *connection) const override;
 
 private:
@@ -41,7 +41,7 @@ public:
   InsertData(DmlConfig const &config, std::size_t rows, TableLocator locator);
   InsertData(DmlConfig const &config, std::size_t rows);
 
-  void execute(metadata::Metadata &metaCtx, ps_random &rand,
+  void execute(metadata::TableRegistry &metaCtx, ps_random &rand,
                sql_variant::LoggedSQL *connection) const override;
 
 private:

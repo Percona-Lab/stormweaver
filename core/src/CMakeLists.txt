@@ -8,7 +8,7 @@ set(LIBRARY_SOURCES
     checksum.cpp
     logging.cpp
     random.cpp
-    metadata.cpp
+    metadata/table.cpp
     statistics.cpp
     workload.cpp
     schema_discovery.cpp

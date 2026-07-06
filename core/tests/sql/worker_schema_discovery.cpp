@@ -68,22 +68,21 @@ TEST_CASE_METHOD(WorkerSchemaDiscoveryFixture,
                      "(name, age DESC)")
       .maybeThrow();
 
-  auto metadata = std::make_shared<metadata::Metadata>();
+  auto metadata = std::make_shared<metadata::TableRegistry>();
   WorkloadParams wp;
 
   auto worker = std::make_unique<Worker>(
       "test-worker", make_connector("test-worker"), wp, metadata);
 
-  REQUIRE(metadata->size() == 0);
+  REQUIRE(metadata->get<metadata::Table>().size() == 0);
 
   worker->discover_existing_schema();
 
-  REQUIRE(metadata->size() == 2);
+  REQUIRE(metadata->get<metadata::Table>().size() == 2);
 
   auto find_table =
       [&metadata](const std::string &name) -> metadata::table_cptr {
-    for (std::size_t i = 0; i < metadata->size(); ++i) {
-      auto table = (*metadata)[i];
+    for (auto const &table : metadata->get<metadata::Table>().snapshotAll()) {
       if (table && table->name == name) {
         return table;
       }
@@ -162,7 +161,7 @@ TEST_CASE_METHOD(WorkerSchemaDiscoveryFixture,
     )")
       .maybeThrow();
 
-  auto metadata = std::make_shared<metadata::Metadata>();
+  auto metadata = std::make_shared<metadata::TableRegistry>();
   WorkloadParams wp;
 
   auto worker = std::make_unique<Worker>(
@@ -171,9 +170,11 @@ TEST_CASE_METHOD(WorkerSchemaDiscoveryFixture,
 
   worker->discover_existing_schema();
 
-  REQUIRE(metadata->size() == 1);
+  REQUIRE(metadata->get<metadata::Table>().size() == 1);
 
-  auto table = (*metadata)[0];
+  auto tables_snapshot = metadata->get<metadata::Table>().snapshotAll();
+  REQUIRE(tables_snapshot.size() == 1);
+  auto table = tables_snapshot.at(0);
   REQUIRE(table != nullptr);
   REQUIRE(table->name == "test_worker_partitioned");
 
@@ -196,7 +197,7 @@ TEST_CASE_METHOD(WorkerSchemaDiscoveryFixture,
                  "[worker_schema_discovery]") {
   REQUIRE(sqlConnection != nullptr);
 
-  auto metadata = std::make_shared<metadata::Metadata>();
+  auto metadata = std::make_shared<metadata::TableRegistry>();
   WorkloadParams wp;
 
   auto worker = std::make_unique<Worker>(
@@ -204,7 +205,7 @@ TEST_CASE_METHOD(WorkerSchemaDiscoveryFixture,
 
   worker->discover_existing_schema();
 
-  REQUIRE(metadata->size() == 0);
+  REQUIRE(metadata->get<metadata::Table>().size() == 0);
 }
 
 TEST_CASE_METHOD(WorkerSchemaDiscoveryFixture,
@@ -221,7 +222,7 @@ TEST_CASE_METHOD(WorkerSchemaDiscoveryFixture,
     )")
       .maybeThrow();
 
-  auto metadata = std::make_shared<metadata::Metadata>();
+  auto metadata = std::make_shared<metadata::TableRegistry>();
   WorkloadParams wp;
 
   auto worker = std::make_unique<Worker>(
@@ -229,14 +230,16 @@ TEST_CASE_METHOD(WorkerSchemaDiscoveryFixture,
 
   REQUIRE_NOTHROW(worker->discover_existing_schema());
 
-  REQUIRE(metadata->size() == 1);
-  auto table = (*metadata)[0];
+  REQUIRE(metadata->get<metadata::Table>().size() == 1);
+  auto tables_snapshot = metadata->get<metadata::Table>().snapshotAll();
+  REQUIRE(tables_snapshot.size() == 1);
+  auto table = tables_snapshot.at(0);
   REQUIRE(table != nullptr);
   REQUIRE(table->name == "test_worker_simple");
 }
 
 TEST_CASE("Worker - Reset metadata functionality", "[worker_reset_metadata]") {
-  auto metadata = std::make_shared<metadata::Metadata>();
+  auto metadata = std::make_shared<metadata::TableRegistry>();
   WorkloadParams wp;
 
   auto worker = std::make_unique<Worker>(
@@ -255,18 +258,18 @@ TEST_CASE("Worker - Reset metadata functionality", "[worker_reset_metadata]") {
       .maybeThrow();
 
   worker->discover_existing_schema();
-  REQUIRE(metadata->size() >= 1);
+  REQUIRE(metadata->get<metadata::Table>().size() >= 1);
 
   worker->reset_metadata();
-  REQUIRE(metadata->size() == 0);
+  REQUIRE(metadata->get<metadata::Table>().size() == 0);
 
   worker->discover_existing_schema();
-  REQUIRE(metadata->size() >= 1);
+  REQUIRE(metadata->get<metadata::Table>().size() >= 1);
 }
 
 TEST_CASE("Worker - Metadata validation functionality",
           "[worker_validate_metadata]") {
-  auto metadata = std::make_shared<metadata::Metadata>();
+  auto metadata = std::make_shared<metadata::TableRegistry>();
   WorkloadParams wp;
 
   auto worker = std::make_unique<Worker>("test-worker-validate",
@@ -286,7 +289,7 @@ TEST_CASE("Worker - Metadata validation functionality",
       .maybeThrow();
 
   worker->discover_existing_schema();
-  REQUIRE(metadata->size() >= 1);
+  REQUIRE(metadata->get<metadata::Table>().size() >= 1);
 
   REQUIRE(worker->validate_metadata());
 }

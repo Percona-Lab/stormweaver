@@ -45,7 +45,8 @@ Column randomColumn(ps_random &rand, bool forceInt = false) {
   return col;
 }
 
-std::string columnDefinition(Column const &col) {
+std::string columnDefinition(Column const &col,
+                             std::string const &fkTargetName = "") {
   if (col.auto_increment) {
     // assert that this is an int type
     return fmt::format("{} {}", col.name, "SERIAL");
@@ -55,486 +56,16 @@ std::string columnDefinition(Column const &col) {
   if (col.length > 0) {
     def += fmt::format("({})", col.length);
   }
-  if (!col.foreign_key_references.empty()) {
-    def += fmt::format(" REFERENCES {} ON DELETE CASCADE",
-                       col.foreign_key_references);
+  if (!fkTargetName.empty()) {
+    def += fmt::format(" REFERENCES {} ON DELETE CASCADE", fkTargetName);
   }
   return def;
 }
 
-} // namespace
-
-CreateTable::CreateTable(DdlConfig config, Table::Type type)
-    : config(std::move(config)), type(type) {}
-
-void CreateTable::setSuccessCallback(TableCallback const &cb) {
-  successCallback = cb;
-}
-
-void CreateTable::execute(Metadata &metaCtx, ps_random &rand,
-                          sql_variant::LoggedSQL *connection) const {
-  if (metaCtx.size() >= config.max_table_count) {
-    // log error and skip
-    return;
-  }
-
-  metaCtx.createTable([&](Metadata::Reservation &res) {
-    // 1: build definition
-
-    auto table = res.table();
-
-    table->name =
-        fmt::format("foo{}", rand.random_number(1, 100000000)); // name;
-
-    const auto column_count =
-        rand.random_number<std::size_t>(2, config.max_column_count);
-
-    const bool partitioned = type == Table::Type::partitioned;
-
-    const bool add_foreign_key = rand.random_number<std::size_t>(1, 100) <=
-                                 config.ct_foreign_key_percentage;
-
-    for (size_t idx = 0; idx < column_count; ++idx) {
-      const bool primary_key_column = idx == 0;
-      const bool foreign_key_column = add_foreign_key && idx == 1;
-      table->columns.push_back(
-          randomColumn(rand, primary_key_column || foreign_key_column));
-    }
-
-    table->columns[0].name = "id";
-
-    table->columns[0].primary_key = true;
-    table->columns[0].nullable = false;
-    if (partitioned) {
-      // with partitioned tables, the primary key won't be a serial as we want
-      // to generate random numbers to evenly distribute the partitions
-      table->columns[0].partition_key = true;
-
-      table->partitioning = RangePartitioning{};
-      table->partitioning->rangeSize = 10000000;
-    } else {
-      table->columns[0].auto_increment = true;
-    }
-
-    if (add_foreign_key) {
-      // Foreign keys are always added to the second column (index 1) as a
-      // simplification for now
-      try {
-        auto table_ref = find_random_table(metaCtx, rand);
-        table->columns[1].foreign_key_references = table_ref->name;
-      } catch (ActionException const &) {
-        // no table to reference yet, column just stays a plain column
-        // @TODO(rework): decide if this should be logged
-      }
-    }
-
-    // 2: build & execute SQL statement
-
-    std::vector<std::string> defs;
-    std::vector<std::string> pk_columns;
-
-    for (auto const &col : table->columns) {
-      if (col.primary_key) {
-        pk_columns.push_back(col.name);
-      }
-      defs.push_back(columnDefinition(col));
-    }
-
-    if (!pk_columns.empty()) {
-      defs.push_back(fmt::format("PRIMARY KEY ({})",
-                                 boost::algorithm::join(pk_columns, ", ")));
-    }
-
-    std::string partitionClause;
-
-    if (partitioned) {
-      partitionClause =
-          fmt::format(" PARTITION BY RANGE ({})", table->columns[0].name);
-    }
-
-    connection
-        ->executeQuery(fmt::format("CREATE TABLE {} ({}) {};", table->name,
-                                   boost::algorithm::join(defs, ",\n"),
-                                   partitionClause))
-        .maybeThrow();
-
-    if (partitioned) {
-      auto cnt = rand.random_number(config.min_partition_count,
-                                    config.max_partition_count);
-      const auto partitionSize = table->partitioning->rangeSize;
-      for (std::size_t i = 0; i < cnt; ++i) {
-        for (std::size_t tries = 0; tries < 3; ++tries) {
-          const auto res = connection->executeQuery(
-              fmt::format("CREATE TABLE {}_p{} PARTITION OF {} "
-                          "FOR VALUES FROM ({}) TO ({});",
-                          table->name, i, table->name, partitionSize * i,
-                          partitionSize * (i + 1)));
-
-          if (!res) {
-            continue;
-          }
-
-          table->partitioning->ranges.push_back(RangePartition{i});
-
-          break;
-        }
-      }
-    }
-
-    res.complete();
-
-    if (successCallback) {
-      successCallback(table);
-    }
-  });
-}
-
-DropTable::DropTable(DdlConfig config) : config(std::move(config)) {}
-
-void DropTable::execute(Metadata &metaCtx, ps_random &rand,
-                        sql_variant::LoggedSQL *connection) const {
-  if (metaCtx.size() <= config.min_table_count) {
-    // log error and skip
-    return;
-  }
-
-  auto idx =
-      rand.random_number(static_cast<std::size_t>(0), metaCtx.size() - 1);
-
-  std::string tableName;
-
-  metaCtx.dropTable(idx, [&](Metadata::Reservation &res) {
-    if (!res.open()) {
-      return;
-    }
-    connection
-        ->executeQuery(fmt::format("DROP TABLE {} CASCADE;", res.table()->name))
-        .maybeThrow();
-
-    tableName = res.table()->name;
-
-    res.complete();
-  });
-
-  if (tableName.empty()) {
-    return;
-  }
-
-  // Make a best effort at trying to remove foreign key references from metadata
-  for (std::size_t table_idx = 0; table_idx < metaCtx.size(); ++table_idx) {
-    auto table = metaCtx[table_idx];
-    if (table && table->hasReferenceTo(tableName)) {
-      metaCtx.dropTable(table_idx, [&](Metadata::Reservation &res) {
-        if (!res.open()) {
-          return;
-        }
-        res.table()->removeReferencesTo(tableName);
-      });
-    }
-  }
-}
-
-AlterTable::AlterTable(DdlConfig config,
-                       BitFlags<AlterSubcommand> const &possibleCommands)
-    : config(std::move(config)), possibleCommands(possibleCommands) {}
-
-void AlterTable::execute(Metadata &metaCtx, ps_random &rand,
-                         sql_variant::LoggedSQL *connection) const {
-  if (metaCtx.size() == 0) {
-    return;
-  }
-
-  auto idx =
-      rand.random_number(static_cast<std::size_t>(0), metaCtx.size() - 1);
-
-  metaCtx.alterTable(idx, [&](Metadata::Reservation &res) {
-    if (!res.open()) {
-      return;
-    }
-
-    auto table = res.table();
-
-    const auto commands = possibleCommands.All();
-
-    const auto howManySubcommands = rand.random_number(
-        static_cast<std::size_t>(1), config.max_alter_clauses);
-
-    std::vector<std::string> alterSubcommands;
-
-    std::vector<std::size_t> availableColumns(table->columns.size());
-    std::vector<std::size_t> droppedColumns;
-    std::ranges::iota(availableColumns, 0);
-
-    std::vector<Column> newColumns;
-
-    bool changingAm = false;
-
-    for (std::size_t idx = 0; idx < howManySubcommands; ++idx) {
-      bool addedSubcommand = false;
-
-      while (!addedSubcommand) {
-        const auto cmdIndex = rand.random_number(static_cast<std::size_t>(0),
-                                                 commands.size() - 1);
-
-        switch (commands[cmdIndex]) {
-        case AlterSubcommand::addColumn: {
-          const auto column = randomColumn(rand);
-          alterSubcommands.emplace_back(
-              fmt::format("ADD COLUMN {}", columnDefinition(column)));
-          // we can't accidentally modify / drop new columns in the same
-          // statement
-          newColumns.push_back(column);
-          addedSubcommand = true;
-          break;
-        }
-        case AlterSubcommand::dropColumn: {
-          if (table->columns.size() - droppedColumns.size() < 3 ||
-              availableColumns.empty()) {
-            continue;
-          }
-          const auto columnIndexIndex = rand.random_number(
-              static_cast<std::size_t>(0), availableColumns.size() - 1);
-          const auto columnIndex = availableColumns[columnIndexIndex];
-          if (columnIndex == 0) {
-            break; // do not try to drop the primary key
-          }
-          alterSubcommands.emplace_back(
-              fmt::format("DROP COLUMN {}", table->columns[columnIndex].name));
-          droppedColumns.push_back(columnIndex);
-          availableColumns.erase(availableColumns.begin() +
-                                 static_cast<std::ptrdiff_t>(columnIndexIndex));
-          addedSubcommand = true;
-          break;
-        }
-        case AlterSubcommand::changeColumn: {
-          // very simple implementation, we only do numeric -> string
-          for (std::size_t idx = 0; idx < availableColumns.size(); ++idx) {
-            auto &col = table->columns[availableColumns[idx]];
-            const bool numericColumn = col.type == metadata::ColumnType::INT ||
-                                       col.type == metadata::ColumnType::REAL;
-
-            if (numericColumn && col.foreign_key_references.empty() &&
-                !col.primary_key) {
-              alterSubcommands.emplace_back(
-                  fmt::format("ALTER COLUMN {} TYPE VARCHAR(32)", col.name));
-              availableColumns.erase(availableColumns.begin() +
-                                     static_cast<std::ptrdiff_t>(idx));
-              addedSubcommand = true;
-              col.type = ColumnType::VARCHAR;
-              col.length = 32;
-              break;
-            }
-          }
-          break;
-        }
-        case AlterSubcommand::changeAccessMethod: {
-          if (changingAm) {
-            break;
-          }
-          const auto amIndex = rand.random_number(
-              static_cast<std::size_t>(0), config.access_methods.size() - 1);
-          alterSubcommands.emplace_back(fmt::format(
-              "SET ACCESS METHOD {}", config.access_methods[amIndex]));
-          changingAm = true;
-          addedSubcommand = true;
-        }
-        }
-      }
-    }
-
-    std::ranges::sort(droppedColumns, std::greater<>());
-    for (auto const &columnIndex : droppedColumns) {
-      table->columns.erase(table->columns.begin() +
-                           static_cast<std::ptrdiff_t>(columnIndex));
-    }
-
-    table->columns.insert(table->columns.end(), newColumns.begin(),
-                          newColumns.end());
-
-    connection
-        ->executeQuery(
-            fmt::format("ALTER TABLE {} \n {};", res.table()->name,
-                        boost::algorithm::join(alterSubcommands, ",\n")))
-        .maybeThrow();
-
-    res.complete();
-  });
-}
-
-RenameTable::RenameTable(DdlConfig config) : config(std::move(config)) {}
-
-void RenameTable::execute(Metadata &metaCtx, ps_random &rand,
-                          sql_variant::LoggedSQL *connection) const {
-  if (metaCtx.size() == 0) {
-    return;
-  }
-
-  auto idx =
-      rand.random_number(static_cast<std::size_t>(0), metaCtx.size() - 1);
-
-  std::string oldTableName;
-  std::string newTableName;
-
-  metaCtx.alterTable(idx, [&](Metadata::Reservation &res) {
-    if (!res.open()) {
-      return;
-    }
-
-    oldTableName = res.table()->name;
-    newTableName = fmt::format("foo{}", rand.random_number(1, 1000000));
-    res.table()->name = newTableName;
-
-    connection
-        ->executeQuery(fmt::format("ALTER TABLE {} RENAME TO {};", oldTableName,
-                                   res.table()->name))
-        .maybeThrow();
-
-    res.complete();
-  });
-
-  if (oldTableName.empty()) {
-    return;
-  }
-
-  // Make a best effort at trying to update foreign key references in metadata
-  for (std::size_t table_idx = 0; table_idx < metaCtx.size(); ++table_idx) {
-    auto table = metaCtx[table_idx];
-    if (table && table->hasReferenceTo(oldTableName)) {
-      metaCtx.dropTable(table_idx, [&](Metadata::Reservation &res) {
-        if (!res.open()) {
-          return;
-        }
-        res.table()->updateReferencesTo(oldTableName, newTableName);
-      });
-    }
-  }
-}
-
-CreateIndex::CreateIndex(DdlConfig config) : config(std::move(config)) {}
-
-void CreateIndex::execute(Metadata &metaCtx, ps_random &rand,
-                          sql_variant::LoggedSQL *connection) const {
-  // TODO: support partial / functional indexes, and the missing parameters,
-  // like null distinct
-  if (metaCtx.size() == 0) {
-    return;
-  }
-
-  auto idx =
-      rand.random_number(static_cast<std::size_t>(0), metaCtx.size() - 1);
-
-  metaCtx.alterTable(idx, [&](Metadata::Reservation &res) {
-    if (!res.open()) {
-      return;
-    }
-
-    metadata::Index newIndex;
-    newIndex.name =
-        fmt::format("idx{}", rand.random_number(1, 100000000)); // name;
-
-    std::vector<std::size_t> availableColumns(res.table()->columns.size());
-    std::ranges::iota(availableColumns, 0);
-    rand.shuffle(availableColumns);
-
-    const auto columnCount = rand.random_number(
-        static_cast<std::size_t>(1),
-        std::min<std::size_t>(availableColumns.size() - 1, 32));
-
-    std::vector<std::string> indexColumns;
-    for (std::size_t i = 0; i < columnCount; ++i) {
-      const std::string columnName =
-          res.table()->columns[availableColumns[i]].name;
-      const bool ascending = rand.random_bool();
-      indexColumns.emplace_back(
-          fmt::format("{} {}", columnName, ascending ? "ASC" : "DESC"));
-      newIndex.fields.emplace_back(metadata::IndexColumn{
-          .column_name = columnName,
-          .ordering = ascending ? metadata::IndexOrdering::asc
-                                : metadata::IndexOrdering::desc});
-    }
-
-    newIndex.unique = rand.random_bool();
-    const std::string_view unique = newIndex.unique ? "UNIQUE" : "";
-    const std::string_view concurrently =
-        rand.random_bool() ? "CONCURRENTLY" : "";
-    const std::string_view only = rand.random_bool() ? "ONLY" : "";
-
-    res.table()->indexes.push_back(newIndex);
-
-    connection
-        ->executeQuery(fmt::format("CREATE {} INDEX {} {} ON {} {} ({});",
-                                   unique, concurrently, newIndex.name, only,
-                                   res.table()->name,
-                                   boost::algorithm::join(indexColumns, ", ")))
-        .maybeThrow();
-
-    res.complete();
-  });
-}
-
-DropIndex::DropIndex(DdlConfig config) : config(std::move(config)) {}
-
-void DropIndex::execute(Metadata &metaCtx, ps_random &rand,
-                        sql_variant::LoggedSQL *connection) const {
-  if (metaCtx.size() < 1) {
-    // log error and skip
-    return;
-  }
-
-  for (int remaingTries = 10; remaingTries > 0; remaingTries--) {
-    auto idx =
-        rand.random_number(static_cast<std::size_t>(0), metaCtx.size() - 1);
-
-    auto table = metaCtx[idx];
-
-    if (table == nullptr || table->indexes.empty()) {
-      continue;
-    }
-
-    if (metaCtx.alterTable(idx, [&](Metadata::Reservation &res) {
-          if (!res.open()) {
-            return false;
-          }
-
-          auto &indexes = res.table()->indexes;
-
-          if (indexes.empty()) {
-            return false;
-          }
-
-          auto indexIdx = rand.random_number(static_cast<std::size_t>(0),
-                                             indexes.size() - 1);
-
-          connection
-              ->executeQuery(
-                  fmt::format("DROP INDEX {};", indexes[indexIdx].name))
-              .maybeThrow();
-
-          indexes.erase(indexes.begin() +
-                        static_cast<std::ptrdiff_t>(indexIdx));
-
-          res.complete();
-
-          return true;
-        })) {
-      break;
-    }
-  }
-}
-
-static int findPartitionedTable(Metadata &metaCtx, ps_random &rand,
+table_cptr findPartitionedTable(Catalog<Table> const &tables, ps_random &rand,
                                 DdlConfig const &config) {
-  const auto size = metaCtx.size();
-
-  if (size == 0) {
-    return -1;
-  }
-
   for (std::size_t i = 0; i < 10; ++i) {
-    auto idx =
-        rand.random_number(static_cast<std::size_t>(0), metaCtx.size() - 1);
-
-    auto table = metaCtx[idx];
+    auto table = tables.randomPick(rand);
 
     if (table == nullptr || !table->partitioning.has_value()) {
       continue;
@@ -547,95 +78,506 @@ static int findPartitionedTable(Metadata &metaCtx, ps_random &rand,
       continue;
     }
 
-    return static_cast<int>(idx);
+    return table;
   }
 
-  return -1;
+  return nullptr;
+}
+
+} // namespace
+
+CreateTable::CreateTable(DdlConfig config, Table::Type type)
+    : config(std::move(config)), type(type) {}
+
+void CreateTable::setSuccessCallback(TableCallback const &cb) {
+  successCallback = cb;
+}
+
+void CreateTable::execute(TableRegistry &metaCtx, ps_random &rand,
+                          sql_variant::LoggedSQL *connection) const {
+  auto &tables = metaCtx.get<Table>();
+
+  if (tables.size() >= config.max_table_count) {
+    // skip: table count limit
+    return;
+  }
+
+  // 1: build the whole record locally; it stays private until insert()
+
+  Table table;
+  table.id = metaCtx.nextId();
+  table.name = fmt::format("foo{}", rand.random_number(1, 100000000));
+
+  const auto column_count =
+      rand.random_number<std::size_t>(2, config.max_column_count);
+
+  const bool partitioned = type == Table::Type::partitioned;
+
+  const bool add_foreign_key = rand.random_number<std::size_t>(1, 100) <=
+                               config.ct_foreign_key_percentage;
+
+  for (size_t idx = 0; idx < column_count; ++idx) {
+    const bool primary_key_column = idx == 0;
+    const bool foreign_key_column = add_foreign_key && idx == 1;
+    table.columns.push_back(
+        randomColumn(rand, primary_key_column || foreign_key_column));
+  }
+
+  table.columns[0].name = "id";
+  table.columns[0].primary_key = true;
+  table.columns[0].nullable = false;
+  if (partitioned) {
+    // with partitioned tables, the primary key won't be a serial as we want
+    // to generate random numbers to evenly distribute the partitions
+    table.columns[0].partition_key = true;
+
+    table.partitioning = RangePartitioning{};
+    table.partitioning->rangeSize = 10000000;
+  } else {
+    table.columns[0].auto_increment = true;
+  }
+
+  std::string fkTargetName;
+  if (add_foreign_key) {
+    // Foreign keys are always added to the second column (index 1) as a
+    // simplification for now
+    try {
+      auto table_ref = find_random_table(metaCtx, rand);
+      table.columns[1].foreign_key_references = Ref<Table>{table_ref->id};
+      fkTargetName = table_ref->name;
+    } catch (ActionException const &) {
+      // no table to reference yet, column just stays a plain column
+      // @TODO: consider logging this skip
+    }
+  }
+
+  // 2: build & execute SQL statement - no lock held anywhere here
+
+  std::vector<std::string> defs;
+  std::vector<std::string> pk_columns;
+
+  for (std::size_t idx = 0; idx < table.columns.size(); ++idx) {
+    auto const &col = table.columns[idx];
+    if (col.primary_key) {
+      pk_columns.push_back(col.name);
+    }
+    defs.push_back(columnDefinition(col, idx == 1 ? fkTargetName : ""));
+  }
+
+  if (!pk_columns.empty()) {
+    defs.push_back(fmt::format("PRIMARY KEY ({})",
+                               boost::algorithm::join(pk_columns, ", ")));
+  }
+
+  std::string partitionClause;
+
+  if (partitioned) {
+    partitionClause =
+        fmt::format(" PARTITION BY RANGE ({})", table.columns[0].name);
+  }
+
+  connection
+      ->executeQuery(fmt::format("CREATE TABLE {} ({}) {};", table.name,
+                                 boost::algorithm::join(defs, ",\n"),
+                                 partitionClause))
+      .maybeThrow();
+
+  if (partitioned) {
+    auto cnt = rand.random_number(config.min_partition_count,
+                                  config.max_partition_count);
+    const auto partitionSize = table.partitioning->rangeSize;
+    for (std::size_t i = 0; i < cnt; ++i) {
+      for (std::size_t tries = 0; tries < 3; ++tries) {
+        const auto res = connection->executeQuery(
+            fmt::format("CREATE TABLE {}_p{} PARTITION OF {} "
+                        "FOR VALUES FROM ({}) TO ({});",
+                        table.name, i, table.name, partitionSize * i,
+                        partitionSize * (i + 1)));
+
+        if (!res) {
+          continue;
+        }
+
+        table.partitioning->ranges.push_back(RangePartition{i});
+
+        break;
+      }
+    }
+  }
+
+  // 3: publish
+
+  const auto fkRef = table.columns.size() > 1
+                         ? table.columns[1].foreign_key_references
+                         : Ref<Table>{};
+  const auto id = table.id;
+  tables.insert(std::move(table));
+
+  if (fkRef && tables.byId(fkRef.id) == nullptr) {
+    // referenced table dropped mid-create; its sweep could not see us yet
+    tables.update(id, [&](Table &t) { return t.removeReferencesTo(fkRef.id); });
+  }
+
+  if (successCallback) {
+    successCallback(tables.byId(id));
+  }
+}
+
+DropTable::DropTable(DdlConfig config) : config(std::move(config)) {}
+
+void DropTable::execute(TableRegistry &metaCtx, ps_random &rand,
+                        sql_variant::LoggedSQL *connection) const {
+  auto &tables = metaCtx.get<Table>();
+
+  if (tables.size() <= config.min_table_count) {
+    // skip: table count limit
+    return;
+  }
+
+  auto snap = tables.randomPick(rand);
+  if (snap == nullptr) {
+    return;
+  }
+
+  connection->executeQuery(fmt::format("DROP TABLE {} CASCADE;", snap->name))
+      .maybeThrow();
+
+  tables.erase(snap->id);
+
+  // Best effort: remove foreign key references to the dropped table
+  for (auto const &other : tables.snapshotAll()) {
+    if (other->hasReferenceTo(snap->id)) {
+      tables.update(other->id,
+                    [&](Table &t) { return t.removeReferencesTo(snap->id); });
+    }
+  }
+}
+
+AlterTable::AlterTable(DdlConfig config,
+                       BitFlags<AlterSubcommand> const &possibleCommands)
+    : config(std::move(config)), possibleCommands(possibleCommands) {}
+
+void AlterTable::execute(TableRegistry &metaCtx, ps_random &rand,
+                         sql_variant::LoggedSQL *connection) const {
+  auto &tables = metaCtx.get<Table>();
+
+  auto snap = tables.randomPick(rand);
+  if (snap == nullptr) {
+    return;
+  }
+
+  Table const &working = *snap; // drives SQL generation only
+
+  const auto commands = possibleCommands.All();
+
+  const auto howManySubcommands =
+      rand.random_number(static_cast<std::size_t>(1), config.max_alter_clauses);
+
+  std::vector<std::string> alterSubcommands;
+
+  std::vector<std::size_t> availableColumns(working.columns.size());
+  std::vector<std::size_t> droppedColumns;
+  std::ranges::iota(availableColumns, 0);
+
+  // the delta, recorded by name: concurrent ALTERs may reshuffle the
+  // record before we merge
+  std::vector<std::string> droppedColumnNames;
+  std::vector<Column> newColumns;
+  struct TypeChange {
+    std::string name;
+    ColumnType type;
+    std::size_t length;
+  };
+  std::vector<TypeChange> typeChanges;
+
+  bool changingAm = false;
+
+  for (std::size_t idx = 0; idx < howManySubcommands; ++idx) {
+    bool addedSubcommand = false;
+
+    while (!addedSubcommand) {
+      const auto cmdIndex =
+          rand.random_number(static_cast<std::size_t>(0), commands.size() - 1);
+
+      switch (commands[cmdIndex]) {
+      case AlterSubcommand::addColumn: {
+        const auto column = randomColumn(rand);
+        alterSubcommands.emplace_back(
+            fmt::format("ADD COLUMN {}", columnDefinition(column)));
+        // we can't accidentally modify / drop new columns in the same
+        // statement
+        newColumns.push_back(column);
+        addedSubcommand = true;
+        break;
+      }
+      case AlterSubcommand::dropColumn: {
+        if (working.columns.size() - droppedColumns.size() < 3 ||
+            availableColumns.empty()) {
+          continue;
+        }
+        const auto columnIndexIndex = rand.random_number(
+            static_cast<std::size_t>(0), availableColumns.size() - 1);
+        const auto columnIndex = availableColumns[columnIndexIndex];
+        if (columnIndex == 0) {
+          break; // do not try to drop the primary key
+        }
+        alterSubcommands.emplace_back(
+            fmt::format("DROP COLUMN {}", working.columns[columnIndex].name));
+        droppedColumnNames.push_back(working.columns[columnIndex].name);
+        droppedColumns.push_back(columnIndex);
+        availableColumns.erase(availableColumns.begin() +
+                               static_cast<std::ptrdiff_t>(columnIndexIndex));
+        addedSubcommand = true;
+        break;
+      }
+      case AlterSubcommand::changeColumn: {
+        // very simple implementation, we only do numeric -> string
+        for (std::size_t colIdx = 0; colIdx < availableColumns.size();
+             ++colIdx) {
+          auto const &col = working.columns[availableColumns[colIdx]];
+          const bool numericColumn = col.type == metadata::ColumnType::INT ||
+                                     col.type == metadata::ColumnType::REAL;
+
+          if (numericColumn && !col.foreign_key_references &&
+              !col.primary_key) {
+            alterSubcommands.emplace_back(
+                fmt::format("ALTER COLUMN {} TYPE VARCHAR(32)", col.name));
+            availableColumns.erase(availableColumns.begin() +
+                                   static_cast<std::ptrdiff_t>(colIdx));
+            addedSubcommand = true;
+            typeChanges.push_back(
+                {.name = col.name, .type = ColumnType::VARCHAR, .length = 32});
+            break;
+          }
+        }
+        break;
+      }
+      case AlterSubcommand::changeAccessMethod: {
+        if (changingAm) {
+          break;
+        }
+        const auto amIndex = rand.random_number(
+            static_cast<std::size_t>(0), config.access_methods.size() - 1);
+        alterSubcommands.emplace_back(fmt::format(
+            "SET ACCESS METHOD {}", config.access_methods[amIndex]));
+        changingAm = true;
+        addedSubcommand = true;
+      }
+      }
+    }
+  }
+
+  connection
+      ->executeQuery(
+          fmt::format("ALTER TABLE {} \n {};", snap->name,
+                      boost::algorithm::join(alterSubcommands, ",\n")))
+      .maybeThrow();
+
+  tables.update(snap->id, [&](Table &t) {
+    for (auto const &name : droppedColumnNames) {
+      auto it = std::ranges::find_if(
+          t.columns, [&](Column const &c) { return c.name == name; });
+      if (it != t.columns.end()) {
+        t.columns.erase(it);
+      }
+    }
+    for (auto const &tc : typeChanges) {
+      auto it = std::ranges::find_if(
+          t.columns, [&](Column const &c) { return c.name == tc.name; });
+      if (it != t.columns.end()) {
+        it->type = tc.type;
+        it->length = tc.length;
+      }
+    }
+    t.columns.insert(t.columns.end(), newColumns.begin(), newColumns.end());
+    return true;
+  });
+}
+
+RenameTable::RenameTable(DdlConfig config) : config(std::move(config)) {}
+
+void RenameTable::execute(TableRegistry &metaCtx, ps_random &rand,
+                          sql_variant::LoggedSQL *connection) const {
+  auto &tables = metaCtx.get<Table>();
+
+  auto snap = tables.randomPick(rand);
+  if (snap == nullptr) {
+    return;
+  }
+
+  const auto newName = fmt::format("foo{}", rand.random_number(1, 1000000));
+
+  connection
+      ->executeQuery(
+          fmt::format("ALTER TABLE {} RENAME TO {};", snap->name, newName))
+      .maybeThrow();
+
+  tables.update(snap->id, [&](Table &t) {
+    t.name = newName;
+    return true;
+  });
+}
+
+CreateIndex::CreateIndex(DdlConfig config) : config(std::move(config)) {}
+
+void CreateIndex::execute(TableRegistry &metaCtx, ps_random &rand,
+                          sql_variant::LoggedSQL *connection) const {
+  // TODO: support partial / functional indexes, and the missing parameters,
+  // like null distinct
+  auto &tables = metaCtx.get<Table>();
+
+  auto snap = tables.randomPick(rand);
+  if (snap == nullptr) {
+    return;
+  }
+
+  metadata::Index newIndex;
+  newIndex.name = fmt::format("idx{}", rand.random_number(1, 100000000));
+
+  std::vector<std::size_t> availableColumns(snap->columns.size());
+  std::ranges::iota(availableColumns, 0);
+  rand.shuffle(availableColumns);
+
+  const auto columnCount = rand.random_number(
+      static_cast<std::size_t>(1),
+      std::min<std::size_t>(availableColumns.size() - 1, 32));
+
+  std::vector<std::string> indexColumns;
+  for (std::size_t i = 0; i < columnCount; ++i) {
+    const std::string columnName = snap->columns[availableColumns[i]].name;
+    const bool ascending = rand.random_bool();
+    indexColumns.emplace_back(
+        fmt::format("{} {}", columnName, ascending ? "ASC" : "DESC"));
+    newIndex.fields.emplace_back(metadata::IndexColumn{
+        .column_name = columnName,
+        .ordering = ascending ? metadata::IndexOrdering::asc
+                              : metadata::IndexOrdering::desc});
+  }
+
+  newIndex.unique = rand.random_bool();
+  const std::string_view unique = newIndex.unique ? "UNIQUE" : "";
+  const std::string_view concurrently =
+      rand.random_bool() ? "CONCURRENTLY" : "";
+  const std::string_view only = rand.random_bool() ? "ONLY" : "";
+
+  connection
+      ->executeQuery(fmt::format("CREATE {} INDEX {} {} ON {} {} ({});", unique,
+                                 concurrently, newIndex.name, only, snap->name,
+                                 boost::algorithm::join(indexColumns, ", ")))
+      .maybeThrow();
+
+  tables.update(snap->id, [&](Table &t) {
+    if (std::ranges::find_if(t.indexes, [&](Index const &i) {
+          return i.name == newIndex.name;
+        }) == t.indexes.end()) {
+      t.indexes.push_back(newIndex);
+    }
+    return true;
+  });
+}
+
+DropIndex::DropIndex(DdlConfig config) : config(std::move(config)) {}
+
+void DropIndex::execute(TableRegistry &metaCtx, ps_random &rand,
+                        sql_variant::LoggedSQL *connection) const {
+  auto &tables = metaCtx.get<Table>();
+
+  for (int remainingTries = 10; remainingTries > 0; remainingTries--) {
+    auto snap = tables.randomPick(rand);
+
+    if (snap == nullptr || snap->indexes.empty()) {
+      continue;
+    }
+
+    auto indexIdx = rand.random_number(static_cast<std::size_t>(0),
+                                       snap->indexes.size() - 1);
+    const std::string indexName = snap->indexes[indexIdx].name;
+
+    connection->executeQuery(fmt::format("DROP INDEX {};", indexName))
+        .maybeThrow();
+
+    tables.update(snap->id, [&](Table &t) {
+      auto it = std::ranges::find_if(
+          t.indexes, [&](Index const &i) { return i.name == indexName; });
+      if (it != t.indexes.end()) {
+        t.indexes.erase(it);
+      }
+      return true;
+    });
+
+    break;
+  }
 }
 
 CreatePartition::CreatePartition(DdlConfig config)
     : config(std::move(config)) {}
 
-void CreatePartition::execute(Metadata &metaCtx, ps_random &rand,
+void CreatePartition::execute(TableRegistry &metaCtx, ps_random &rand,
                               sql_variant::LoggedSQL *connection) const {
+  auto &tables = metaCtx.get<Table>();
 
-  auto idx = findPartitionedTable(metaCtx, rand, config);
-
-  if (idx == -1) {
+  auto snap = findPartitionedTable(tables, rand, config);
+  if (snap == nullptr) {
     return;
   }
 
-  metaCtx.alterTable(idx, [&](Metadata::Reservation &res) {
-    if (!res.open()) {
-      return;
+  std::size_t partIdx = rand.random_number(1, 100000000);
+  const auto partitionSize = snap->partitioning->rangeSize;
+
+  connection
+      ->executeQuery(fmt::format(
+          "CREATE TABLE {}_p{} PARTITION OF {} FOR VALUES FROM ({}) TO ({});",
+          snap->name, partIdx, snap->name, partitionSize * partIdx,
+          partitionSize * (partIdx + 1)))
+      .maybeThrow();
+
+  tables.update(snap->id, [&](Table &t) {
+    if (!t.partitioning.has_value()) {
+      return false; // concurrently restructured; skip
     }
-
-    auto table = res.table();
-
-    if (!table->partitioning.has_value()) {
-      return;
+    auto &ranges = t.partitioning->ranges;
+    if (std::ranges::find_if(ranges, [&](RangePartition const &r) {
+          return r.rangebase == partIdx;
+        }) != ranges.end()) {
+      return false;
     }
-
-    auto currentCount = table->partitioning->ranges.size();
-    if (currentCount >= config.max_partition_count) {
-      return;
-    }
-
-    std::size_t partIdx = rand.random_number(1, 100000000);
-    const auto partitionSize = table->partitioning->rangeSize;
-    connection
-        ->executeQuery(fmt::format(
-            "CREATE TABLE {}_p{} PARTITION OF {} FOR VALUES FROM ({}) TO ({});",
-            table->name, partIdx, table->name, partitionSize * partIdx,
-            partitionSize * (partIdx + 1)))
-        .maybeThrow();
-
-    table->partitioning->ranges.push_back(RangePartition{partIdx});
-
-    res.complete();
+    ranges.push_back(RangePartition{partIdx});
+    return true;
   });
 }
 
 DropPartition::DropPartition(DdlConfig config) : config(std::move(config)) {}
 
-void DropPartition::execute(Metadata &metaCtx, ps_random &rand,
+void DropPartition::execute(TableRegistry &metaCtx, ps_random &rand,
                             sql_variant::LoggedSQL *connection) const {
+  auto &tables = metaCtx.get<Table>();
 
-  auto idx = findPartitionedTable(metaCtx, rand, config);
-
-  if (idx == -1) {
+  auto snap = findPartitionedTable(tables, rand, config);
+  if (snap == nullptr) {
     return;
   }
 
-  metaCtx.alterTable(idx, [&](Metadata::Reservation &res) {
-    if (!res.open()) {
-      return;
+  std::size_t partId = rand.random_number(
+      static_cast<std::size_t>(0), snap->partitioning->ranges.size() - 1);
+  std::size_t partIdx = snap->partitioning->ranges[partId].rangebase;
+
+  connection
+      ->executeQuery(
+          fmt::format("DROP TABLE {}_p{} CASCADE;", snap->name, partIdx))
+      .maybeThrow();
+
+  tables.update(snap->id, [&](Table &t) {
+    if (!t.partitioning.has_value()) {
+      return false;
     }
-
-    auto table = res.table();
-
-    if (!table->partitioning.has_value()) {
-      return;
+    auto &ranges = t.partitioning->ranges;
+    auto it = std::ranges::find_if(ranges, [&](RangePartition const &r) {
+      return r.rangebase == partIdx;
+    });
+    if (it == ranges.end()) {
+      return false;
     }
-
-    auto currentCount = table->partitioning->ranges.size();
-    if (currentCount <= config.min_partition_count) {
-      return;
-    }
-
-    std::size_t partId = rand.random_number(
-        static_cast<std::size_t>(0), table->partitioning->ranges.size() - 1);
-
-    std::size_t partIdx = table->partitioning->ranges[partId].rangebase;
-
-    connection
-        ->executeQuery(
-            fmt::format("DROP TABLE {}_p{} CASCADE;", table->name, partIdx))
-        .maybeThrow();
-
-    table->partitioning->ranges.erase(table->partitioning->ranges.begin() +
-                                      static_cast<std::ptrdiff_t>(partId));
-
-    res.complete();
+    ranges.erase(it);
+    return true;
   });
 }

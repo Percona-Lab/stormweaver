@@ -10,7 +10,7 @@
 
 #include "action/action_registry.hpp"
 #include "logging.hpp"
-#include "metadata.hpp"
+#include "metadata/table.hpp"
 #include "py_action.hpp"
 #include "random.hpp"
 #include "sql_variant/generic.hpp"
@@ -100,17 +100,17 @@ NB_MODULE(_stormweaver, m) {
 
   // --- Metadata ---
 
-  nb::class_<metadata::Metadata>(m, "Metadata")
+  nb::class_<metadata::TableRegistry>(m, "Metadata")
       .def(nb::init<>())
-      .def("size", &metadata::Metadata::size)
-      .def("reset", &metadata::Metadata::reset)
-      .def("table_names", [](metadata::Metadata const &self) {
+      .def("size",
+           [](metadata::TableRegistry const &self) {
+             return self.get<metadata::Table>().size();
+           })
+      .def("reset", &metadata::TableRegistry::reset)
+      .def("table_names", [](metadata::TableRegistry const &self) {
         std::vector<std::string> names;
-        for (metadata::Metadata::index_t i = 0; i < self.size(); ++i) {
-          auto table = self[i];
-          if (table) {
-            names.push_back(table->name);
-          }
+        for (auto const &table : self.get<metadata::Table>().snapshotAll()) {
+          names.push_back(table->name);
         }
         return names;
       });
