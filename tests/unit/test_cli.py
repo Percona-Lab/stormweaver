@@ -101,3 +101,35 @@ def test_cli_unexpected_error_keeps_traceback(
     assert "Traceback" in log
     outcomes = list(Path("logs").glob("*/outcome"))
     assert "scenario result=failed" in outcomes[0].read_text()
+
+
+def test_cli_systemexit_message_logged_and_recorded(
+    tmp_path, monkeypatch, _restore_log_state
+):
+    monkeypatch.chdir(tmp_path)
+    scen = tmp_path / "scen.py"
+    scen.write_text("def main(args):\n    raise SystemExit('need --tde on')\n")
+    assert main([str(scen)]) == 1
+    log = _main_log()
+    assert "scenario failed: need --tde on" in log
+    assert "Traceback" not in log
+    outcomes = list(Path("logs").glob("*/outcome"))
+    assert "scenario result=failed" in outcomes[0].read_text()
+
+
+def test_cli_systemexit_code_preserved(tmp_path, monkeypatch, _restore_log_state):
+    monkeypatch.chdir(tmp_path)
+    scen = tmp_path / "scen.py"
+    scen.write_text("def main(args):\n    raise SystemExit(3)\n")
+    assert main([str(scen)]) == 3
+    outcomes = list(Path("logs").glob("*/outcome"))
+    assert "scenario result=failed" in outcomes[0].read_text()
+
+
+def test_cli_systemexit_zero_is_passed(tmp_path, monkeypatch, _restore_log_state):
+    monkeypatch.chdir(tmp_path)
+    scen = tmp_path / "scen.py"
+    scen.write_text("def main(args):\n    raise SystemExit(0)\n")
+    assert main([str(scen)]) == 0
+    outcomes = list(Path("logs").glob("*/outcome"))
+    assert "scenario result=passed" in outcomes[0].read_text()
