@@ -174,8 +174,8 @@ void RandomWorker::run_thread(std::size_t duration_in_seconds) {
       const auto w = rand.random_number(static_cast<std::size_t>(0),
                                         actions.totalWeight());
       const auto actionFactory = actions.lookupByWeightOffset(w);
-      auto action = actionFactory.builder(
-          action::BuildContext{config.actionConfig, actions});
+      auto action = actionFactory.builder(action::BuildContext{
+          .config = config.actionConfig, .registry = actions});
 
       stats.startAction(actionFactory.name);
       sql_conn->resetAccumulatedSqlTime();

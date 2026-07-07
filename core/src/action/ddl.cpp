@@ -384,27 +384,23 @@ void AlterTable::execute(Context &metaCtx, ps_random &rand,
       // mirror the server's handling of indexes on the dropped column:
       // pg drops the whole index, mysql just removes the key part
       if (wholeIndexDrop) {
-        t.indexes.erase(std::remove_if(t.indexes.begin(), t.indexes.end(),
-                                       [&](Index const &idx) {
-                                         return std::ranges::any_of(
-                                             idx.fields,
-                                             [&](IndexColumn const &f) {
-                                               return f.column_name == name;
-                                             });
-                                       }),
-                        t.indexes.end());
+        auto dead = std::ranges::remove_if(t.indexes, [&](Index const &idx) {
+          return std::ranges::any_of(idx.fields, [&](IndexColumn const &f) {
+            return f.column_name == name;
+          });
+        });
+        t.indexes.erase(dead.begin(), dead.end());
       } else {
         for (auto &idx : t.indexes) {
-          idx.fields.erase(std::remove_if(idx.fields.begin(), idx.fields.end(),
-                                          [&](IndexColumn const &f) {
-                                            return f.column_name == name;
-                                          }),
-                           idx.fields.end());
+          auto dead =
+              std::ranges::remove_if(idx.fields, [&](IndexColumn const &f) {
+                return f.column_name == name;
+              });
+          idx.fields.erase(dead.begin(), dead.end());
         }
-        t.indexes.erase(
-            std::remove_if(t.indexes.begin(), t.indexes.end(),
-                           [](Index const &idx) { return idx.fields.empty(); }),
-            t.indexes.end());
+        auto dead = std::ranges::remove_if(
+            t.indexes, [](Index const &idx) { return idx.fields.empty(); });
+        t.indexes.erase(dead.begin(), dead.end());
       }
     }
     for (auto const &tc : typeChanges) {

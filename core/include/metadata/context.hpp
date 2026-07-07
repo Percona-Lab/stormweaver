@@ -216,7 +216,7 @@ public:
   CatalogView(Catalog<T> &catalog, TxnBuffer<T> *txn)
       : catalog_(&catalog), txn_(txn) {}
 
-  object_cptr<T> byId(ObjectId id) const {
+  [[nodiscard]] object_cptr<T> byId(ObjectId id) const {
     if (txn_ != nullptr) {
       if (txn_->erasedContains(id)) {
         return nullptr;
@@ -228,7 +228,7 @@ public:
     return catalog_->byId(id);
   }
 
-  object_cptr<T> byName(std::string_view name) const {
+  [[nodiscard]] object_cptr<T> byName(std::string_view name) const {
     if (txn_ == nullptr) {
       return catalog_->byName(name);
     }
@@ -255,14 +255,14 @@ public:
     return all[rand.random_number<std::size_t>(0, all.size() - 1)];
   }
 
-  std::size_t size() const {
+  [[nodiscard]] std::size_t size() const {
     if (txn_ == nullptr) {
       return catalog_->size();
     }
     return snapshotAll().size();
   }
 
-  std::vector<object_cptr<T>> snapshotAll() const {
+  [[nodiscard]] std::vector<object_cptr<T>> snapshotAll() const {
     if (txn_ == nullptr) {
       return catalog_->snapshotAll();
     }
@@ -289,7 +289,7 @@ public:
     return true;
   }
 
-  bool update(ObjectId id, typename TxnBuffer<T>::delta_fn delta) {
+  bool update(ObjectId id, TxnBuffer<T>::delta_fn delta) {
     if (txn_ == nullptr) {
       return catalog_->update(id, std::move(delta));
     }
@@ -315,7 +315,7 @@ public:
 
   // single-kind today: txn_ is Table-typed; a second catalog kind needs
   // per-kind buffers
-  template <typename T> CatalogView<T> get() const {
+  template <typename T> [[nodiscard]] CatalogView<T> get() const {
     return CatalogView<T>(reg_->get<T>(), txn_);
   }
 

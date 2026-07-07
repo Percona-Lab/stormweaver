@@ -25,7 +25,7 @@ public:
       // best effort; must never throw during unwind
       try {
         std::ignore = conn->executeQuery("ROLLBACK;");
-      } catch (...) {
+      } catch (...) { // NOLINT(bugprone-empty-catch)
       }
     }
   }
@@ -64,7 +64,8 @@ struct Savepoint {
 
 } // namespace
 
-TransactionAction::TransactionAction(AllConfig config, ActionRegistry pool)
+TransactionAction::TransactionAction(AllConfig config,
+                                     ActionRegistry const &pool)
     : allConfig(std::move(config)),
       poolAll(pool.filtered([](ActionFactory const &f) {
         return f.type != ActionType::transaction;
@@ -113,7 +114,8 @@ void TransactionAction::execute(metadata::Context &metaCtx, ps_random &rand,
   for (std::size_t i = 0; i < subCount; ++i) {
     const auto w = rand.random_number<std::size_t>(0, pool.totalWeight());
     const auto factory = pool.lookupByWeightOffset(w);
-    auto sub = factory.builder(BuildContext{allConfig, pool});
+    auto sub =
+        factory.builder(BuildContext{.config = allConfig, .registry = pool});
 
     if (inTrx && !ddlTransactional && factory.type == ActionType::ddl) {
       // mysql mirror mode: DDL implicitly commits the open transaction
@@ -168,7 +170,7 @@ void TransactionAction::execute(metadata::Context &metaCtx, ps_random &rand,
     if (useSavepoints) {
       const auto sp = ++spCounter;
       connection->executeQuery(fmt::format("SAVEPOINT sp{};", sp)).maybeThrow();
-      savepoints.push_back({sp, txn.mark()});
+      savepoints.push_back({.name = sp, .mark = txn.mark()});
       try {
         sub->execute(trxCtx, rand, connection);
         ++okCount;

@@ -11,7 +11,7 @@ namespace action {
    discards them. */
 class TransactionAction : public Action {
 public:
-  TransactionAction(AllConfig config, ActionRegistry pool);
+  TransactionAction(AllConfig config, ActionRegistry const &pool);
 
   void execute(metadata::Context &metaCtx, ps_random &rand,
                sql_variant::LoggedSQL *connection) const override;
