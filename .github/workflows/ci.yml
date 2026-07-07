@@ -122,6 +122,7 @@ jobs:
       - run: conan profile detect --exist-ok
       - run: uv python install 3.14t && uv venv && uv pip install -e . pytest
       - run: uv run --no-sync stormweaver scenarios/ci/basic.py -i /usr/lib/postgresql/16
+      - run: uv run --no-sync stormweaver scenarios/ci/basic.py -i /usr/lib/postgresql/16 --wrapper-cmd env --duration 3 --repeat 1
 
   scenario-mysql:
     runs-on: ubuntu-24.04
@@ -141,6 +142,7 @@ jobs:
       - run: sudo aa-remove-unknown || true; sudo ln -sf /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/ 2>/dev/null || true; sudo apparmor_parser -R /etc/apparmor.d/usr.sbin.mysqld 2>/dev/null || true
       - run: sudo systemctl stop mysql || true
       - run: uv run --no-sync stormweaver scenarios/ci/basic_mysql.py -i /usr
+      - run: uv run --no-sync stormweaver scenarios/ci/basic_mysql.py -i /usr --wrapper-cmd env --duration 3 --repeat 1
 
   scenario-asan:
     runs-on: ubuntu-24.04

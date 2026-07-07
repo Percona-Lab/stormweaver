@@ -44,6 +44,22 @@ tasks:
     cmds:
       - uv run stormweaver scenarios/ci/basic.py -i "{{.PG_DIR}}"
 
+  test:scenario:rr:
+    desc: Basic scenario with servers under rr (needs rr + perf counter access)
+    preconditions:
+      - sh: test -x "{{.PG_DIR}}/bin/initdb"
+        msg: "PG_DIR must point to a PostgreSQL install with bin/initdb (arg or .env), see docs/building.md"
+    cmds:
+      - uv run stormweaver scenarios/ci/basic.py -i "{{.PG_DIR}}" --wrapper rr
+
+  test:scenario:valgrind:
+    desc: Basic scenario with servers under valgrind (slow, manual use)
+    preconditions:
+      - sh: test -x "{{.PG_DIR}}/bin/initdb"
+        msg: "PG_DIR must point to a PostgreSQL install with bin/initdb (arg or .env), see docs/building.md"
+    cmds:
+      - uv run stormweaver scenarios/ci/basic.py -i "{{.PG_DIR}}" --wrapper valgrind --duration 5 --repeat 1
+
   test:
     desc: Everything local (the scenario part needs PG_DIR)
     cmds:

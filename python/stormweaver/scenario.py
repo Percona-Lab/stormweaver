@@ -19,6 +19,7 @@ from stormweaver.backends.postgres import Postgres
 from stormweaver.config import Config
 from stormweaver.tde import init_tde_globally, init_tde_only_for_db
 from stormweaver.workload import Workload
+from stormweaver.wrappers import ServerWrapper, make_wrapper
 
 logger = logging.getLogger(__name__)
 
@@ -35,9 +36,30 @@ def parse(
     parser.add_argument("--tde", choices=["on", "on_wal", "off"], default="off")
     parser.add_argument("--pgsm", choices=["on", "off"], default="off")
     parser.add_argument("--clear-logs", action="store_true")
+    wrap = parser.add_mutually_exclusive_group()
+    wrap.add_argument(
+        "--wrapper", choices=["rr", "valgrind"], help="run servers under a preset tool"
+    )
+    wrap.add_argument(
+        "--wrapper-cmd", help="run servers under an arbitrary command prefix"
+    )
+    parser.add_argument(
+        "--wrapper-arg",
+        action="append",
+        default=[],
+        help="extra argument for the wrapper tool, repeatable",
+    )
+    parser.add_argument(
+        "--keep-traces", action="store_true", help="keep traces of clean sessions too"
+    )
     if extend:
         extend(parser)
     opts = parser.parse_args(args.extra)
+
+    # replaces the preset name with a ready-to-use wrapper object
+    opts.wrapper = make_wrapper(
+        opts.wrapper, opts.wrapper_cmd, opts.wrapper_arg, opts.keep_traces
+    )
 
     opts.config = Config.load(args.config)
     opts.install_dir = args.install_dir or opts.config.pgroot
@@ -250,6 +272,7 @@ def single_pg(
     dbname: str = "testdb",
     worker_setup: Callable[[Any, int], None] | None = None,
     datadir_name: str = "primary",
+    wrapper: ServerWrapper | None = None,
 ) -> Iterator[PgContext]:
     """Fresh single-primary postgres with standard actions and a ready workload."""
     datadir = opts.config.datadir(datadir_name)
@@ -287,7 +310,10 @@ def single_pg(
         settings |= extra_config
 
     pg = Postgres(
-        install_dir=opts.install_dir, datadir=datadir, port=opts.config.free_port()
+        install_dir=opts.install_dir,
+        datadir=datadir,
+        port=opts.config.free_port(),
+        wrapper=wrapper or getattr(opts, "wrapper", None),
     )
     pg.add_config(settings)
     pg.start()
@@ -350,13 +376,17 @@ def single_mysql(
     dbname: str = "testdb",
     worker_setup: Callable[[Any, int], None] | None = None,
     datadir_name: str = "primary_mysql",
+    wrapper: ServerWrapper | None = None,
 ) -> Iterator[MySqlContext]:
     """Fresh single mysql server with a ready workload."""
     datadir = opts.config.datadir(datadir_name)
     shutil.rmtree(datadir, ignore_errors=True)
 
     my = MySQL(
-        install_dir=opts.install_dir, datadir=datadir, port=opts.config.free_port()
+        install_dir=opts.install_dir,
+        datadir=datadir,
+        port=opts.config.free_port(),
+        wrapper=wrapper or getattr(opts, "wrapper", None),
     )
     my.add_config({"max_connections": "200"} | (extra_config or {}))
     my.start()

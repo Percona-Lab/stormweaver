@@ -32,6 +32,13 @@ from stormweaver.actions import action
 from stormweaver.backends import DatabaseBackend, MySQL, Postgres
 from stormweaver.config import Config
 from stormweaver.workload import Workload
+from stormweaver.wrappers import (
+    ExecPrefixWrapper,
+    RRWrapper,
+    ServerWrapper,
+    ValgrindWrapper,
+    WrapCtx,
+)
 
 __all__ = [
     "ActionFactory",
@@ -42,18 +49,23 @@ __all__ = [
     "DatabaseBackend",
     "DdlConfig",
     "DmlConfig",
+    "ExecPrefixWrapper",
     "LoggedSQL",
     "Metadata",
     "MySQL",
     "Postgres",
     "QueryResult",
+    "RRWrapper",
     "Random",
     "RandomWorker",
+    "ServerWrapper",
     "TimingStatistics",
+    "ValgrindWrapper",
     "Worker",
     "WorkerStatistics",
     "Workload",
     "WorkloadParams",
+    "WrapCtx",
     "__version__",
     "action",
     "connect_mysql",

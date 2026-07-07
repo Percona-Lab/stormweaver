@@ -11,6 +11,24 @@ class FakeCompleted:
         self.stderr = stderr
 
 
+class FakeProc:
+    def __init__(self, cmd=None, pid=4242):
+        self.cmd = cmd
+        self.pid = pid
+        self.returncode = None
+
+    def poll(self):
+        return self.returncode
+
+    def wait(self, timeout=None):
+        if self.returncode is None:
+            self.returncode = 0
+        return self.returncode
+
+    def kill(self):
+        self.returncode = -9
+
+
 def test_postgres_is_backend(tmp_path):
     pg = sw.Postgres(
         install_dir="/opt/pg", datadir=str(tmp_path / "d"), port=26100, init=False
@@ -18,64 +36,215 @@ def test_postgres_is_backend(tmp_path):
     assert isinstance(pg, sw.DatabaseBackend)
 
 
-def test_start_records_install_and_datadir_in_command(tmp_path, monkeypatch):
+def test_start_spawns_postgres_directly(tmp_path, monkeypatch):
     datadir = tmp_path / "d"
     datadir.mkdir()
     pg = sw.Postgres(
         install_dir="/opt/pg", datadir=str(datadir), port=26100, init=False
     )
 
-    calls = []
+    spawned = []
 
-    def fake_run(cmd, **kwargs):
-        calls.append(cmd)
-        return FakeCompleted(returncode=0)
+    def fake_popen(cmd, **kwargs):
+        spawned.append(cmd)
+        return FakeProc(cmd)
 
-    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr(subprocess, "Popen", fake_popen)
     pg.start()
 
-    assert len(calls) == 1
-    cmd = calls[0]
-    assert any("/opt/pg" in str(part) for part in cmd)
-    assert any(str(datadir) in str(part) for part in cmd)
+    assert len(spawned) == 1
+    cmd = spawned[0]
+    assert cmd[0] == "/opt/pg/bin/postgres"
+    assert cmd[1:] == ["-D", str(datadir)]
+    assert pg.is_running()
 
 
-def test_is_running_reflects_pid_liveness(tmp_path, monkeypatch):
+def test_is_running_reflects_proc_state(tmp_path):
     pg = sw.Postgres(
         install_dir="/opt/pg", datadir=str(tmp_path / "d"), port=26100, init=False
     )
     assert pg.is_running() is False
-
-    import os
-
-    pg._pid = os.getpid()
+    pg._proc = FakeProc()
     assert pg.is_running() is True
-
-    pg._pid = 2**30  # extremely unlikely to be a real pid
+    pg._proc.returncode = 0
     assert pg.is_running() is False
 
 
-def test_kill_sends_sigkill(tmp_path, monkeypatch):
-    pg = sw.Postgres(
-        install_dir="/opt/pg", datadir=str(tmp_path / "d"), port=26100, init=False
-    )
-    pg._pid = 4242
-
-    killed = {}
-
-    def fake_kill(pid, sig):
-        killed["pid"] = pid
-        killed["sig"] = sig
-
+def test_kill_sends_sigkill_to_server_pid(tmp_path, monkeypatch):
     import os
-
-    monkeypatch.setattr(os, "kill", fake_kill)
-    pg.kill()
-
     import signal
 
+    pg = sw.Postgres(
+        install_dir="/opt/pg", datadir=str(tmp_path / "d"), port=26100, init=False
+    )
+    pg._proc = FakeProc(pid=4242)
+    pg._session = 1
+
+    killed = {}
+    monkeypatch.setattr(os, "kill", lambda pid, sig: killed.update(pid=pid, sig=sig))
+    pg.kill()
+
     assert killed == {"pid": 4242, "sig": signal.SIGKILL}
-    assert pg._pid is None
+    assert pg._proc is None
+
+
+def test_kill_wrapped_uses_pidfile(tmp_path, monkeypatch):
+    import os
+
+    datadir = tmp_path / "d"
+    datadir.mkdir()
+    pg = sw.Postgres(
+        install_dir="/opt/pg",
+        datadir=str(datadir),
+        port=26100,
+        init=False,
+        wrapper=sw.ExecPrefixWrapper(["env"]),
+    )
+    (datadir / "postmaster.pid").write_text("2222\nmore lines\n")
+    pg._proc = FakeProc(pid=1111)
+    pg._session = 1
+
+    killed = {}
+    monkeypatch.setattr(os, "kill", lambda pid, sig: killed.update(pid=pid, sig=sig))
+    pg.kill()
+    assert killed["pid"] == 2222
+
+
+def test_session_classification(tmp_path):
+    pg = sw.Postgres(
+        install_dir="/opt/pg", datadir=str(tmp_path / "d"), port=26100, init=False
+    )
+    assert pg._session_result("stop", 0) == "clean"
+    assert pg._session_result("stop", 1) == "crashed"
+    assert pg._session_result("kill", -9) == "killed"
+    assert pg._session_result(None, -11) == "crashed"
+
+
+def test_stop_fires_on_session_end(tmp_path, monkeypatch):
+    from stormweaver.wrappers import ServerWrapper
+
+    class RecordingWrapper(ServerWrapper):
+        def __init__(self):
+            self.ended = []
+
+        def on_session_end(self, ctx, crashed):
+            self.ended.append((ctx.session, crashed))
+
+    rw = RecordingWrapper()
+    pg = sw.Postgres(
+        install_dir="/opt/pg",
+        datadir=str(tmp_path / "d"),
+        port=26100,
+        init=False,
+        wrapper=rw,
+    )
+    pg._proc = FakeProc()
+    pg._session = 1
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: FakeCompleted(returncode=0))
+    pg.stop()
+    assert rw.ended == [(1, False)]
+
+
+def test_timeout_scaling(tmp_path):
+    from stormweaver.wrappers import ExecPrefixWrapper
+
+    pg = sw.Postgres(
+        install_dir="/opt/pg",
+        datadir=str(tmp_path / "d"),
+        port=26100,
+        init=False,
+        wrapper=ExecPrefixWrapper(["env"], time_multiplier=3.0),
+    )
+    assert pg._timeout(10.0) == 30.0
+
+
+def test_reap_force_kills_stubborn_proc(tmp_path):
+    class StubbornProc:
+        pid = 4242
+
+        def __init__(self):
+            self.returncode = None
+            self.killed = False
+
+        def wait(self, timeout=None):
+            if not self.killed:
+                raise subprocess.TimeoutExpired("cmd", timeout)
+            self.returncode = -9
+            return self.returncode
+
+        def kill(self):
+            self.killed = True
+
+    pg = sw.Postgres(
+        install_dir="/opt/pg", datadir=str(tmp_path / "d"), port=26100, init=False
+    )
+    proc = StubbornProc()
+    pg._proc = proc
+    pg._session = 1
+    pg._reap("stop", 0.1)
+    assert proc.killed
+    assert pg._proc is None
+
+
+def test_reap_records_crashed_outcome(tmp_path, monkeypatch):
+    from stormweaver import log as swlog
+
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    monkeypatch.setattr(swlog, "_run_dir", run_dir)
+
+    pg = sw.Postgres(
+        install_dir="/opt/pg", datadir=str(tmp_path / "d"), port=26100, init=False
+    )
+    proc = FakeProc()
+    proc.returncode = -11
+    pg._proc = proc
+    pg._session = 2
+    pg._reap(None)
+
+    content = (run_dir / "outcome").read_text()
+    assert "node=" in content
+    assert "session=2" in content
+    assert "result=crashed" in content
+    assert "exit=SIGSEGV" in content
+
+
+def test_wait_ready_exits_early_when_server_dies(tmp_path, monkeypatch):
+    import time
+
+    pg = sw.Postgres(
+        install_dir="/opt/pg", datadir=str(tmp_path / "d"), port=26100, init=False
+    )
+    proc = FakeProc()
+    proc.returncode = 1
+    pg._proc = proc
+    monkeypatch.setattr(pg, "is_ready", lambda: False)
+
+    start = time.monotonic()
+    assert pg.wait_ready(timeout=5) is False
+    assert time.monotonic() - start < 2
+
+
+def test_kill_wrapped_no_pidfile_falls_back_to_proc_pid(tmp_path, monkeypatch):
+    import os
+
+    datadir = tmp_path / "d"
+    datadir.mkdir()
+    pg = sw.Postgres(
+        install_dir="/opt/pg",
+        datadir=str(datadir),
+        port=26100,
+        init=False,
+        wrapper=sw.ExecPrefixWrapper(["env"]),
+    )
+    pg._proc = FakeProc(pid=1111)
+    pg._session = 1
+
+    killed = {}
+    monkeypatch.setattr(os, "kill", lambda pid, sig: killed.update(pid=pid, sig=sig))
+    pg.kill()
+    assert killed["pid"] == 1111
+    assert pg._proc is None
 
 
 def test_connection_params(monkeypatch):

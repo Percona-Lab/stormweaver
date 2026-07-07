@@ -1,12 +1,13 @@
 import logging
+import os
 import signal
 import subprocess
-import time
 from pathlib import Path
 from typing import Any
 
 from stormweaver import log as swlog
 from stormweaver.backends.base import DatabaseBackend
+from stormweaver.wrappers import ServerWrapper
 
 logger = logging.getLogger(__name__)
 
@@ -18,13 +19,16 @@ class MySQL(DatabaseBackend):
         datadir: str | Path,
         init: bool = True,
         port: int | None = None,
+        wrapper: ServerWrapper | None = None,
     ) -> None:
         self.install_dir = Path(install_dir)
         # mysqld resolves a relative --datadir against its basedir, not cwd
         # (unlike postgres), so make it absolute up front
         self.datadir = Path(datadir).absolute()
         self._port = str(port) if port else None
+        self.wrapper = wrapper
         self._proc: subprocess.Popen[bytes] | None = None
+        self._session = 0
 
         if init:
             self.initialize()
@@ -100,13 +104,38 @@ class MySQL(DatabaseBackend):
             for k, v in settings.items():
                 f.write(f"{k} = {v}\n")
 
+    def _pid_file(self) -> Path:
+        return self.datadir / "mysqld.pid"
+
+    def _server_pid(self) -> int | None:
+        if self.wrapper is None and self._proc is not None:
+            return self._proc.pid
+        try:
+            return int(self._pid_file().read_text().strip())
+        except (FileNotFoundError, ValueError):  # fmt: skip
+            return None
+
+    def _wrapper_log_path(self) -> Path:
+        run_dir = swlog.log_dir()
+        base = run_dir if run_dir is not None else self.datadir
+        return base / f"wrapper-{self.datadir.name}-s{self._session:02d}.log"
+
     def start(self) -> None:
-        logger.info("Starting MySQL on port %s", self._port)
-        self._proc = subprocess.Popen(
-            [self._bin("mysqld"), f"--defaults-file={self._defaults_file()}"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+        if self._proc is not None:
+            raise RuntimeError("mysqld already started")
+        self._session += 1
+        logger.info("Starting MySQL on port %s (session %d)", self._port, self._session)
+        cmd = [self._bin("mysqld"), f"--defaults-file={self._defaults_file()}"]
+        if self.wrapper is None:
+            # mysqld logs via log-error, stdout is noise
+            self._proc = subprocess.Popen(
+                cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+        else:
+            with open(self._wrapper_log_path(), "ab") as log_file:
+                self._proc = self.wrapper.spawn(
+                    cmd, self._wrap_ctx(), stdout=log_file, stderr=subprocess.STDOUT
+                )
         logger.info("MySQL starting, pid %s", self._proc.pid)
 
     def _admin(self, *args: str) -> subprocess.CompletedProcess[str]:
@@ -119,21 +148,17 @@ class MySQL(DatabaseBackend):
     def stop(self, timeout: float = 10.0) -> None:
         logger.info("Stopping MySQL")
         self._admin("shutdown")
-        if self._proc is not None:
-            try:
-                self._proc.wait(timeout=timeout)
-            except subprocess.TimeoutExpired:
-                logger.warning("mysqld did not stop in time, killing")
-                self._proc.kill()
-                self._proc.wait()
-        self._proc = None
+        self._reap("stop", self._timeout(timeout))
 
     def kill(self) -> None:
-        logger.info("Killing MySQL pid %s", self._proc.pid if self._proc else None)
-        if self._proc is not None:
-            self._proc.send_signal(signal.SIGKILL)
-            self._proc.wait()
-        self._proc = None
+        pid = self._server_pid()
+        if pid is None and self._proc is not None:
+            pid = self._proc.pid
+        logger.info("Killing MySQL pid %s", pid)
+        if pid is not None:
+            os.kill(pid, signal.SIGKILL)
+        # a wrapper (rr) may need a while to finalize its trace
+        self._reap("kill", self._timeout(30.0))
 
     def restart(self, timeout: float = 10.0) -> None:
         self.stop(timeout)
@@ -144,14 +169,6 @@ class MySQL(DatabaseBackend):
 
     def is_ready(self) -> bool:
         return self._admin("ping").returncode == 0
-
-    def wait_ready(self, timeout: float = 60.0) -> bool:
-        deadline = time.monotonic() + timeout
-        while time.monotonic() < deadline:
-            if self.is_ready():
-                return True
-            time.sleep(0.2)
-        return False
 
     def _ensure_tcp_root(self) -> None:
         # --initialize-insecure only makes root@localhost (socket auth); the

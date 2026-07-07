@@ -3,12 +3,12 @@ import logging
 import os
 import signal
 import subprocess
-import time
 from pathlib import Path
 from typing import Any
 
 from stormweaver import log as swlog
 from stormweaver.backends.base import DatabaseBackend
+from stormweaver.wrappers import ServerWrapper
 
 logger = logging.getLogger(__name__)
 
@@ -20,11 +20,14 @@ class Postgres(DatabaseBackend):
         datadir: str | Path,
         init: bool = True,
         port: int | None = None,
+        wrapper: ServerWrapper | None = None,
     ) -> None:
         self.install_dir = Path(install_dir)
         self.datadir = Path(datadir)
         self._port = str(port) if port else None
-        self._pid: int | None = None
+        self.wrapper = wrapper
+        self._proc: subprocess.Popen[bytes] | None = None
+        self._session = 0
 
         if init:
             self.initialize()
@@ -80,26 +83,6 @@ class Postgres(DatabaseBackend):
         with open(hba_file, "a") as f:
             f.write(f"{host_type} {database} {user} {address} {method}\n")
 
-    def start(self) -> None:
-        logger.info("Starting PostgreSQL on port %s", self._port)
-        result = subprocess.run(
-            [
-                self._bin("pg_ctl"),
-                "start",
-                "-D",
-                str(self.datadir),
-                "-l",
-                str(self._server_log_path()),
-                "-w",
-            ],
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode != 0:
-            raise RuntimeError(f"pg_ctl start failed: {result.stderr}")
-        self._pid = self._read_pid()
-        logger.info("PostgreSQL started")
-
     def _read_pid(self) -> int | None:
         pid_file = self.datadir / "postmaster.pid"
         try:
@@ -108,8 +91,31 @@ class Postgres(DatabaseBackend):
         except (FileNotFoundError, ValueError):  # fmt: skip
             return None
 
+    def _server_pid(self) -> int | None:
+        if self.wrapper is None and self._proc is not None:
+            return self._proc.pid
+        return self._read_pid()
+
+    def start(self) -> None:
+        if self._proc is not None:
+            raise RuntimeError("postgres already started")
+        self._session += 1
+        logger.info(
+            "Starting PostgreSQL on port %s (session %d)", self._port, self._session
+        )
+        wrapper = self.wrapper or ServerWrapper()
+        cmd = [self._bin("postgres"), "-D", str(self.datadir)]
+        # postgres logs to stderr when started directly; under a wrapper the
+        # tool's own stderr shares this file (same stream, can't split)
+        with open(self._server_log_path(), "ab") as log_file:
+            self._proc = wrapper.spawn(
+                cmd, self._wrap_ctx(), stdout=log_file, stderr=subprocess.STDOUT
+            )
+        logger.info("PostgreSQL starting, pid %s", self._proc.pid)
+
     def stop(self, timeout: float = 10) -> None:
         logger.info("Stopping PostgreSQL")
+        timeout = self._timeout(timeout)
         result = subprocess.run(
             [
                 self._bin("pg_ctl"),
@@ -119,33 +125,31 @@ class Postgres(DatabaseBackend):
                 "-m",
                 "fast",
                 "-t",
-                str(timeout),
+                str(int(timeout)),
             ],
             capture_output=True,
             text=True,
         )
         if result.returncode != 0:
             logger.warning("pg_ctl stop failed: %s", result.stderr)
-        self._pid = None
+        self._reap("stop", timeout)
 
     def kill(self) -> None:
-        logger.info("Killing PostgreSQL pid %s", self._pid)
-        if self._pid is not None:
-            os.kill(self._pid, signal.SIGKILL)
-        self._pid = None
+        pid = self._server_pid()
+        if pid is None and self._proc is not None:
+            pid = self._proc.pid
+        logger.info("Killing PostgreSQL pid %s", pid)
+        if pid is not None:
+            os.kill(pid, signal.SIGKILL)
+        # a wrapper (rr) may need a while to finalize its trace
+        self._reap("kill", self._timeout(30.0))
 
     def restart(self, timeout: float = 10) -> None:
         self.stop(timeout)
         self.start()
 
     def is_running(self) -> bool:
-        if self._pid is None:
-            return False
-        try:
-            os.kill(self._pid, 0)
-            return True
-        except (ProcessLookupError, PermissionError):  # fmt: skip
-            return False
+        return self._proc is not None and self._proc.poll() is None
 
     def is_ready(self) -> bool:
         result = subprocess.run(
@@ -154,14 +158,6 @@ class Postgres(DatabaseBackend):
             text=True,
         )
         return result.returncode == 0
-
-    def wait_ready(self, timeout: float = 60.0) -> bool:
-        deadline = time.monotonic() + timeout
-        while time.monotonic() < deadline:
-            if self.is_ready():
-                return True
-            time.sleep(0.2)
-        return False
 
     def createdb(self, name: str) -> None:
         result = subprocess.run(

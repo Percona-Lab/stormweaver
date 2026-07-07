@@ -13,6 +13,7 @@ nav:
   - Python actions: python-actions.md
   - Stable tests: stable-tests.md
   - Determinism: determinism.md
+  - Server wrappers: wrappers.md
   - Randomized testing concepts: randomized-testing-concepts.md
   - Config parameters: config-parameters.md
   - Design notes:

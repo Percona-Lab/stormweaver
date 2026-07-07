@@ -80,3 +80,26 @@ def test_shutdown_registered_once(tmp_path, monkeypatch):
     swlog.init_logging(tmp_path / "a")
     swlog.init_logging(tmp_path / "b")
     assert registered == [_stormweaver.shutdown_core_logging]
+
+
+def test_record_outcome_appends_lines(tmp_path):
+    swlog.init_logging(tmp_path / "run")
+    swlog.record_outcome("node=primary session=1 result=clean exit=0")
+    swlog.record_outcome("scenario result=passed")
+    text = (tmp_path / "run" / "outcome").read_text()
+    assert text.splitlines() == [
+        "node=primary session=1 result=clean exit=0",
+        "scenario result=passed",
+    ]
+
+
+def test_record_outcome_noop_without_run_dir(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(swlog, "_run_dir", None)
+    swlog.record_outcome("scenario result=passed")
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_record_outcome_swallows_os_errors(tmp_path, monkeypatch):
+    monkeypatch.setattr(swlog, "_run_dir", tmp_path / "gone" / "deeper")
+    swlog.record_outcome("scenario result=passed")

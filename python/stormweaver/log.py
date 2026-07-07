@@ -8,6 +8,8 @@ import stormweaver._stormweaver as _stormweaver
 # single source of truth, C++ file loggers replicate this shape
 FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 
+logger = logging.getLogger(__name__)
+
 _run_dir: Path | None = None
 _shutdown_registered = False
 
@@ -80,3 +82,13 @@ def init_run_logging(
 
 def log_dir() -> Path | None:
     return _run_dir
+
+
+def record_outcome(line: str) -> None:
+    if _run_dir is None:
+        return
+    try:
+        with open(_run_dir / "outcome", "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+    except OSError:
+        logger.warning("could not record outcome", exc_info=True)

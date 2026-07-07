@@ -10,6 +10,24 @@ class FakeCompleted:
         self.stderr = stderr
 
 
+class FakeProc:
+    def __init__(self, cmd=None, pid=4242):
+        self.cmd = cmd
+        self.pid = pid
+        self.returncode = None
+
+    def poll(self):
+        return self.returncode
+
+    def wait(self, timeout=None):
+        if self.returncode is None:
+            self.returncode = 0
+        return self.returncode
+
+    def kill(self):
+        self.returncode = -9
+
+
 def test_mysql_is_backend(tmp_path):
     my = sw.MySQL(
         install_dir="/opt/mysql", datadir=str(tmp_path / "d"), port=23306, init=False
@@ -125,3 +143,41 @@ def test_is_running_false_initially(tmp_path):
         install_dir="/opt/mysql", datadir=str(tmp_path / "d"), port=23306, init=False
     )
     assert my.is_running() is False
+
+
+def test_kill_wrapped_uses_pid_file(tmp_path, monkeypatch):
+    import os
+    import signal
+
+    datadir = tmp_path / "d"
+    datadir.mkdir()
+    my = sw.MySQL(
+        install_dir="/opt/mysql",
+        datadir=str(datadir),
+        port=23306,
+        init=False,
+        wrapper=sw.ExecPrefixWrapper(["env"]),
+    )
+    (datadir / "mysqld.pid").write_text("31337\n")
+    my._proc = FakeProc(pid=1111)
+    my._session = 1
+
+    killed = {}
+    monkeypatch.setattr(os, "kill", lambda pid, sig: killed.update(pid=pid, sig=sig))
+    my.kill()
+    assert killed == {"pid": 31337, "sig": signal.SIGKILL}
+
+
+def test_kill_unwrapped_uses_proc_pid(tmp_path, monkeypatch):
+    import os
+
+    my = sw.MySQL(
+        install_dir="/opt/mysql", datadir=str(tmp_path / "d"), port=23306, init=False
+    )
+    my._proc = FakeProc(pid=5555)
+    my._session = 1
+
+    killed = {}
+    monkeypatch.setattr(os, "kill", lambda pid, sig: killed.update(pid=pid, sig=sig))
+    my.kill()
+    assert killed["pid"] == 5555

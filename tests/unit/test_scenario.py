@@ -127,3 +127,42 @@ def test_wait_for_log_timeout(tmp_path):
     start = time.monotonic()
     assert not scenario.wait_for_log(log, "absent", timeout=0.5)
     assert time.monotonic() - start < 5
+
+
+def test_parse_no_wrapper_by_default(tmp_path):
+    opts = scenario.parse(make_args(tmp_path, install_dir="/opt/pg"))
+    assert opts.wrapper is None
+
+
+def test_parse_wrapper_cmd(tmp_path):
+    from stormweaver.wrappers import ExecPrefixWrapper
+
+    args = make_args(tmp_path, extra=["--wrapper-cmd", "env"], install_dir="/opt/pg")
+    opts = scenario.parse(args)
+    assert isinstance(opts.wrapper, ExecPrefixWrapper)
+    assert opts.wrapper.argv == ["env"]
+
+
+def test_parse_wrapper_and_cmd_conflict(tmp_path):
+    args = make_args(
+        tmp_path,
+        extra=["--wrapper", "rr", "--wrapper-cmd", "env"],
+        install_dir="/opt/pg",
+    )
+    with pytest.raises(SystemExit):
+        scenario.parse(args)
+
+
+def test_parse_wrapper_rr(tmp_path, monkeypatch):
+    from stormweaver.wrappers import RRWrapper
+
+    monkeypatch.setattr(RRWrapper, "preflight", lambda self: None)
+    args = make_args(
+        tmp_path,
+        extra=["--wrapper", "rr", "--wrapper-arg=--chaos", "--keep-traces"],
+        install_dir="/opt/pg",
+    )
+    opts = scenario.parse(args)
+    assert isinstance(opts.wrapper, RRWrapper)
+    assert opts.wrapper.extra_args == ["--chaos"]
+    assert opts.wrapper.keep_all is True

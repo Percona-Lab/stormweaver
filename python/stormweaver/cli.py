@@ -6,7 +6,7 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from stormweaver.log import init_run_logging
+from stormweaver.log import init_run_logging, record_outcome
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +63,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     spec = importlib.util.spec_from_file_location("scenario", args.scenario)
     if spec is None or spec.loader is None:
         print(f"Error: cannot load scenario file: {args.scenario}", file=sys.stderr)
+        record_outcome("scenario result=failed")
         return 1
 
     module = importlib.util.module_from_spec(spec)
@@ -76,11 +77,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                 f"Error: scenario {args.scenario} has no main() function",
                 file=sys.stderr,
             )
+            record_outcome("scenario result=failed")
             return 1
 
         result = module.main(args)
     except Exception:
         logger.exception("scenario failed")
+        record_outcome("scenario result=failed")
         return 1
 
-    return 0 if result is None else int(result)
+    rc = 0 if result is None else int(result)
+    record_outcome("scenario result=" + ("passed" if rc == 0 else "failed"))
+    return rc
