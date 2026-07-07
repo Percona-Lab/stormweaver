@@ -624,4 +624,17 @@ void DropPartition::execute(Context &metaCtx, ps_random &rand,
     ranges.erase(it);
     return true;
   });
+
+  // pg renders dropPartition as DROP TABLE ... CASCADE, and that cascade
+  // also drops every FK constraint referencing the partitioned parent
+  // (the constraint depends on each partition). Sweep matching refs; on
+  // mysql FKs can't reference partitioned tables, so this finds nothing.
+  const auto parentId = snap->id;
+  for (auto const &other : tables.snapshotAll()) {
+    if (other->hasReferenceTo(parentId)) {
+      tables.update(other->id, [parentId](Table &t) {
+        return t.removeReferencesTo(parentId);
+      });
+    }
+  }
 }

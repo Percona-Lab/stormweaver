@@ -13,20 +13,6 @@
 
 namespace {
 
-// pool whose metadata round-trips cleanly against schema discovery: table
-// creates plus DML. drop/alter/index/partition actions are deliberately left
-// out - their catalog bookkeeping has pre-existing (autocommit) drift against
-// rediscovery, unrelated to transactions, that would mask real trx bugs.
-action::ActionRegistry cleanPool(sql_variant::flavor flav) {
-  auto &def = action::default_registry(flav);
-  action::ActionRegistry pool;
-  pool.insert(def["create_normal_table"]);
-  pool.insert(def["insert_some_data"]);
-  pool.insert(def["delete_some_data"]);
-  pool.insert(def["update_one_row"]);
-  return pool;
-}
-
 struct Fixture {
   mutable metadata::TableRegistry reg;
   mutable metadata::Context ctx{reg};
@@ -62,7 +48,7 @@ TEST_CASE_PERSISTENT_FIXTURE(Fixture, "transactions") {
 
     config.transaction.commit_probability = 100;
     action::TransactionAction trx(
-        config, cleanPool(sqlConnection->serverInfo().flavor_));
+        config, action::default_registry(sqlConnection->serverInfo().flavor_));
     for (int i = 0; i < 100; ++i) {
       REQUIRE_NOTHROW(trx.execute(ctx, rand, sqlConnection.get()));
     }
@@ -74,9 +60,9 @@ TEST_CASE_PERSISTENT_FIXTURE(Fixture, "transactions") {
     reg.reset();
     seedTables(5);
 
-    // full registry here: pg rolls all DDL back, so the catalog and database
-    // both stay at the seeded state regardless of what got picked - a strong
-    // check that the buffer is discarded for every action type.
+    // pg rolls all DDL back, so the catalog and database both stay at the
+    // seeded state regardless of what got picked - a strong check that the
+    // buffer is discarded for every action type.
     config.transaction.commit_probability = 0; // always ROLLBACK
     action::TransactionAction trx(
         config, action::default_registry(sqlConnection->serverInfo().flavor_));
@@ -91,9 +77,9 @@ TEST_CASE_PERSISTENT_FIXTURE(Fixture, "transactions") {
     reg.reset();
     seedTables(3);
 
-    // a guaranteed-failing custom action mixed into the clean pool
-    action::ActionRegistry pool =
-        cleanPool(sqlConnection->serverInfo().flavor_);
+    // a guaranteed-failing custom action mixed into the full pool
+    action::ActionRegistry pool;
+    pool.use(action::default_registry(sqlConnection->serverInfo().flavor_));
     pool.makeCustomSqlAction("boom", "SELECT * FROM no_such_table_ever;", 500);
 
     // explicit: the fixture persists across sections, don't rely on defaults

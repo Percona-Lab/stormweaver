@@ -1,5 +1,6 @@
 
 #include <catch2/catch_test_macros.hpp>
+#include <fmt/format.h>
 
 #include "action/ddl.hpp"
 #include "metadata_populator.hpp"
@@ -103,4 +104,56 @@ TEST_CASE("drop column keeps dependent index metadata in sync", "[ddl]") {
     populateFromDatabase(fresh);
     REQUIRE(metadata::normalize(reg) == metadata::normalize(fresh));
   }
+}
+
+// regression: pg's DROP TABLE <partition> CASCADE also drops FK constraints
+// referencing the partitioned parent; the catalog sweep must follow
+TEST_CASE("drop partition sweeps foreign keys referencing the parent",
+          "[ddl][pg]") {
+  testutil::resetTestSchema();
+  sqlConnection
+      ->executeQuery(
+          "CREATE TABLE fkpart (id INT PRIMARY KEY) PARTITION BY RANGE (id);")
+      .maybeThrow();
+  for (int i = 0; i < 4; ++i) {
+    sqlConnection
+        ->executeQuery(fmt::format("CREATE TABLE fkpart_p{} PARTITION OF "
+                                   "fkpart FOR VALUES FROM ({}) TO ({});",
+                                   i, i * 10000000, (i + 1) * 10000000))
+        .maybeThrow();
+  }
+  sqlConnection
+      ->executeQuery("CREATE TABLE fkchild (id INT PRIMARY KEY, r INT "
+                     "REFERENCES fkpart(id));")
+      .maybeThrow();
+
+  metadata::TableRegistry reg;
+  populateFromDatabase(reg);
+  metadata::Context ctx(reg);
+
+  ps_random rand{20260707};
+  action::DdlConfig config;
+
+  // retry: the action may pick the non-partitioned table and no-op
+  for (int i = 0; i < 5; ++i) {
+    action::DropPartition dp(config);
+    REQUIRE_NOTHROW(dp.execute(ctx, rand, sqlConnection.get()));
+    auto parent = reg.get<metadata::Table>().byName("fkpart");
+    REQUIRE(parent != nullptr);
+    if (parent->partitioning->ranges.size() < 4) {
+      break;
+    }
+  }
+  REQUIRE(
+      reg.get<metadata::Table>().byName("fkpart")->partitioning->ranges.size() <
+      4);
+
+  // the cascade removed the constraint server-side; catalog must agree
+  auto child = reg.get<metadata::Table>().byName("fkchild");
+  REQUIRE(child != nullptr);
+  REQUIRE_FALSE(child->columns[1].foreign_key_references);
+
+  metadata::TableRegistry fresh;
+  populateFromDatabase(fresh);
+  REQUIRE(metadata::normalize(reg) == metadata::normalize(fresh));
 }
