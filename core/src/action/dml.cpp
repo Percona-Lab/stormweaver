@@ -22,8 +22,9 @@ std::string generate_value(metadata::Column const &col, ps_random &rand,
       return "0";
     }
 
-    std::size_t num = rand.random_number(static_cast<std::size_t>(0),
-                                         rp->rangeSize * rp->ranges.size());
+    // random_number is inclusive on both ends
+    std::size_t num = rand.random_number(
+        static_cast<std::size_t>(0), (rp->rangeSize * rp->ranges.size()) - 1);
     std::size_t range = num / rp->rangeSize;
     return std::to_string((rp->ranges[range].rangebase * rp->rangeSize) +
                           (num % rp->rangeSize));
