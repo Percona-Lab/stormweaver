@@ -87,13 +87,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         result = module.main(args)
     except SystemExit as e:
         # scenarios use SystemExit('msg') for usage errors, argparse uses ints
-        if isinstance(e.code, str):
-            logger.error("scenario failed: %s", e.code)
-            record_outcome("scenario result=failed")
-            return 1
-        rc = 0 if e.code is None else int(e.code)
-        record_outcome("scenario result=" + ("passed" if rc == 0 else "failed"))
-        return rc
+        if e.code is None or isinstance(e.code, int):
+            rc = e.code or 0
+            record_outcome("scenario result=" + ("passed" if rc == 0 else "failed"))
+            return rc
+        logger.error("scenario failed: %s", e.code)
+        record_outcome("scenario result=failed")
+        return 1
     except EXPECTED_ERRORS as e:
         logger.error("scenario failed: %s", e)
         logger.debug("traceback:", exc_info=True)
