@@ -1,10 +1,13 @@
 
 #include "sql_variant/mysql.hpp"
 
+#include <limits>
 #include <mutex>
 #include <mysql.h>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
+#include <string_view>
 
 // #include "common.hpp"
 #ifndef MAX_PACKET_DEFAULT
@@ -100,6 +103,33 @@ sql_variant::SqlStatus statusForError(unsigned int errCode) {
              ? sql_variant::SqlStatus::serverGone
              : sql_variant::SqlStatus::error;
 }
+
+// nullopt when mysql_real_escape_string rejects the value (invalid
+// multibyte data, or NO_BACKSLASH_ESCAPES in effect)
+std::optional<std::string> escape_param(MYSQL *conn,
+                                        sql_variant::Param const &param) {
+  if (!param.value) {
+    return "NULL";
+  }
+  if (param.binary) {
+    static constexpr std::string_view hexd = "0123456789ABCDEF";
+    std::string out = "X'";
+    for (unsigned char c : *param.value) {
+      out += hexd[c >> 4];
+      out += hexd[c & 0xF];
+    }
+    out += '\'';
+    return out;
+  }
+  std::string buf((param.value->size() * 2) + 1, '\0');
+  const auto len = mysql_real_escape_string(
+      conn, buf.data(), param.value->data(), param.value->size());
+  if (len == std::numeric_limits<unsigned long>::max()) {
+    return std::nullopt;
+  }
+  buf.resize(len);
+  return "'" + buf + "'";
+}
 } // namespace
 
 namespace sql_variant {
@@ -166,6 +196,7 @@ void MySQL::logError(std::ostream &ostream) const {
 
 QueryResult MySQL::executeQuery(std::string const &query) const {
   QueryResult result;
+  result.query = query;
 
   result.executedAt = std::chrono::high_resolution_clock::now();
   const auto qres = mysql_real_query(connection, query.c_str(), query.size());
@@ -207,11 +238,74 @@ QueryResult MySQL::executeQuery(std::string const &query) const {
   return result;
 }
 
+QueryResult MySQL::executeParams(std::string const &query,
+                                 std::vector<Param> const &params) const {
+  // splice escaped literals over ? placeholders; ? inside quoted strings
+  // and backtick identifiers is left alone. assumes default sql_mode
+  // backslash escaping (NO_BACKSLASH_ESCAPES would break the scanner).
+  // also not comment-aware: ? inside --, # or /* */ comments is treated
+  // as a placeholder.
+  const auto fail = [&](std::string code, std::string message) {
+    QueryResult result;
+    result.query = query;
+    result.executionTime = std::chrono::nanoseconds{0};
+    result.errorInfo.errorCode = std::move(code);
+    result.errorInfo.errorMessage = std::move(message);
+    result.errorInfo.errorStatus = SqlStatus::error;
+    result.errorInfo.errorClass = ErrorClass::other;
+    return result;
+  };
+
+  std::string expanded;
+  expanded.reserve(query.size() + (32 * params.size()));
+  std::size_t idx = 0;
+  char quote = 0;
+
+  for (std::size_t i = 0; i < query.size(); ++i) {
+    const char c = query[i];
+    if (quote != 0) {
+      expanded += c;
+      if (c == '\\' && quote != '`' && i + 1 < query.size()) {
+        expanded += query[++i];
+      } else if (c == quote) {
+        quote = 0;
+      }
+      continue;
+    }
+    if (c == '\'' || c == '"' || c == '`') {
+      quote = c;
+      expanded += c;
+      continue;
+    }
+    if (c == '?') {
+      if (idx >= params.size()) {
+        return fail("params-mismatch", "placeholder/parameter count mismatch");
+      }
+      auto escaped = escape_param(connection, params[idx++]);
+      if (!escaped) {
+        return fail("params-escape-failed",
+                    "mysql_real_escape_string rejected parameter");
+      }
+      expanded += *escaped;
+      continue;
+    }
+    expanded += c;
+  }
+
+  if (idx != params.size()) {
+    return fail("params-mismatch", "placeholder/parameter count mismatch");
+  }
+
+  return executeQuery(expanded);
+}
+
 std::string MySQL::serverInfoString() const { return "TODO"; }
 
 ServerInfo MySQL::calculateServerInfo() const {
   std::string versionInfo = mysql_get_server_info(connection);
-  unsigned long major = 0, minor = 0, version = 0;
+  unsigned long major = 0;
+  unsigned long minor = 0;
+  unsigned long version = 0;
 
   std::size_t major_p = versionInfo.find('.');
   if (major_p != std::string::npos) {
@@ -229,7 +323,7 @@ ServerInfo MySQL::calculateServerInfo() const {
               : versionInfo.substr(minor_p + 1));
     }
   }
-  auto server_version = major * 10000 + minor * 100 + version;
+  auto server_version = (major * 10000) + (minor * 100) + version;
 
   flavor flav = flavor::mysql;
 

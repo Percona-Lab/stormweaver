@@ -22,6 +22,10 @@ public:
   [[nodiscard]] QueryResult
   executeQuery(std::string const &query) const override;
 
+  [[nodiscard]] QueryResult
+  executeParams(std::string const &query,
+                std::vector<Param> const &params) const override;
+
   [[nodiscard]] std::string serverInfoString() const override;
 
   [[nodiscard]] std::string hostInfo() const override;

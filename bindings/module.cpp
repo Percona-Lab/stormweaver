@@ -50,6 +50,56 @@ static action::ActionType parse_action_type(std::string const &action_type) {
   return action::ActionType::other;
 }
 
+static const char *error_class_name(ErrorClass c) {
+  switch (c) {
+  case ErrorClass::none:
+    return "none";
+  case ErrorClass::conflict:
+    return "conflict";
+  case ErrorClass::failedTxn:
+    return "failedTxn";
+  case ErrorClass::serverGone:
+    return "serverGone";
+  case ErrorClass::other:
+    return "other";
+  }
+  return "other";
+}
+
+static std::vector<Param> to_params(nb::handle seq) {
+  // str/bytes iterate per element and would silently become many params
+  if (nb::isinstance<nb::str>(seq) || nb::isinstance<nb::bytes>(seq)) {
+    throw nb::type_error("params must be a sequence of values, not str/bytes");
+  }
+  std::vector<Param> out;
+  for (nb::handle o : seq) {
+    Param p;
+    if (o.is_none()) {
+      // NULL
+    } else if (nb::isinstance<nb::bool_>(o)) {
+      // bool first: python bool is an int subclass
+      p.value = nb::cast<bool>(o) ? "1" : "0";
+    } else if (nb::isinstance<nb::int_>(o) || nb::isinstance<nb::float_>(o)) {
+      // str() round-trips arbitrary ints and shortest-repr floats
+      p.value = nb::cast<std::string>(nb::str(o));
+    } else if (nb::isinstance<nb::str>(o)) {
+      p.value = nb::cast<std::string>(o);
+    } else if (nb::isinstance<nb::bytes>(o)) {
+      auto b = nb::cast<nb::bytes>(o);
+      p.value = std::string(b.c_str(), b.size());
+      p.binary = true;
+    } else {
+      throw nb::type_error("unsupported SQL parameter type");
+    }
+    out.push_back(std::move(p));
+  }
+  return out;
+}
+
+// exception type kept at file scope so the capture-less translator lambda
+// (plain function pointer) can reach it
+static PyObject *sql_error_type = nullptr;
+
 NB_MODULE(_stormweaver, m) {
   m.attr("__version__") = "0.1.0";
 
@@ -78,6 +128,24 @@ NB_MODULE(_stormweaver, m) {
 
   // --- SQL Layer ---
 
+  sql_error_type = PyErr_NewException("stormweaver._stormweaver.SqlError",
+                                      PyExc_RuntimeError, nullptr);
+  m.attr("SqlError") = nb::borrow<nb::object>(sql_error_type);
+
+  nb::register_exception_translator(
+      [](const std::exception_ptr &p, void *) {
+        try {
+          std::rethrow_exception(p);
+        } catch (SqlException const &e) {
+          nb::object inst =
+              nb::borrow<nb::object>(sql_error_type)(nb::str(e.what()));
+          inst.attr("error_code") = nb::str(e.getErrorCode().c_str());
+          inst.attr("error_class") = nb::str(error_class_name(e.errorClass()));
+          PyErr_SetObject(sql_error_type, inst.ptr());
+        }
+      },
+      nullptr);
+
   nb::class_<QueryResult>(m, "QueryResult")
       .def("success", &QueryResult::success)
       .def_ro("query", &QueryResult::query)
@@ -87,6 +155,10 @@ NB_MODULE(_stormweaver, m) {
       .def_prop_ro(
           "error_message",
           [](const QueryResult &r) { return r.errorInfo.errorMessage; })
+      .def_prop_ro("error_class",
+                   [](const QueryResult &r) {
+                     return error_class_name(r.errorInfo.errorClass);
+                   })
       .def("rows", [](const QueryResult &r) {
         std::vector<std::vector<std::optional<std::string>>> rows;
         if (!r.data) {
@@ -110,9 +182,33 @@ NB_MODULE(_stormweaver, m) {
         return rows;
       });
 
+  // marshal params while attached, then release the thread state for the
+  // blocking SQL call: free-threaded cyclic GC stops the world by waiting
+  // on all attached threads, so a lock-waiting query must not hold ours
   nb::class_<LoggedSQL>(m, "LoggedSQL")
-      .def("execute", &LoggedSQL::executeQuery)
-      .def("reconnect", &LoggedSQL::reconnect);
+      .def(
+          "execute",
+          [](LoggedSQL const &self, std::string const &query,
+             nb::object params) {
+            bool const plain = params.is_none();
+            auto p = plain ? std::vector<Param>{} : to_params(params);
+            nb::gil_scoped_release rel;
+            return plain ? self.executeQuery(query)
+                         : self.executeParams(query, p);
+          },
+          nb::arg("query"), nb::arg("params") = nb::none())
+      .def(
+          "safe_execute",
+          [](LoggedSQL const &self, std::string const &query,
+             nb::object params) {
+            auto p =
+                params.is_none() ? std::vector<Param>{} : to_params(params);
+            nb::gil_scoped_release rel;
+            return self.safeQuery(query, p);
+          },
+          nb::arg("query"), nb::arg("params") = nb::none())
+      .def("reconnect", &LoggedSQL::reconnect,
+           nb::call_guard<nb::gil_scoped_release>());
 
   m.def("connect_pg", &connect_pg, nb::arg("host") = "localhost",
         nb::arg("port") = 5432, nb::arg("dbname") = "postgres",

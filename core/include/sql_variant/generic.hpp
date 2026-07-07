@@ -147,6 +147,11 @@ struct ErrorInfo {
   }
 };
 
+struct Param {
+  std::optional<std::string> value; // nullopt = NULL
+  bool binary = false;              // bytea / BLOB
+};
+
 struct RowView {
   std::vector<std::optional<std::string_view>> rowData;
 };
@@ -204,6 +209,10 @@ public:
   [[nodiscard]] virtual QueryResult
   executeQuery(std::string const &query) const = 0;
 
+  [[nodiscard]] virtual QueryResult
+  executeParams(std::string const &query,
+                std::vector<Param> const &params) const = 0;
+
   [[nodiscard]] virtual std::string serverInfoString() const = 0;
 
   [[nodiscard]] ServerInfo serverInfo() const;
@@ -224,6 +233,15 @@ public:
 
   [[nodiscard]] QueryResult executeQuery(std::string const &query) const;
 
+  [[nodiscard]] QueryResult
+  executeParams(std::string const &query,
+                std::vector<Param> const &params) const;
+
+  // throws SqlException on any failure; empty params = plain executeQuery
+  // (multi-statement capable), non-empty = single-statement executeParams
+  QueryResult safeQuery(std::string const &query,
+                        std::vector<Param> const &params = {}) const;
+
   // owning string: the view would dangle once the QueryResult dies
   [[nodiscard]] std::optional<std::string>
   querySingleValue(const std::string &sql) const;
@@ -233,7 +251,7 @@ public:
   std::chrono::nanoseconds getAccumulatedSqlTime() const;
   void resetAccumulatedSqlTime();
 
-  // monotonic count of executeQuery calls (success or failure); lets
+  // monotonic count of query executions (success or failure); lets
   // callers detect whether an opaque operation actually sent SQL
   std::uint64_t getQueryCount() const;
 

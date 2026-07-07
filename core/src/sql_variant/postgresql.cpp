@@ -94,6 +94,44 @@ std::string build_connection_string(sql_variant::ServerParams const &params) {
   return ret;
 }
 
+template <typename Fn>
+sql_variant::QueryResult run_pg_query(std::string const &query, Fn &&fn) {
+  sql_variant::QueryResult result;
+  result.query = query;
+
+  try {
+    result.executedAt = std::chrono::high_resolution_clock::now();
+    const auto qres = fn();
+
+    const auto end = std::chrono::high_resolution_clock::now();
+    result.executionTime = end - result.executedAt;
+    result.errorInfo.errorStatus = sql_variant::SqlStatus::success;
+
+    result.affectedRows = qres.affected_rows();
+    result.data = std::make_unique<PostgreSQLSpecificResult>(qres);
+
+  } catch (pqxx::sql_error const &e) {
+    const auto end = std::chrono::high_resolution_clock::now();
+    result.executionTime = end - result.executedAt;
+
+    result.errorInfo.errorCode = e.sqlstate();
+    result.errorInfo.errorMessage = e.what();
+    result.errorInfo.errorStatus = sql_variant::SqlStatus::error;
+    result.errorInfo.errorClass =
+        sql_variant::classify_pg_sqlstate(e.sqlstate());
+  } catch (pqxx::broken_connection const &e) {
+    const auto end = std::chrono::high_resolution_clock::now();
+    result.executionTime = end - result.executedAt;
+
+    result.errorInfo.errorCode = "0";
+    result.errorInfo.errorMessage = e.what();
+    result.errorInfo.errorStatus = sql_variant::SqlStatus::serverGone;
+    result.errorInfo.errorClass = sql_variant::ErrorClass::serverGone;
+  }
+
+  return result;
+}
+
 } // namespace
 
 namespace sql_variant {
@@ -125,43 +163,32 @@ void PostgreSQL::logError(std::ostream & /*ostream*/) const {
 }
 
 QueryResult PostgreSQL::executeQuery(std::string const &query) const {
-  QueryResult result;
-
-  try {
+  return run_pg_query(query, [&] {
     // TODO: explicit transactions!
     pqxx::nontransaction work(*connection);
+    return work.exec(query);
+  });
+}
 
-    result.executedAt = std::chrono::high_resolution_clock::now();
-    const auto qres = work.exec(query);
-
-    // work.commit(); no need with nontransaction
-
-    const auto end = std::chrono::high_resolution_clock::now();
-    result.executionTime = end - result.executedAt;
-    result.errorInfo.errorStatus = SqlStatus::success;
-
-    result.affectedRows = qres.affected_rows();
-    result.data = std::make_unique<PostgreSQLSpecificResult>(qres);
-
-  } catch (pqxx::sql_error const &e) {
-    const auto end = std::chrono::high_resolution_clock::now();
-    result.executionTime = end - result.executedAt;
-
-    result.errorInfo.errorCode = e.sqlstate();
-    result.errorInfo.errorMessage = e.what();
-    result.errorInfo.errorStatus = SqlStatus::error;
-    result.errorInfo.errorClass = classify_pg_sqlstate(e.sqlstate());
-  } catch (pqxx::broken_connection const &e) {
-    const auto end = std::chrono::high_resolution_clock::now();
-    result.executionTime = end - result.executedAt;
-
-    result.errorInfo.errorCode = "0";
-    result.errorInfo.errorMessage = e.what();
-    result.errorInfo.errorStatus = SqlStatus::serverGone;
-    result.errorInfo.errorClass = ErrorClass::serverGone;
-  }
-
-  return result;
+// PQexecParams under the hood: single statement only, no multi-statement
+// scripts
+QueryResult PostgreSQL::executeParams(std::string const &query,
+                                      std::vector<Param> const &params) const {
+  return run_pg_query(query, [&] {
+    pqxx::nontransaction work(*connection);
+    pqxx::params pq_params;
+    for (auto const &param : params) {
+      if (!param.value) {
+        pq_params.append();
+      } else if (param.binary) {
+        pq_params.append(
+            pqxx::binary_cast(param.value->data(), param.value->size()));
+      } else {
+        pq_params.append(*param.value);
+      }
+    }
+    return work.exec_params(query, pq_params);
+  });
 }
 
 std::string PostgreSQL::serverInfoString() const {

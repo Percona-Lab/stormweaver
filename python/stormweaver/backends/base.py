@@ -17,6 +17,7 @@ class DatabaseBackend(ABC):
     Implementations: Postgres, MySQL.
     """
 
+    install_dir: Path
     datadir: Path
     wrapper: ServerWrapper | None
     _proc: subprocess.Popen[bytes] | None
@@ -43,6 +44,10 @@ class DatabaseBackend(ABC):
     @abstractmethod
     def is_ready(self) -> bool: ...
 
+    @property
+    @abstractmethod
+    def port(self) -> int: ...
+
     @abstractmethod
     def createdb(self, name: str) -> None: ...
 
@@ -54,6 +59,10 @@ class DatabaseBackend(ABC):
 
     @abstractmethod
     def _server_log_path(self) -> Path: ...
+
+    @property
+    def server_log_path(self) -> Path:
+        return self._server_log_path()
 
     def wait_ready(self, timeout: float = 60.0) -> bool:
         timeout = self._timeout(timeout)

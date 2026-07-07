@@ -5,6 +5,27 @@
 
 #include "logging.hpp"
 
+namespace {
+// binary values are logged as length only, never raw bytes
+std::string describe_params(std::vector<sql_variant::Param> const &params) {
+  std::string out = "[";
+  for (std::size_t i = 0; i < params.size(); ++i) {
+    if (i != 0) {
+      out += ", ";
+    }
+    auto const &p = params[i];
+    if (!p.value) {
+      out += "NULL";
+    } else if (p.binary) {
+      out += fmt::format("<bytes:{}>", p.value->size());
+    } else {
+      out += fmt::format("'{}'", *p.value);
+    }
+  }
+  return out + "]";
+}
+} // namespace
+
 namespace sql_variant {
 
 QuerySpecificResult::~QuerySpecificResult() = default;
@@ -35,6 +56,30 @@ QueryResult LoggedSQL::executeQuery(std::string const &query) const {
                   res.errorInfo.errorCode, res.errorInfo.errorMessage);
   }
 
+  return res;
+}
+
+QueryResult LoggedSQL::executeParams(std::string const &query,
+                                     std::vector<Param> const &params) const {
+  logger->info("Statement: {} params: {}", query, describe_params(params));
+
+  ++queryCount;
+  auto res = sql->executeParams(query, params);
+  accumulatedSqlTime += res.executionTime;
+
+  if (!res.success()) {
+    logger->error("Error while executing SQL statement: {} {}",
+                  res.errorInfo.errorCode, res.errorInfo.errorMessage);
+  }
+
+  return res;
+}
+
+QueryResult LoggedSQL::safeQuery(std::string const &query,
+                                 std::vector<Param> const &params) const {
+  auto res =
+      params.empty() ? executeQuery(query) : executeParams(query, params);
+  res.maybeThrow();
   return res;
 }
 

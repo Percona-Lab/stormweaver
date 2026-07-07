@@ -41,10 +41,6 @@ class Postgres(DatabaseBackend):
             return run_dir / f"server-{self.datadir.name}.log"
         return self.datadir / f"server-{self.datadir.name}.log"
 
-    @property
-    def server_log_path(self) -> Path:
-        return self._server_log_path()
-
     def initialize(self) -> None:
         logger.info("Initializing datadir at %s", self.datadir)
         self.datadir.mkdir(parents=True, exist_ok=True)
@@ -147,6 +143,23 @@ class Postgres(DatabaseBackend):
     def restart(self, timeout: float = 10) -> None:
         self.stop(timeout)
         self.start()
+
+    def promote(self, timeout: float = 30) -> None:
+        result = subprocess.run(
+            [
+                self._bin("pg_ctl"),
+                "promote",
+                "-D",
+                str(self.datadir),
+                "-w",
+                "-t",
+                str(int(self._timeout(timeout))),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(f"pg_ctl promote failed: {result.stderr}")
 
     def is_running(self) -> bool:
         return self._proc is not None and self._proc.poll() is None

@@ -76,3 +76,11 @@ if(WITH_PYTHON)
   find_package(nanobind CONFIG REQUIRED)
   add_subdirectory(bindings)
 endif()
+
+# python extension demos: run through the editable-install venv, independent of
+# WITH_PYTHON (this tree builds the C++ lib; the venv already has the module).
+include(StormweaverPytest)
+stormweaver_add_pytest(scenarios/demo/test_mysql_smoke.py)
+stormweaver_add_pytest(scenarios/demo/test_tde_basic.py)
+stormweaver_add_pytest(scenarios/demo/test_pg_rewind.py)
+stormweaver_add_pytest(scenarios/demo/test_hybrid_workload.py)
