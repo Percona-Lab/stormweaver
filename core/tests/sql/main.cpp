@@ -1,9 +1,14 @@
 #include "spdlog/sinks/stdout_color_sinks.h"
 #include "sql.hpp"
 #include <catch2/catch_session.hpp>
+#include <cstdint>
 #include <filesystem>
 #include <optional>
 #include <spdlog/spdlog.h>
+
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 #include "mysql_launcher.hpp"
 #include "pg_launcher.hpp"
@@ -85,6 +90,27 @@ int run_mysql(testutil::MysqlLauncher &mysql, std::string const &dataDir,
   return 0;
 }
 
+// OS-assigned free TCP port, falls back to the hint on probe failure. avoids
+// colliding with an orphan server a previous aborted run left on a fixed port.
+std::uint16_t find_free_port(std::uint16_t fallback) {
+  int fd = ::socket(AF_INET, SOCK_STREAM, 0);
+  if (fd < 0) {
+    return fallback;
+  }
+  sockaddr_in addr{};
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  addr.sin_port = 0;
+  socklen_t len = sizeof(addr);
+  std::uint16_t port = fallback;
+  if (::bind(fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) == 0 &&
+      ::getsockname(fd, reinterpret_cast<sockaddr *>(&addr), &len) == 0) {
+    port = ntohs(addr.sin_port);
+  }
+  ::close(fd);
+  return port;
+}
+
 } // namespace
 
 int main(int argc, char **argv) {
@@ -103,7 +129,10 @@ int main(int argc, char **argv) {
   const std::string flavor = argv[1];
   const std::string installDir = argv[2];
   const std::string dataDir = argv[3];
-  const std::string port = argv[4];
+  // argv[4] is a hint; pick an actually-free port to dodge an orphan server
+  // left on the fixed port by a previous aborted run
+  const std::string port = std::to_string(
+      find_free_port(static_cast<std::uint16_t>(std::stoi(argv[4]))));
 
   if (std::filesystem::is_directory(dataDir)) {
     spdlog::warn("Data directory '{}' already exist, deleting.", dataDir);

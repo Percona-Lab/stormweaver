@@ -65,6 +65,21 @@ def test_run_dir_naming_and_collision(tmp_path, monkeypatch):
     assert d2 == tmp_path / "2026-07-06_09-44-31-basic-2"
 
 
+def test_run_dir_absolute_survives_chdir(tmp_path, monkeypatch):
+    # relative base_dir like the real "logs": the run dir must be captured as an
+    # absolute path so a later chdir (e.g. a scenario test) can't break server
+    # log paths derived from log_dir()
+    monkeypatch.chdir(tmp_path)
+    run_dir = swlog.init_run_logging("chdirtest", base_dir="logs")
+    assert run_dir.is_absolute()
+    other = tmp_path / "elsewhere"
+    other.mkdir()
+    monkeypatch.chdir(other)
+    assert swlog.log_dir() == run_dir
+    # would raise FileNotFoundError if log_dir() were a stale relative path
+    (swlog.log_dir() / "probe.log").write_text("ok")
+
+
 def test_level_mapping():
     assert swlog._py_to_spdlog(logging.DEBUG) == 1
     assert swlog._py_to_spdlog(logging.INFO) == 2

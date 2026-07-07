@@ -46,7 +46,9 @@ def _py_to_spdlog(level: int) -> int:
 
 def init_logging(run_dir: str | Path, level: int = logging.INFO) -> Path:
     global _run_dir, _shutdown_registered
-    run_dir = Path(run_dir)
+    # absolute at init time: server log paths derive from this global, and a
+    # later chdir (some scenario tests do) must not strand a relative path
+    run_dir = Path(run_dir).absolute()
     run_dir.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
         level=level,
