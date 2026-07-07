@@ -68,6 +68,9 @@ public:
   // dropping a column that participates in a FK without dropping the
   // constraint first
   [[nodiscard]] virtual bool canDropFkColumn() const = 0;
+  // mysql needs an index on the referencing column and silently creates one
+  // when missing; emit it explicitly so the catalog knows its name
+  [[nodiscard]] virtual bool fkRequiresIndex() const = 0;
   // pg drops the whole dependent index when an indexed column is dropped;
   // mysql only removes the column from the index (index stays unless empty)
   [[nodiscard]] virtual bool dropColumnRemovesWholeIndex() const = 0;

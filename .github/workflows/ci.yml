@@ -62,6 +62,14 @@ jobs:
       - run: sudo aa-remove-unknown || true; sudo ln -sf /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/ 2>/dev/null || true; sudo apparmor_parser -R /etc/apparmor.d/usr.sbin.mysqld 2>/dev/null || true
       - run: sudo systemctl stop mysql || true
       - run: ctest --preset ${{ matrix.preset }} --output-on-failure
+      # per-connection sql statement logs; the ctest output only has spdlog
+      # stderr, these are the only way to see what was sent to the server
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: sql-logs-${{ matrix.preset }}
+          path: build/**/sql-conn-*.log
+          if-no-files-found: ignore
 
   clang-tidy:
     runs-on: ubuntu-24.04

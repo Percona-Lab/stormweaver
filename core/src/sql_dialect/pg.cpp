@@ -132,6 +132,8 @@ public:
 
   [[nodiscard]] bool canDropFkColumn() const override { return true; }
 
+  [[nodiscard]] bool fkRequiresIndex() const override { return false; }
+
   [[nodiscard]] bool dropColumnRemovesWholeIndex() const override {
     return true;
   }

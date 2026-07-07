@@ -53,6 +53,18 @@ public:
                                  boost::algorithm::join(pk_columns, ", ")));
     }
 
+    for (auto const &idx : table.indexes) {
+      std::vector<std::string> idxColumns;
+      for (auto const &field : idx.fields) {
+        idxColumns.push_back(fmt::format(
+            "{} {}", field.column_name,
+            field.ordering == IndexOrdering::desc ? "DESC" : "ASC"));
+      }
+      defs.push_back(fmt::format("{}KEY {} ({})", idx.unique ? "UNIQUE " : "",
+                                 idx.name,
+                                 boost::algorithm::join(idxColumns, ", ")));
+    }
+
     if (!fkTargetName.empty() && table.columns.size() > 1) {
       defs.push_back(
           fmt::format("FOREIGN KEY ({}) REFERENCES {} (id) ON DELETE CASCADE",
@@ -156,6 +168,8 @@ public:
 
   // mysql needs the FK constraint dropped before the column
   [[nodiscard]] bool canDropFkColumn() const override { return false; }
+
+  [[nodiscard]] bool fkRequiresIndex() const override { return true; }
 
   [[nodiscard]] bool dropColumnRemovesWholeIndex() const override {
     return false;

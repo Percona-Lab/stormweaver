@@ -139,6 +139,14 @@ void CreateTable::execute(Context &metaCtx, ps_random &rand,
     }
   }
 
+  if (!fkTargetName.empty() && dialect.fkRequiresIndex()) {
+    Index fkIndex;
+    fkIndex.name = fmt::format("fk_{}", table.columns[1].name);
+    fkIndex.fields.push_back(IndexColumn{.column_name = table.columns[1].name,
+                                         .ordering = IndexOrdering::asc});
+    table.indexes.push_back(fkIndex);
+  }
+
   // decide partition layout before SQL: inline-partition dialects need it
   // in the CREATE statement. rolled after the fk pick to keep the legacy
   // rand draw order
