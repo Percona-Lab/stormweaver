@@ -73,10 +73,11 @@ Worker::~Worker() = default;
 void Worker::reconnect() { sql_conn = sql_connector(); }
 
 void Worker::create_random_tables(std::size_t count) {
+  metadata::Context ctx(*metadata);
   for (std::size_t i = 0; i < count; ++i) {
     action::CreateTable creator(config.actionConfig.ddl,
                                 metadata::Table::Type::normal);
-    creator.execute(*metadata.get(), rand, sql_conn.get());
+    creator.execute(ctx, rand, sql_conn.get());
   }
 }
 
@@ -173,13 +174,15 @@ void RandomWorker::run_thread(std::size_t duration_in_seconds) {
       const auto w = rand.random_number(static_cast<std::size_t>(0),
                                         actions.totalWeight());
       const auto actionFactory = actions.lookupByWeightOffset(w);
-      auto action = actionFactory.builder(config.actionConfig);
+      auto action = actionFactory.builder(
+          action::BuildContext{config.actionConfig, actions});
 
       stats.startAction(actionFactory.name);
       sql_conn->resetAccumulatedSqlTime();
 
       try {
-        action->execute(*metadata, rand, sql_conn.get());
+        metadata::Context actionCtx(*metadata);
+        action->execute(actionCtx, rand, sql_conn.get());
         auto sqlTime = sql_conn->getAccumulatedSqlTime();
         stats.recordSuccess(actionFactory.name, sqlTime);
 
@@ -192,9 +195,15 @@ void RandomWorker::run_thread(std::size_t duration_in_seconds) {
 
       } catch (const sql_variant::SqlException &e) {
         auto sqlTime = sql_conn->getAccumulatedSqlTime();
-        stats.recordSqlFailure(actionFactory.name, e.getErrorCode(), sqlTime);
-        logger->warn("Worker {} SQL failed ({}): {}", name, e.getErrorCode(),
-                     e.what());
+        if (e.errorClass() == sql_variant::ErrorClass::conflict) {
+          stats.recordConflict(actionFactory.name, e.getErrorCode(), sqlTime);
+          logger->info("Worker {} conflict ({}): {}", name, e.getErrorCode(),
+                       e.what());
+        } else {
+          stats.recordSqlFailure(actionFactory.name, e.getErrorCode(), sqlTime);
+          logger->warn("Worker {} SQL failed ({}): {}", name, e.getErrorCode(),
+                       e.what());
+        }
         if (e.serverGone()) {
           connectionAttempts++;
 

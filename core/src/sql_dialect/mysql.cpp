@@ -161,6 +161,28 @@ public:
   [[nodiscard]] std::size_t maxIndexColumns() const override { return 16; }
 
   [[nodiscard]] std::size_t maxIndexesPerTable() const override { return 60; }
+
+  [[nodiscard]] bool transactionalDDL() const override { return false; }
+
+  [[nodiscard]] std::vector<std::string>
+  beginStatements(IsolationLevel level) const override {
+    std::vector<std::string> out;
+    switch (level) {
+    case IsolationLevel::readCommitted:
+      out.emplace_back("SET TRANSACTION ISOLATION LEVEL READ COMMITTED;");
+      break;
+    case IsolationLevel::repeatableRead:
+      out.emplace_back("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;");
+      break;
+    case IsolationLevel::serializable:
+      out.emplace_back("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;");
+      break;
+    case IsolationLevel::serverDefault:
+      break;
+    }
+    out.emplace_back("START TRANSACTION;");
+    return out;
+  }
 };
 
 } // namespace

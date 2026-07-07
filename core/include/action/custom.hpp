@@ -18,7 +18,7 @@ public:
   CustomSql(CustomConfig const &config, std::string sqlStatement,
             const inject_t &injectParameters);
 
-  void execute(metadata::TableRegistry &metaCtx, ps_random &rand,
+  void execute(metadata::Context &metaCtx, ps_random &rand,
                sql_variant::LoggedSQL *connection) const override;
 
 private:
@@ -26,7 +26,7 @@ private:
   std::string sqlStatement;
   inject_t injectParameters;
 
-  static std::string doInject(metadata::TableRegistry &metaCtx, ps_random &rand,
+  static std::string doInject(metadata::Context &metaCtx, ps_random &rand,
                               std::string const &injectionPoint);
 };
 

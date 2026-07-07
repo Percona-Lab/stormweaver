@@ -46,8 +46,8 @@ Column randomColumn(ps_random &rand, bool forceInt = false) {
   return col;
 }
 
-table_cptr findPartitionedTable(Catalog<Table> const &tables, ps_random &rand,
-                                DdlConfig const &config) {
+table_cptr findPartitionedTable(CatalogView<Table> const &tables,
+                                ps_random &rand, DdlConfig const &config) {
   for (std::size_t i = 0; i < 10; ++i) {
     auto table = tables.randomPick(rand);
 
@@ -77,12 +77,12 @@ void CreateTable::setSuccessCallback(TableCallback const &cb) {
   successCallback = cb;
 }
 
-void CreateTable::execute(TableRegistry &metaCtx, ps_random &rand,
+void CreateTable::execute(Context &metaCtx, ps_random &rand,
                           sql_variant::LoggedSQL *connection) const {
   auto const serverInfo = connection->serverInfo();
   auto const &dialect = sql_dialect::dialect_for(serverInfo);
 
-  auto &tables = metaCtx.get<Table>();
+  auto tables = metaCtx.get<Table>();
 
   if (tables.size() >= config.max_table_count) {
     // skip: table count limit
@@ -182,7 +182,8 @@ void CreateTable::execute(TableRegistry &metaCtx, ps_random &rand,
 
   if (fkRef && tables.byId(fkRef.id) == nullptr) {
     // referenced table dropped mid-create; its sweep could not see us yet
-    tables.update(id, [&](Table &t) { return t.removeReferencesTo(fkRef.id); });
+    tables.update(id,
+                  [fkRef](Table &t) { return t.removeReferencesTo(fkRef.id); });
   }
 
   if (successCallback) {
@@ -192,9 +193,9 @@ void CreateTable::execute(TableRegistry &metaCtx, ps_random &rand,
 
 DropTable::DropTable(DdlConfig config) : config(std::move(config)) {}
 
-void DropTable::execute(TableRegistry &metaCtx, ps_random &rand,
+void DropTable::execute(Context &metaCtx, ps_random &rand,
                         sql_variant::LoggedSQL *connection) const {
-  auto &tables = metaCtx.get<Table>();
+  auto tables = metaCtx.get<Table>();
 
   if (tables.size() <= config.min_table_count) {
     // skip: table count limit
@@ -233,10 +234,12 @@ void DropTable::execute(TableRegistry &metaCtx, ps_random &rand,
   tables.erase(snap->id);
 
   // Best effort: remove foreign key references to the dropped table
+  const auto droppedId = snap->id;
   for (auto const &other : tables.snapshotAll()) {
-    if (other->hasReferenceTo(snap->id)) {
-      tables.update(other->id,
-                    [&](Table &t) { return t.removeReferencesTo(snap->id); });
+    if (other->hasReferenceTo(droppedId)) {
+      tables.update(other->id, [droppedId](Table &t) {
+        return t.removeReferencesTo(droppedId);
+      });
     }
   }
 }
@@ -245,12 +248,12 @@ AlterTable::AlterTable(DdlConfig config,
                        BitFlags<AlterSubcommand> const &possibleCommands)
     : config(std::move(config)), possibleCommands(possibleCommands) {}
 
-void AlterTable::execute(TableRegistry &metaCtx, ps_random &rand,
+void AlterTable::execute(Context &metaCtx, ps_random &rand,
                          sql_variant::LoggedSQL *connection) const {
   auto const serverInfo = connection->serverInfo();
   auto const &dialect = sql_dialect::dialect_for(serverInfo);
 
-  auto &tables = metaCtx.get<Table>();
+  auto tables = metaCtx.get<Table>();
 
   auto snap = tables.randomPick(rand);
   if (snap == nullptr) {
@@ -368,32 +371,33 @@ void AlterTable::execute(TableRegistry &metaCtx, ps_random &rand,
                       boost::algorithm::join(alterSubcommands, ",\n")))
       .maybeThrow();
 
-  tables.update(snap->id, [&](Table &t) {
-    for (auto const &name : droppedColumnNames) {
-      auto it = std::ranges::find_if(
-          t.columns, [&](Column const &c) { return c.name == name; });
-      if (it != t.columns.end()) {
-        t.columns.erase(it);
-      }
-    }
-    for (auto const &tc : typeChanges) {
-      auto it = std::ranges::find_if(
-          t.columns, [&](Column const &c) { return c.name == tc.name; });
-      if (it != t.columns.end()) {
-        it->type = tc.type;
-        it->length = tc.length;
-      }
-    }
-    t.columns.insert(t.columns.end(), newColumns.begin(), newColumns.end());
-    return true;
-  });
+  tables.update(
+      snap->id, [droppedColumnNames, typeChanges, newColumns](Table &t) {
+        for (auto const &name : droppedColumnNames) {
+          auto it = std::ranges::find_if(
+              t.columns, [&](Column const &c) { return c.name == name; });
+          if (it != t.columns.end()) {
+            t.columns.erase(it);
+          }
+        }
+        for (auto const &tc : typeChanges) {
+          auto it = std::ranges::find_if(
+              t.columns, [&](Column const &c) { return c.name == tc.name; });
+          if (it != t.columns.end()) {
+            it->type = tc.type;
+            it->length = tc.length;
+          }
+        }
+        t.columns.insert(t.columns.end(), newColumns.begin(), newColumns.end());
+        return true;
+      });
 }
 
 RenameTable::RenameTable(DdlConfig config) : config(std::move(config)) {}
 
-void RenameTable::execute(TableRegistry &metaCtx, ps_random &rand,
+void RenameTable::execute(Context &metaCtx, ps_random &rand,
                           sql_variant::LoggedSQL *connection) const {
-  auto &tables = metaCtx.get<Table>();
+  auto tables = metaCtx.get<Table>();
 
   auto snap = tables.randomPick(rand);
   if (snap == nullptr) {
@@ -408,7 +412,7 @@ void RenameTable::execute(TableRegistry &metaCtx, ps_random &rand,
           fmt::format("ALTER TABLE {} RENAME TO {};", snap->name, newName))
       .maybeThrow();
 
-  tables.update(snap->id, [&](Table &t) {
+  tables.update(snap->id, [newName](Table &t) {
     t.name = newName;
     return true;
   });
@@ -416,14 +420,14 @@ void RenameTable::execute(TableRegistry &metaCtx, ps_random &rand,
 
 CreateIndex::CreateIndex(DdlConfig config) : config(std::move(config)) {}
 
-void CreateIndex::execute(TableRegistry &metaCtx, ps_random &rand,
+void CreateIndex::execute(Context &metaCtx, ps_random &rand,
                           sql_variant::LoggedSQL *connection) const {
   // TODO: support partial / functional indexes, and the missing parameters,
   // like null distinct
   auto const serverInfo = connection->serverInfo();
   auto const &dialect = sql_dialect::dialect_for(serverInfo);
 
-  auto &tables = metaCtx.get<Table>();
+  auto tables = metaCtx.get<Table>();
 
   const std::size_t maxTableIndexes = dialect.maxIndexesPerTable();
 
@@ -471,7 +475,7 @@ void CreateIndex::execute(TableRegistry &metaCtx, ps_random &rand,
   connection->executeQuery(dialect.createIndex(*snap, newIndex, opts))
       .maybeThrow();
 
-  tables.update(snap->id, [&](Table &t) {
+  tables.update(snap->id, [newIndex](Table &t) {
     if (std::ranges::find_if(t.indexes, [&](Index const &i) {
           return i.name == newIndex.name;
         }) == t.indexes.end()) {
@@ -483,12 +487,12 @@ void CreateIndex::execute(TableRegistry &metaCtx, ps_random &rand,
 
 DropIndex::DropIndex(DdlConfig config) : config(std::move(config)) {}
 
-void DropIndex::execute(TableRegistry &metaCtx, ps_random &rand,
+void DropIndex::execute(Context &metaCtx, ps_random &rand,
                         sql_variant::LoggedSQL *connection) const {
   auto const serverInfo = connection->serverInfo();
   auto const &dialect = sql_dialect::dialect_for(serverInfo);
 
-  auto &tables = metaCtx.get<Table>();
+  auto tables = metaCtx.get<Table>();
 
   for (int remainingTries = 10; remainingTries > 0; remainingTries--) {
     auto snap = tables.randomPick(rand);
@@ -512,7 +516,7 @@ void DropIndex::execute(TableRegistry &metaCtx, ps_random &rand,
       result.maybeThrow();
     }
 
-    tables.update(snap->id, [&](Table &t) {
+    tables.update(snap->id, [indexName](Table &t) {
       auto it = std::ranges::find_if(
           t.indexes, [&](Index const &i) { return i.name == indexName; });
       if (it != t.indexes.end()) {
@@ -528,12 +532,12 @@ void DropIndex::execute(TableRegistry &metaCtx, ps_random &rand,
 CreatePartition::CreatePartition(DdlConfig config)
     : config(std::move(config)) {}
 
-void CreatePartition::execute(TableRegistry &metaCtx, ps_random &rand,
+void CreatePartition::execute(Context &metaCtx, ps_random &rand,
                               sql_variant::LoggedSQL *connection) const {
   auto const serverInfo = connection->serverInfo();
   auto const &dialect = sql_dialect::dialect_for(serverInfo);
 
-  auto &tables = metaCtx.get<Table>();
+  auto tables = metaCtx.get<Table>();
 
   auto snap = findPartitionedTable(tables, rand, config);
   if (snap == nullptr) {
@@ -544,7 +548,7 @@ void CreatePartition::execute(TableRegistry &metaCtx, ps_random &rand,
 
   connection->executeQuery(dialect.addPartition(*snap, partIdx)).maybeThrow();
 
-  tables.update(snap->id, [&](Table &t) {
+  tables.update(snap->id, [partIdx](Table &t) {
     if (!t.partitioning.has_value()) {
       return false; // concurrently restructured; skip
     }
@@ -561,12 +565,12 @@ void CreatePartition::execute(TableRegistry &metaCtx, ps_random &rand,
 
 DropPartition::DropPartition(DdlConfig config) : config(std::move(config)) {}
 
-void DropPartition::execute(TableRegistry &metaCtx, ps_random &rand,
+void DropPartition::execute(Context &metaCtx, ps_random &rand,
                             sql_variant::LoggedSQL *connection) const {
   auto const serverInfo = connection->serverInfo();
   auto const &dialect = sql_dialect::dialect_for(serverInfo);
 
-  auto &tables = metaCtx.get<Table>();
+  auto tables = metaCtx.get<Table>();
 
   auto snap = findPartitionedTable(tables, rand, config);
   if (snap == nullptr) {
@@ -579,7 +583,7 @@ void DropPartition::execute(TableRegistry &metaCtx, ps_random &rand,
 
   connection->executeQuery(dialect.dropPartition(*snap, partIdx)).maybeThrow();
 
-  tables.update(snap->id, [&](Table &t) {
+  tables.update(snap->id, [partIdx](Table &t) {
     if (!t.partitioning.has_value()) {
       return false;
     }

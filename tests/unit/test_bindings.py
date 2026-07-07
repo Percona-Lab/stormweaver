@@ -56,6 +56,20 @@ def test_config_roundtrip():
     assert cfg.ddl.access_methods == ["heap"]
 
 
+def test_transaction_config_roundtrip():
+    cfg = sw.AllConfig()
+    cfg.transaction.commit_prob = 80
+    cfg.transaction.error_mode = "abort"
+    cfg.transaction.mysql_ddl_mode = "exclude"
+    cfg.transaction.isolation_weights.serializable = 5
+    assert cfg.transaction.commit_prob == 80
+    assert cfg.transaction.error_mode == "abort"
+    assert cfg.transaction.mysql_ddl_mode == "exclude"
+    assert cfg.transaction.isolation_weights.serializable == 5
+    with pytest.raises(ValueError):
+        cfg.transaction.error_mode = "explode"
+
+
 def test_connect_mysql_exists_and_fails_cleanly():
     with pytest.raises(RuntimeError):
         sw.connect_mysql(host="127.0.0.1", port=1, log_name="mysql-nope")

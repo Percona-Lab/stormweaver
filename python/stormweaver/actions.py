@@ -7,7 +7,10 @@ ActionFn = Callable[[Any, Any, Any], None]
 
 
 def action(
-    registry: ActionRegistry, name: str, weight: int = 10
+    registry: ActionRegistry,
+    name: str,
+    weight: int = 10,
+    action_type: str = "other",
 ) -> Callable[[ActionFn], ActionFn]:
     """Register a python callable as a workload action.
 
@@ -20,7 +23,7 @@ def action(
     """
 
     def decorator(fn: ActionFn) -> ActionFn:
-        registry.register_python(name, weight, fn)
+        registry.register_python(name, weight, fn, action_type)
         return fn
 
     return decorator

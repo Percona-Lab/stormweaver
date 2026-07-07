@@ -7,6 +7,7 @@
 namespace {
 struct Fixture {
   mutable metadata::TableRegistry metaCtx;
+  mutable metadata::Context ctx{metaCtx};
   mutable ps_random rand;
   action::DdlConfig config;
 };
@@ -19,7 +20,7 @@ TEST_CASE_PERSISTENT_FIXTURE(Fixture, "DDLs work") {
 
     for (int i = 0; i < 100; ++i) {
       action::CreateTable ct(config, metadata::Table::Type::normal);
-      REQUIRE_NOTHROW(ct.execute(metaCtx, rand, sqlConnection.get()));
+      REQUIRE_NOTHROW(ct.execute(ctx, rand, sqlConnection.get()));
     }
   }
 
@@ -30,35 +31,35 @@ TEST_CASE_PERSISTENT_FIXTURE(Fixture, "DDLs work") {
       action::AlterTable at(config,
                             BitFlags<action::AlterSubcommand>::AllSet().Unset(
                                 action::AlterSubcommand::changeAccessMethod));
-      REQUIRE_NOTHROW(at.execute(metaCtx, rand, sqlConnection.get()));
+      REQUIRE_NOTHROW(at.execute(ctx, rand, sqlConnection.get()));
     }
   }
 
   SECTION("tables can be renamed") {
     for (int i = 0; i < 100; ++i) {
       action::RenameTable rt(config);
-      REQUIRE_NOTHROW(rt.execute(metaCtx, rand, sqlConnection.get()));
+      REQUIRE_NOTHROW(rt.execute(ctx, rand, sqlConnection.get()));
     }
   }
 
   SECTION("indexes can be created") {
     for (int i = 0; i < 1000; ++i) {
       action::CreateIndex rt(config);
-      REQUIRE_NOTHROW(rt.execute(metaCtx, rand, sqlConnection.get()));
+      REQUIRE_NOTHROW(rt.execute(ctx, rand, sqlConnection.get()));
     }
   }
 
   SECTION("indexes can be dropped") {
     for (int i = 0; i < 100; ++i) {
       action::DropIndex rt(config);
-      REQUIRE_NOTHROW(rt.execute(metaCtx, rand, sqlConnection.get()));
+      REQUIRE_NOTHROW(rt.execute(ctx, rand, sqlConnection.get()));
     }
   }
 
   SECTION("tables can be dropped") {
     for (int i = 0; i < 100; ++i) {
       action::DropTable dt(config);
-      REQUIRE_NOTHROW(dt.execute(metaCtx, rand, sqlConnection.get()));
+      REQUIRE_NOTHROW(dt.execute(ctx, rand, sqlConnection.get()));
     }
   }
 }

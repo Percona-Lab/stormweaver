@@ -4,7 +4,7 @@
 
 namespace action {
 
-metadata::table_cptr find_random_table(metadata::TableRegistry const &metaCtx,
+metadata::table_cptr find_random_table(metadata::Context const &metaCtx,
                                        ps_random &rand) {
   auto table = metaCtx.get<metadata::Table>().randomPick(rand);
   if (table == nullptr) {

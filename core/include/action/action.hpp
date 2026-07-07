@@ -3,7 +3,7 @@
 
 #include <utility>
 
-#include "metadata/table.hpp"
+#include "metadata/context.hpp"
 #include "random.hpp"
 #include "sql_variant/generic.hpp"
 
@@ -18,7 +18,7 @@ class Action {
 public:
   virtual ~Action();
 
-  virtual void execute(metadata::TableRegistry &metaCtx, ps_random &rand,
+  virtual void execute(metadata::Context &metaCtx, ps_random &rand,
                        sql_variant::LoggedSQL *connection) const = 0;
 };
 

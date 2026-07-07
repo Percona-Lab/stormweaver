@@ -95,13 +95,23 @@ void ActionStatistics::recordOtherFailure(std::chrono::nanoseconds sqlTime) {
   sqlTiming.record(sqlTime);
 }
 
+void ActionStatistics::recordConflict(const std::string &errorCode,
+                                      std::chrono::nanoseconds sqlTime) {
+  auto execTime = calculateExecutionTime(startTime);
+  sqlConflictCount++;
+  sqlErrorCodes[errorCode]++;
+  executionTiming.record(execTime);
+  sqlTiming.record(sqlTime);
+}
+
 uint64_t ActionStatistics::getTotalCount() const {
   return successCount + actionFailureCount + sqlFailureCount +
-         otherFailureCount;
+         otherFailureCount + sqlConflictCount;
 }
 
 uint64_t ActionStatistics::getTotalFailureCount() const {
-  return actionFailureCount + sqlFailureCount + otherFailureCount;
+  return actionFailureCount + sqlFailureCount + otherFailureCount +
+         sqlConflictCount;
 }
 
 double ActionStatistics::getSuccessRate() const {
@@ -117,6 +127,7 @@ void ActionStatistics::reset() {
   actionFailureCount = 0;
   sqlFailureCount = 0;
   otherFailureCount = 0;
+  sqlConflictCount = 0;
   actionErrorNames.clear();
   sqlErrorCodes.clear();
   executionTiming.reset();
@@ -150,6 +161,12 @@ void WorkerStatistics::recordSqlFailure(const std::string &actionName,
 void WorkerStatistics::recordOtherFailure(const std::string &actionName,
                                           std::chrono::nanoseconds sqlTime) {
   actionStats[actionName].recordOtherFailure(sqlTime);
+}
+
+void WorkerStatistics::recordConflict(const std::string &actionName,
+                                      const std::string &errorCode,
+                                      std::chrono::nanoseconds sqlTime) {
+  actionStats[actionName].recordConflict(errorCode, sqlTime);
 }
 
 void WorkerStatistics::start() {
@@ -242,7 +259,8 @@ std::string WorkerStatistics::reportDetailed() const {
     oss << " (Success: " << stats.successCount;
     oss << ", Action Fail: " << stats.actionFailureCount;
     oss << ", SQL Fail: " << stats.sqlFailureCount;
-    oss << ", Other Fail: " << stats.otherFailureCount << ")\n";
+    oss << ", Other Fail: " << stats.otherFailureCount;
+    oss << ", Conflict: " << stats.sqlConflictCount << ")\n";
     oss << "  Success Rate: " << stats.getSuccessRate() << "%\n";
 
     if (stats.executionTiming.hasData()) {

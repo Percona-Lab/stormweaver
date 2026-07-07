@@ -92,12 +92,25 @@ struct QueryResult;
 
 enum class SqlStatus : std::uint8_t { success, error, serverGone };
 
+enum class ErrorClass : std::uint8_t {
+  none,      // success
+  conflict,  // serialization failure / deadlock: expected under concurrency
+  failedTxn, // pg 25P02: statement in an already-aborted transaction
+  serverGone,
+  other
+};
+
+// flavor-specific mappings, implemented in postgresql.cpp / mysql.cpp
+ErrorClass classify_pg_sqlstate(std::string_view sqlstate);
+ErrorClass classify_mysql_errno(unsigned int errcode);
+
 class SqlException : public std::exception {
 public:
   SqlException(std::string errorCode, std::string message,
-               SqlStatus status = SqlStatus::error)
+               SqlStatus status = SqlStatus::error,
+               ErrorClass errorClass = ErrorClass::other)
       : errorCode(std::move(errorCode)), message(std::move(message)),
-        status(status) {}
+        status(status), errorClass_(errorClass) {}
 
   [[nodiscard]] const char *what() const noexcept override {
     return message.c_str();
@@ -111,16 +124,20 @@ public:
     return status == SqlStatus::serverGone;
   }
 
+  [[nodiscard]] ErrorClass errorClass() const { return errorClass_; }
+
 private:
   std::string errorCode;
   std::string message;
   SqlStatus status;
+  ErrorClass errorClass_;
 };
 
 struct ErrorInfo {
   std::string errorCode;
   std::string errorMessage;
   SqlStatus errorStatus;
+  ErrorClass errorClass = ErrorClass::none;
 
   [[nodiscard]] bool success() const {
     return errorStatus == SqlStatus::success;
@@ -166,7 +183,7 @@ struct QueryResult {
                          fmt::format("Error while executing query: {} {}",
                                      errorInfo.errorCode,
                                      errorInfo.errorMessage),
-                         errorInfo.errorStatus);
+                         errorInfo.errorStatus, errorInfo.errorClass);
     }
   }
 };
@@ -216,10 +233,15 @@ public:
   std::chrono::nanoseconds getAccumulatedSqlTime() const;
   void resetAccumulatedSqlTime();
 
+  // monotonic count of executeQuery calls (success or failure); lets
+  // callers detect whether an opaque operation actually sent SQL
+  std::uint64_t getQueryCount() const;
+
 private:
   std::unique_ptr<GenericSQL> sql;
   std::shared_ptr<spdlog::logger> logger;
   mutable std::chrono::nanoseconds accumulatedSqlTime{0};
+  mutable std::uint64_t queryCount{0};
 };
 
 } // namespace sql_variant

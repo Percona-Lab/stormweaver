@@ -104,6 +104,11 @@ sql_variant::SqlStatus statusForError(unsigned int errCode) {
 
 namespace sql_variant {
 
+ErrorClass classify_mysql_errno(unsigned int errcode) {
+  return (errcode == 1213 || errcode == 1205) ? ErrorClass::conflict
+                                              : ErrorClass::other;
+}
+
 MySQL::MySQL(ServerParams const &params) {
   {
     // mysql_connect is not thread safe, hold a mutex
@@ -175,6 +180,10 @@ QueryResult MySQL::executeQuery(std::string const &query) const {
   if (qres == 1) { // failure
 
     result.errorInfo.errorStatus = statusForError(errCode);
+    result.errorInfo.errorClass =
+        result.errorInfo.errorStatus == SqlStatus::serverGone
+            ? ErrorClass::serverGone
+            : classify_mysql_errno(errCode);
   } else {
     auto *res = mysql_store_result(connection);
     errCode = mysql_errno(connection);
@@ -184,6 +193,10 @@ QueryResult MySQL::executeQuery(std::string const &query) const {
       result.errorInfo.errorCode = std::to_string(errCode);
       result.errorInfo.errorMessage = mysql_error(connection);
       result.errorInfo.errorStatus = statusForError(errCode);
+      result.errorInfo.errorClass =
+          result.errorInfo.errorStatus == SqlStatus::serverGone
+              ? ErrorClass::serverGone
+              : classify_mysql_errno(errCode);
     } else { // success, res == nullptr here is normal for DML
       result.errorInfo.errorStatus = SqlStatus::success;
       result.data = std::make_unique<MySQLSpecificResult>(res);

@@ -10,6 +10,7 @@
 
 #include "action/action_registry.hpp"
 #include "logging.hpp"
+#include "metadata/context.hpp"
 #include "metadata/table.hpp"
 #include "py_action.hpp"
 #include "random.hpp"
@@ -37,6 +38,16 @@ connect_mysql(std::string host, uint16_t port, std::string dbname,
   ServerParams params{dbname, host, socket, user, password, port};
   auto sql = std::make_unique<sql_variant::MySQL>(params);
   return std::make_unique<LoggedSQL>(std::move(sql), log_name);
+}
+
+static action::ActionType parse_action_type(std::string const &action_type) {
+  if (action_type == "ddl") {
+    return action::ActionType::ddl;
+  }
+  if (action_type == "dml") {
+    return action::ActionType::dml;
+  }
+  return action::ActionType::other;
 }
 
 NB_MODULE(_stormweaver, m) {
@@ -130,6 +141,20 @@ NB_MODULE(_stormweaver, m) {
         return names;
       });
 
+  nb::class_<metadata::Context>(m, "MetadataContext")
+      .def("size",
+           [](metadata::Context const &self) {
+             return self.get<metadata::Table>().size();
+           })
+      .def("reset", [](metadata::Context &self) { self.registry().reset(); })
+      .def("table_names", [](metadata::Context const &self) {
+        std::vector<std::string> names;
+        for (auto const &table : self.get<metadata::Table>().snapshotAll()) {
+          names.push_back(table->name);
+        }
+        return names;
+      });
+
   // --- Random ---
 
   nb::class_<ps_random>(m, "Random")
@@ -163,24 +188,44 @@ NB_MODULE(_stormweaver, m) {
       // rework
       .def("get", &action::ActionRegistry::getReference,
            nb::rv_policy::reference_internal)
-      .def("make_custom_sql", &action::ActionRegistry::makeCustomSqlAction)
-      .def("make_custom_table_sql",
-           &action::ActionRegistry::makeCustomTableSqlAction)
+      .def(
+          "make_custom_sql",
+          [](action::ActionRegistry &registry, std::string const &name,
+             std::string const &sql, std::size_t weight,
+             std::string const &action_type) {
+            registry.makeCustomSqlAction(name, sql, weight,
+                                         parse_action_type(action_type));
+          },
+          nb::arg("name"), nb::arg("sql"), nb::arg("weight"),
+          nb::arg("action_type") = "other")
+      .def(
+          "make_custom_table_sql",
+          [](action::ActionRegistry &registry, std::string const &name,
+             std::string const &sql, std::size_t weight,
+             std::string const &action_type) {
+            registry.makeCustomTableSqlAction(name, sql, weight,
+                                              parse_action_type(action_type));
+          },
+          nb::arg("name"), nb::arg("sql"), nb::arg("weight"),
+          nb::arg("action_type") = "other")
       .def("use", &action::ActionRegistry::use)
       .def(
           "register_python",
           [](action::ActionRegistry &registry, std::string const &name,
-             std::size_t weight, nb::object fn) {
+             std::size_t weight, nb::object fn,
+             std::string const &action_type) {
             auto shared_fn = make_py_action_fn(std::move(fn));
             registry.insert(action::ActionFactory{
                 .name = name,
                 .builder =
-                    [shared_fn](action::AllConfig const &) {
+                    [shared_fn](action::BuildContext const &) {
                       return std::make_unique<PyCallableAction>(shared_fn);
                     },
-                .weight = weight});
+                .weight = weight,
+                .type = parse_action_type(action_type)});
           },
-          nb::arg("name"), nb::arg("weight"), nb::arg("fn"));
+          nb::arg("name"), nb::arg("weight"), nb::arg("fn"),
+          nb::arg("action_type") = "other");
 
   m.def(
       "default_action_registry",
@@ -205,10 +250,64 @@ NB_MODULE(_stormweaver, m) {
       .def_rw("delete_min", &action::DmlConfig::deleteMin)
       .def_rw("delete_max", &action::DmlConfig::deleteMax);
 
+  nb::class_<action::IsolationWeights>(m, "IsolationWeights")
+      .def(nb::init<>())
+      .def_rw("server_default", &action::IsolationWeights::server_default)
+      .def_rw("read_committed", &action::IsolationWeights::read_committed)
+      .def_rw("repeatable_read", &action::IsolationWeights::repeatable_read)
+      .def_rw("serializable", &action::IsolationWeights::serializable);
+
+  nb::class_<action::TransactionConfig>(m, "TransactionConfig")
+      .def(nb::init<>())
+      .def_rw("min_sub_actions", &action::TransactionConfig::min_sub_actions)
+      .def_rw("max_sub_actions", &action::TransactionConfig::max_sub_actions)
+      .def_rw("commit_prob", &action::TransactionConfig::commit_probability)
+      .def_rw("rollback_to_savepoint_prob",
+              &action::TransactionConfig::rollback_to_savepoint_probability)
+      .def_rw("isolation_weights",
+              &action::TransactionConfig::isolation_weights)
+      .def_prop_rw(
+          "error_mode",
+          [](action::TransactionConfig const &c) {
+            return c.error_mode ==
+                           action::TransactionConfig::ErrorMode::savepoint
+                       ? "savepoint"
+                       : "abort";
+          },
+          [](action::TransactionConfig &c, std::string const &v) {
+            if (v == "savepoint") {
+              c.error_mode = action::TransactionConfig::ErrorMode::savepoint;
+            } else if (v == "abort") {
+              c.error_mode = action::TransactionConfig::ErrorMode::abort;
+            } else {
+              throw std::invalid_argument("error_mode: savepoint|abort");
+            }
+          })
+      .def_prop_rw(
+          "mysql_ddl_mode",
+          [](action::TransactionConfig const &c) {
+            return c.mysql_ddl_mode ==
+                           action::TransactionConfig::MysqlDdlMode::mirror
+                       ? "mirror"
+                       : "exclude";
+          },
+          [](action::TransactionConfig &c, std::string const &v) {
+            if (v == "mirror") {
+              c.mysql_ddl_mode =
+                  action::TransactionConfig::MysqlDdlMode::mirror;
+            } else if (v == "exclude") {
+              c.mysql_ddl_mode =
+                  action::TransactionConfig::MysqlDdlMode::exclude;
+            } else {
+              throw std::invalid_argument("mysql_ddl_mode: mirror|exclude");
+            }
+          });
+
   nb::class_<action::AllConfig>(m, "AllConfig")
       .def(nb::init<>())
       .def_rw("ddl", &action::AllConfig::ddl)
-      .def_rw("dml", &action::AllConfig::dml);
+      .def_rw("dml", &action::AllConfig::dml)
+      .def_rw("transaction", &action::AllConfig::transaction);
 
   nb::class_<WorkloadParams>(m, "WorkloadParams")
       .def(nb::init<>())
@@ -236,6 +335,8 @@ NB_MODULE(_stormweaver, m) {
               &statistics::ActionStatistics::sqlFailureCount)
       .def_ro("other_failure_count",
               &statistics::ActionStatistics::otherFailureCount)
+      .def_ro("sql_conflict_count",
+              &statistics::ActionStatistics::sqlConflictCount)
       .def_ro("execution_timing",
               &statistics::ActionStatistics::executionTiming)
       .def_ro("sql_timing", &statistics::ActionStatistics::sqlTiming);
@@ -268,6 +369,13 @@ NB_MODULE(_stormweaver, m) {
              return it == self.actionStats.end()
                         ? 0
                         : it->second.getTotalFailureCount();
+           })
+      .def("action_conflict_count",
+           [](statistics::WorkerStatistics const &self,
+              std::string const &name) -> std::uint64_t {
+             auto it = self.actionStats.find(name);
+             return it == self.actionStats.end() ? 0
+                                                 : it->second.sqlConflictCount;
            });
 
   // --- Workers ---

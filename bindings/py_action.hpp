@@ -4,7 +4,7 @@
 #include <nanobind/nanobind.h>
 
 #include "action/action.hpp"
-#include "metadata/table.hpp"
+#include "metadata/context.hpp"
 #include "random.hpp"
 #include "sql_variant/generic.hpp"
 
@@ -49,7 +49,7 @@ class PyCallableAction : public action::Action {
 public:
   explicit PyCallableAction(py_fn_ptr fn) : fn(std::move(fn)) {}
 
-  void execute(metadata::TableRegistry &metaCtx, ps_random &rand,
+  void execute(metadata::Context &metaCtx, ps_random &rand,
                sql_variant::LoggedSQL *connection) const override {
     nb::gil_scoped_acquire guard;
     try {

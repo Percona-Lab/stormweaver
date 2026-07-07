@@ -314,6 +314,38 @@ TEST_CASE("mysql typeName", "[dialect]") {
   REQUIRE(dialect.typeName(ColumnType::VARCHAR, 32) == "VARCHAR(32)");
 }
 
+TEST_CASE("transaction capabilities", "[dialect]") {
+  auto const &pg = pg_dialect();
+  auto const &my = mysql_dialect();
+
+  REQUIRE(pg.transactionalDDL());
+  REQUIRE_FALSE(my.transactionalDDL());
+
+  REQUIRE(pg.beginStatements(IsolationLevel::serverDefault) ==
+          std::vector<std::string>{"BEGIN;"});
+  REQUIRE(pg.beginStatements(IsolationLevel::serializable) ==
+          std::vector<std::string>{"BEGIN ISOLATION LEVEL SERIALIZABLE;"});
+  REQUIRE(pg.beginStatements(IsolationLevel::repeatableRead) ==
+          std::vector<std::string>{"BEGIN ISOLATION LEVEL REPEATABLE READ;"});
+  REQUIRE(pg.beginStatements(IsolationLevel::readCommitted) ==
+          std::vector<std::string>{"BEGIN ISOLATION LEVEL READ COMMITTED;"});
+
+  REQUIRE(my.beginStatements(IsolationLevel::serverDefault) ==
+          std::vector<std::string>{"START TRANSACTION;"});
+  REQUIRE(
+      my.beginStatements(IsolationLevel::serializable) ==
+      std::vector<std::string>{"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;",
+                               "START TRANSACTION;"});
+  REQUIRE(my.beginStatements(IsolationLevel::readCommitted) ==
+          std::vector<std::string>{
+              "SET TRANSACTION ISOLATION LEVEL READ COMMITTED;",
+              "START TRANSACTION;"});
+  REQUIRE(my.beginStatements(IsolationLevel::repeatableRead) ==
+          std::vector<std::string>{
+              "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;",
+              "START TRANSACTION;"});
+}
+
 TEST_CASE("dialect_for dispatches on flavor", "[dialect]") {
   sql_variant::ServerInfo mysqlInfo{.flavor_ = sql_variant::flavor::ps,
                                     .version = 80400};

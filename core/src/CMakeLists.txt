@@ -5,6 +5,7 @@ set(LIBRARY_SOURCES
     action/ddl.cpp
     action/dml.cpp
     action/helper.cpp
+    action/transaction.cpp
     checksum.cpp
     logging.cpp
     random.cpp

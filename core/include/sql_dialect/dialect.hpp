@@ -3,14 +3,23 @@
 #include "metadata/table.hpp"
 #include "sql_variant/generic.hpp"
 
+#include <cstdint>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace sql_dialect {
 
 struct IndexOptions {
   bool concurrent = false; // pg: CONCURRENTLY; ignored on mysql
   bool only = false;       // pg: ON ONLY; ignored on mysql
+};
+
+enum class IsolationLevel : std::uint8_t {
+  serverDefault,
+  readCommitted,
+  repeatableRead,
+  serializable
 };
 
 /* Stateless SQL renderers. One instance per flavor family; obtained via
@@ -61,6 +70,12 @@ public:
   [[nodiscard]] virtual bool canDropFkColumn() const = 0;
   [[nodiscard]] virtual std::size_t maxIndexColumns() const = 0;
   [[nodiscard]] virtual std::size_t maxIndexesPerTable() const = 0;
+
+  // pg: DDL rolls back with the transaction. mysql: DDL implicitly commits.
+  [[nodiscard]] virtual bool transactionalDDL() const = 0;
+  // statements opening a transaction; executed in order
+  [[nodiscard]] virtual std::vector<std::string>
+  beginStatements(IsolationLevel level) const = 0;
 };
 
 Dialect const &pg_dialect();

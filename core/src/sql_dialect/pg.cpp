@@ -137,6 +137,23 @@ public:
   [[nodiscard]] std::size_t maxIndexesPerTable() const override {
     return std::numeric_limits<std::size_t>::max();
   }
+
+  [[nodiscard]] bool transactionalDDL() const override { return true; }
+
+  [[nodiscard]] std::vector<std::string>
+  beginStatements(IsolationLevel level) const override {
+    switch (level) {
+    case IsolationLevel::readCommitted:
+      return {"BEGIN ISOLATION LEVEL READ COMMITTED;"};
+    case IsolationLevel::repeatableRead:
+      return {"BEGIN ISOLATION LEVEL REPEATABLE READ;"};
+    case IsolationLevel::serializable:
+      return {"BEGIN ISOLATION LEVEL SERIALIZABLE;"};
+    case IsolationLevel::serverDefault:
+      break;
+    }
+    return {"BEGIN;"};
+  }
 };
 
 } // namespace

@@ -1,4 +1,4 @@
-set(SQLTEST_SOURCES main.cpp ddl.cpp schema_discovery.cpp metadata_populator.cpp worker_schema_discovery.cpp checksum.cpp)
+set(SQLTEST_SOURCES main.cpp ddl.cpp schema_discovery.cpp metadata_populator.cpp worker_schema_discovery.cpp checksum.cpp transaction.cpp)
 add_executable(test-stormweaver-sql ${SQLTEST_SOURCES})
 target_link_libraries(test-stormweaver-sql Catch2::Catch2 stormweaver_core)
 if(NOT "${TEST_PG_DIR}" STREQUAL "")

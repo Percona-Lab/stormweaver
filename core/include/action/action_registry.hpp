@@ -4,17 +4,28 @@
 #include "action/all.hpp"
 #include "sql_variant/generic.hpp"
 
+#include <cstdint>
 #include <mutex>
 
 namespace action {
 
+enum class ActionType : std::uint8_t { ddl, dml, transaction, other };
+
+class ActionRegistry;
+
+struct BuildContext {
+  AllConfig const &config;
+  ActionRegistry const &registry; // registry the factory was picked from
+};
+
 using action_build_t =
-    std::function<std::unique_ptr<action::Action>(action::AllConfig const &)>;
+    std::function<std::unique_ptr<action::Action>(BuildContext const &)>;
 
 struct ActionFactory {
   std::string name;
   action_build_t builder;
   std::size_t weight;
+  ActionType type = ActionType::other;
 };
 
 class ActionRegistry {
@@ -35,10 +46,12 @@ public:
   ActionFactory &getReference(std::string const &name);
 
   void makeCustomSqlAction(std::string const &name, std::string const &sql,
-                           std::size_t weight);
+                           std::size_t weight,
+                           ActionType type = ActionType::other);
 
   void makeCustomTableSqlAction(std::string const &name, std::string const &sql,
-                                std::size_t weight);
+                                std::size_t weight,
+                                ActionType type = ActionType::other);
 
   void use(ActionRegistry const &other);
 
@@ -47,6 +60,9 @@ public:
   bool has(std::string name) const;
 
   ActionFactory lookupByWeightOffset(std::size_t offset) const;
+
+  ActionRegistry
+  filtered(std::function<bool(ActionFactory const &)> const &pred) const;
 
 private:
   std::vector<ActionFactory> factories;

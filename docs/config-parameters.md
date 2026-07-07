@@ -41,6 +41,31 @@ pg.add_config({
 })
 ```
 
+## Action configuration
+
+Actions read their knobs from `sw.AllConfig` (`WorkloadParams.action_config`),
+not from the TOML file - see [Writing scenarios](writing-scenarios.md) for how
+a scenario builds one. The `transaction` action (see
+[Transactions](transactions.md)) reads `AllConfig.transaction`
+(`TransactionConfig`):
+
+| Knob | Default | Meaning |
+| --- | --- | --- |
+| `transaction.min_sub_actions` | 2 | Minimum number of sub-actions run inside one transaction |
+| `transaction.max_sub_actions` | 10 | Maximum number of sub-actions run inside one transaction |
+| `transaction.commit_prob` | 95 | Percent chance the transaction ends with `COMMIT` instead of `ROLLBACK` |
+| `transaction.rollback_to_savepoint_prob` | 10 | Percent chance, per successful sub-action in `savepoint` mode, of rewinding to a random earlier savepoint |
+| `transaction.error_mode` | `"savepoint"` | `"savepoint"` rolls back to a per-sub-action savepoint on failure; `"abort"` rolls back the whole transaction on the first failure |
+| `transaction.mysql_ddl_mode` | `"mirror"` | `"mirror"` keeps DDL in the pool and models MySQL's implicit commit truthfully; `"exclude"` filters DDL out so MySQL transactions stay DML-only |
+| `transaction.isolation_weights.server_default` | 1 | Relative weight for leaving the isolation level at the server default |
+| `transaction.isolation_weights.read_committed` | 1 | Relative weight for `READ COMMITTED` |
+| `transaction.isolation_weights.repeatable_read` | 1 | Relative weight for `REPEATABLE READ` |
+| `transaction.isolation_weights.serializable` | 1 | Relative weight for `SERIALIZABLE` |
+
+The `transaction` action's own selection frequency is not a config field -
+it's the registry weight, same as any other action: `registry.get("transaction").weight`
+to tune it, `registry.remove("transaction")` to disable it.
+
 ## Build-time configuration
 
 See [Building from source](building.md) for CMake presets (`debug`, `asan-ubsan`, `tsan`) and the Conan `cppstd=gnu23` profile requirement.

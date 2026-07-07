@@ -341,3 +341,11 @@ TEST_CASE("Statistics edge cases", "[statistics][edge]") {
     REQUIRE(stats.sqlErrorCodes.count("") == 1);
   }
 }
+
+TEST_CASE("conflict bucket", "[statistics]") {
+  statistics::WorkerStatistics stats;
+  stats.startAction("transaction");
+  stats.recordConflict("transaction", "40001");
+  REQUIRE(stats.actionStats.at("transaction").sqlConflictCount == 1);
+  REQUIRE(stats.getTotalFailureCount() == 1);
+}

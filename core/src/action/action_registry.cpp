@@ -5,6 +5,7 @@
 
 #include "action/action_registry.hpp"
 #include "action/dml.hpp"
+#include "action/transaction.hpp"
 
 namespace {
 
@@ -24,7 +25,8 @@ ActionRegistry initializeDefaultRegisty() {
   ActionFactory createNormalTable{
       .name = "create_normal_table",
       .builder =
-          [](AllConfig const &config) {
+          [](BuildContext const &bctx) {
+            auto const &config = bctx.config;
             auto ctx = std::make_unique<TableRef>();
             auto createTable = std::make_unique<CreateTable>(
                 config.ddl, metadata::Table::Type::normal);
@@ -41,12 +43,14 @@ ActionRegistry initializeDefaultRegisty() {
                                [c = ctx.get()]() { return c->ptr; }),
                     1));
           },
-      .weight = 100};
+      .weight = 100,
+      .type = ActionType::ddl};
 
   ActionFactory createPartitionedTable{
       .name = "create_partitioned_table",
       .builder =
-          [](AllConfig const &config) {
+          [](BuildContext const &bctx) {
+            auto const &config = bctx.config;
             auto ctx = std::make_unique<TableRef>();
             auto createTable = std::make_unique<CreateTable>(
                 config.ddl, metadata::Table::Type::partitioned);
@@ -63,86 +67,108 @@ ActionRegistry initializeDefaultRegisty() {
                                [c = ctx.get()]() { return c->ptr; }),
                     1));
           },
-      .weight = 100};
+      .weight = 100,
+      .type = ActionType::ddl};
 
   ActionFactory dropTable{.name = "drop_table",
                           .builder =
-                              [](AllConfig const &config) {
-                                return std::make_unique<DropTable>(config.ddl);
+                              [](BuildContext const &bctx) {
+                                return std::make_unique<DropTable>(
+                                    bctx.config.ddl);
                               },
-                          .weight = 100};
+                          .weight = 100,
+                          .type = ActionType::ddl};
 
   ActionFactory alterTable{.name = "alter_table",
                            .builder =
-                               [](AllConfig const &config) {
+                               [](BuildContext const &bctx) {
                                  return std::make_unique<AlterTable>(
-                                     config.ddl,
+                                     bctx.config.ddl,
                                      BitFlags<AlterSubcommand>::AllSet());
                                },
-                           .weight = 100};
+                           .weight = 100,
+                           .type = ActionType::ddl};
 
   ActionFactory renameTable{.name = "rename_table",
                             .builder =
-                                [](AllConfig const &config) {
+                                [](BuildContext const &bctx) {
                                   return std::make_unique<RenameTable>(
-                                      config.ddl);
+                                      bctx.config.ddl);
                                 },
-                            .weight = 100};
+                            .weight = 100,
+                            .type = ActionType::ddl};
 
   ActionFactory createIndex{.name = "create_index",
                             .builder =
-                                [](AllConfig const &config) {
+                                [](BuildContext const &bctx) {
                                   return std::make_unique<CreateIndex>(
-                                      config.ddl);
+                                      bctx.config.ddl);
                                 },
-                            .weight = 100};
+                            .weight = 100,
+                            .type = ActionType::ddl};
 
   ActionFactory dropIndex{.name = "drop_index",
                           .builder =
-                              [](AllConfig const &config) {
-                                return std::make_unique<DropIndex>(config.ddl);
+                              [](BuildContext const &bctx) {
+                                return std::make_unique<DropIndex>(
+                                    bctx.config.ddl);
                               },
-                          .weight = 100};
+                          .weight = 100,
+                          .type = ActionType::ddl};
 
   ActionFactory createPartition{.name = "create_partition",
                                 .builder =
-                                    [](AllConfig const &config) {
+                                    [](BuildContext const &bctx) {
                                       return std::make_unique<CreatePartition>(
-                                          config.ddl);
+                                          bctx.config.ddl);
                                     },
-                                .weight = 100};
+                                .weight = 100,
+                                .type = ActionType::ddl};
 
   ActionFactory dropPartition{.name = "drop_partition",
                               .builder =
-                                  [](AllConfig const &config) {
+                                  [](BuildContext const &bctx) {
                                     return std::make_unique<DropPartition>(
-                                        config.ddl);
+                                        bctx.config.ddl);
                                   },
-                              .weight = 100};
+                              .weight = 100,
+                              .type = ActionType::ddl};
 
   ActionFactory insertSomeData{.name = "insert_some_data",
                                .builder =
-                                   [](AllConfig const &config) {
+                                   [](BuildContext const &bctx) {
                                      return std::make_unique<InsertData>(
-                                         config.dml, 10);
+                                         bctx.config.dml, 10);
                                    },
-                               .weight = 1000};
+                               .weight = 1000,
+                               .type = ActionType::dml};
 
   ActionFactory deleteSomeData{.name = "delete_some_data",
                                .builder =
-                                   [](AllConfig const &config) {
+                                   [](BuildContext const &bctx) {
                                      return std::make_unique<DeleteData>(
-                                         config.dml);
+                                         bctx.config.dml);
                                    },
-                               .weight = 1000};
+                               .weight = 1000,
+                               .type = ActionType::dml};
 
   ActionFactory updateOneRow{.name = "update_one_row",
                              .builder =
-                                 [](AllConfig const &config) {
+                                 [](BuildContext const &bctx) {
                                    return std::make_unique<UpdateOneRow>(
-                                       config.dml);
+                                       bctx.config.dml);
                                  },
-                             .weight = 1000};
+                             .weight = 1000,
+                             .type = ActionType::dml};
+
+  ActionFactory transaction{.name = "transaction",
+                            .builder =
+                                [](BuildContext const &bctx) {
+                                  return std::make_unique<TransactionAction>(
+                                      bctx.config, bctx.registry);
+                                },
+                            .weight = 100,
+                            .type = ActionType::transaction};
 
   ar.insert(createNormalTable);
   ar.insert(createPartitionedTable);
@@ -156,6 +182,7 @@ ActionRegistry initializeDefaultRegisty() {
   ar.insert(insertSomeData);
   ar.insert(deleteSomeData);
   ar.insert(updateOneRow);
+  ar.insert(transaction);
 
   return ar;
 }
@@ -288,27 +315,31 @@ ActionFactory ActionRegistry::lookupByWeightOffset(std::size_t offset) const {
 
 void ActionRegistry::makeCustomSqlAction(std::string const &name,
                                          std::string const &sql,
-                                         std::size_t weight) {
+                                         std::size_t weight, ActionType type) {
   insert(ActionFactory{.name = name,
                        .builder =
-                           [sql](AllConfig const &config) {
+                           [sql](BuildContext const &bctx) {
                              return std::make_unique<CustomSql>(
-                                 config.custom, sql, CustomSql::inject_t{});
+                                 bctx.config.custom, sql,
+                                 CustomSql::inject_t{});
                            },
-                       .weight = weight});
+                       .weight = weight,
+                       .type = type});
 }
 
 void ActionRegistry::makeCustomTableSqlAction(std::string const &name,
                                               std::string const &sql,
-                                              std::size_t weight) {
+                                              std::size_t weight,
+                                              ActionType type) {
   insert(ActionFactory{.name = name,
                        .builder =
-                           [sql](AllConfig const &config) {
+                           [sql](BuildContext const &bctx) {
                              return std::make_unique<CustomSql>(
-                                 config.custom, sql,
+                                 bctx.config.custom, sql,
                                  CustomSql::inject_t{"table"});
                            },
-                       .weight = weight});
+                       .weight = weight,
+                       .type = type});
 }
 
 ActionRegistry &default_registry(sql_variant::flavor flav) {
@@ -326,5 +357,22 @@ ActionRegistry &default_registy() {
 }
 
 void ActionRegistry::use(ActionRegistry const &other) { *this = other; }
+
+ActionRegistry ActionRegistry::filtered(
+    std::function<bool(ActionFactory const &)> const &pred) const {
+  // run pred outside the lock so it can call back into the registry
+  std::vector<ActionFactory> copy;
+  {
+    std::unique_lock<std::mutex> lk(mutex);
+    copy = factories;
+  }
+  ActionRegistry out;
+  for (auto const &f : copy) {
+    if (pred(f)) {
+      out.factories.push_back(f);
+    }
+  }
+  return out;
+}
 
 } // namespace action

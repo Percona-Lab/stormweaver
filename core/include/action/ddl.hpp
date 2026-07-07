@@ -29,7 +29,7 @@ public:
 
   void setSuccessCallback(TableCallback const &cb);
 
-  void execute(metadata::TableRegistry &metaCtx, ps_random &rand,
+  void execute(metadata::Context &metaCtx, ps_random &rand,
                sql_variant::LoggedSQL *connection) const override;
 
 private:
@@ -42,7 +42,7 @@ class DropTable : public Action {
 public:
   DropTable(DdlConfig config);
 
-  void execute(metadata::TableRegistry &metaCtx, ps_random &rand,
+  void execute(metadata::Context &metaCtx, ps_random &rand,
                sql_variant::LoggedSQL *connection) const override;
 
 private:
@@ -62,7 +62,7 @@ public:
   AlterTable(DdlConfig config,
              BitFlags<AlterSubcommand> const &possibleCommands);
 
-  void execute(metadata::TableRegistry &metaCtx, ps_random &rand,
+  void execute(metadata::Context &metaCtx, ps_random &rand,
                sql_variant::LoggedSQL *connection) const override;
 
 private:
@@ -74,7 +74,7 @@ class RenameTable : public Action {
 public:
   RenameTable(DdlConfig config);
 
-  void execute(metadata::TableRegistry &metaCtx, ps_random &rand,
+  void execute(metadata::Context &metaCtx, ps_random &rand,
                sql_variant::LoggedSQL *connection) const override;
 
 private:
@@ -85,7 +85,7 @@ class CreateIndex : public Action {
 public:
   CreateIndex(DdlConfig config);
 
-  void execute(metadata::TableRegistry &metaCtx, ps_random &rand,
+  void execute(metadata::Context &metaCtx, ps_random &rand,
                sql_variant::LoggedSQL *connection) const override;
 
 private:
@@ -96,7 +96,7 @@ class DropIndex : public Action {
 public:
   DropIndex(DdlConfig config);
 
-  void execute(metadata::TableRegistry &metaCtx, ps_random &rand,
+  void execute(metadata::Context &metaCtx, ps_random &rand,
                sql_variant::LoggedSQL *connection) const override;
 
 private:
@@ -107,7 +107,7 @@ class CreatePartition : public Action {
 public:
   CreatePartition(DdlConfig config);
 
-  void execute(metadata::TableRegistry &metaCtx, ps_random &rand,
+  void execute(metadata::Context &metaCtx, ps_random &rand,
                sql_variant::LoggedSQL *connection) const override;
 
 private:
@@ -118,7 +118,7 @@ class DropPartition : public Action {
 public:
   DropPartition(DdlConfig config);
 
-  void execute(metadata::TableRegistry &metaCtx, ps_random &rand,
+  void execute(metadata::Context &metaCtx, ps_random &rand,
                sql_variant::LoggedSQL *connection) const override;
 
 private:

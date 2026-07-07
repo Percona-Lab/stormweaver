@@ -36,4 +36,25 @@ Concretely:
 
 ## Registering vs configuring
 
-`registry.register_python(name, weight, fn)` is what `@sw.action` calls under the hood. Use `registry.has(name)` / `registry.remove(name)` to trim built-in actions (e.g. dropping partition actions for a simpler schema), and `registry.get(name)` to inspect/tweak weight after registration.
+`registry.register_python(name, weight, fn, action_type)` is what `@sw.action` calls under the hood. Use `registry.has(name)` / `registry.remove(name)` to trim built-in actions (e.g. dropping partition actions for a simpler schema), and `registry.get(name)` to inspect/tweak weight after registration.
+
+`action_type` (`"ddl"`, `"dml"`, or `"other"`, default `"other"`) tags what kind of SQL the action runs. It's not just bookkeeping: the [`transaction`](transactions.md) action uses it to decide which sub-actions to pick, and on MySQL, to detect an implicit commit caused by DDL. If your custom action runs `CREATE`/`DROP`/`ALTER` (or anything else non-transactional on MySQL), register it with `action_type="ddl"` - otherwise `mysql_ddl_mode="mirror"` won't know to treat it as a potential implicit-commit point, and `mysql_ddl_mode="exclude"` won't filter it out of transaction pools.
+
+```python
+@sw.action(registry, "my_ddl_action", weight=10, action_type="ddl")
+def my_ddl_action(metadata, rand, connection):
+    connection.execute("ALTER TABLE ...")
+```
+
+## Rules for actions run inside a transaction
+
+Custom actions can be picked as sub-actions of the built-in `transaction`
+action (see [Transactions](transactions.md)) the same way as any other
+registered action. Because `transaction` owns the transaction's framing:
+
+* **Never issue your own `BEGIN`, `COMMIT`, `ROLLBACK`, or `SAVEPOINT`** from
+  inside an action's `fn`. `transaction` already manages these around and
+  between sub-actions; a stray one from Python would desynchronize the
+  buffered metadata from the connection's real transaction state.
+* Tag any action that runs DDL with `action_type="ddl"` as described above,
+  so MySQL's implicit-commit handling works correctly.

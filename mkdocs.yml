@@ -11,6 +11,7 @@ nav:
   - Building from source: building.md
   - Writing scenarios: writing-scenarios.md
   - Python actions: python-actions.md
+  - Transactions: transactions.md
   - Stable tests: stable-tests.md
   - Determinism: determinism.md
   - Server wrappers: wrappers.md

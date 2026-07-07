@@ -27,6 +27,7 @@ struct ActionStatistics {
   uint64_t actionFailureCount = 0;
   uint64_t sqlFailureCount = 0;
   uint64_t otherFailureCount = 0;
+  uint64_t sqlConflictCount = 0;
 
   std::map<std::string, uint64_t> actionErrorNames;
   std::map<std::string, uint64_t> sqlErrorCodes;
@@ -50,6 +51,9 @@ struct ActionStatistics {
       const std::string &errorCode,
       std::chrono::nanoseconds sqlTime = std::chrono::nanoseconds{0});
   void recordOtherFailure(
+      std::chrono::nanoseconds sqlTime = std::chrono::nanoseconds{0});
+  void recordConflict(
+      const std::string &errorCode,
       std::chrono::nanoseconds sqlTime = std::chrono::nanoseconds{0});
   [[nodiscard]] uint64_t getTotalCount() const;
   [[nodiscard]] uint64_t getTotalFailureCount() const;
@@ -76,6 +80,9 @@ struct WorkerStatistics {
       std::chrono::nanoseconds sqlTime = std::chrono::nanoseconds{0});
   void recordOtherFailure(
       const std::string &actionName,
+      std::chrono::nanoseconds sqlTime = std::chrono::nanoseconds{0});
+  void recordConflict(
+      const std::string &actionName, const std::string &errorCode,
       std::chrono::nanoseconds sqlTime = std::chrono::nanoseconds{0});
   void start();
   void stop();

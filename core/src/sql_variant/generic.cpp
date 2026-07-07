@@ -26,6 +26,7 @@ ServerInfo LoggedSQL::serverInfo() const { return sql->serverInfo(); }
 QueryResult LoggedSQL::executeQuery(std::string const &query) const {
   logger->info("Statement: {}", query);
 
+  ++queryCount;
   auto res = sql->executeQuery(query);
   accumulatedSqlTime += res.executionTime;
 
@@ -70,5 +71,7 @@ std::chrono::nanoseconds LoggedSQL::getAccumulatedSqlTime() const {
 void LoggedSQL::resetAccumulatedSqlTime() {
   accumulatedSqlTime = std::chrono::nanoseconds{0};
 }
+
+std::uint64_t LoggedSQL::getQueryCount() const { return queryCount; }
 
 } // namespace sql_variant

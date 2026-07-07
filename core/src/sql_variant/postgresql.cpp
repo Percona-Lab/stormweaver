@@ -98,6 +98,16 @@ std::string build_connection_string(sql_variant::ServerParams const &params) {
 
 namespace sql_variant {
 
+ErrorClass classify_pg_sqlstate(std::string_view sqlstate) {
+  if (sqlstate == "40001" || sqlstate == "40P01") {
+    return ErrorClass::conflict;
+  }
+  if (sqlstate == "25P02") {
+    return ErrorClass::failedTxn;
+  }
+  return ErrorClass::other;
+}
+
 PostgreSQL::PostgreSQL(ServerParams const &params) try
     : params(params), connection(std::make_unique<pqxx::connection>(
                           build_connection_string(params))) {
@@ -140,6 +150,7 @@ QueryResult PostgreSQL::executeQuery(std::string const &query) const {
     result.errorInfo.errorCode = e.sqlstate();
     result.errorInfo.errorMessage = e.what();
     result.errorInfo.errorStatus = SqlStatus::error;
+    result.errorInfo.errorClass = classify_pg_sqlstate(e.sqlstate());
   } catch (pqxx::broken_connection const &e) {
     const auto end = std::chrono::high_resolution_clock::now();
     result.executionTime = end - result.executedAt;
@@ -147,6 +158,7 @@ QueryResult PostgreSQL::executeQuery(std::string const &query) const {
     result.errorInfo.errorCode = "0";
     result.errorInfo.errorMessage = e.what();
     result.errorInfo.errorStatus = SqlStatus::serverGone;
+    result.errorInfo.errorClass = ErrorClass::serverGone;
   }
 
   return result;

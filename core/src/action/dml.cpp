@@ -14,7 +14,7 @@ namespace {
 
 std::string generate_value(metadata::Column const &col, ps_random &rand,
                            std::optional<RangePartitioning> const &rp,
-                           metadata::Catalog<metadata::Table> const &tables,
+                           metadata::CatalogView<metadata::Table> const &tables,
                            sql_dialect::Dialect const &dialect) {
   if (col.partition_key) {
     // Query will fail, but at least we don't crash
@@ -63,12 +63,12 @@ InsertData::InsertData(DmlConfig const &config, std::size_t rows,
                        TableLocator locator)
     : config(config), locator(std::move(locator)), rows(rows) {}
 
-void InsertData::execute(TableRegistry &metaCtx, ps_random &rand,
+void InsertData::execute(Context &metaCtx, ps_random &rand,
                          sql_variant::LoggedSQL *connection) const {
   auto const serverInfo = connection->serverInfo();
   auto const &dialect = sql_dialect::dialect_for(serverInfo);
 
-  auto const &tables = metaCtx.get<Table>();
+  auto const tables = metaCtx.get<Table>();
 
   table_cptr table = locator ? locator() : find_random_table(metaCtx, rand);
   if (table == nullptr) {
@@ -119,7 +119,7 @@ void InsertData::execute(TableRegistry &metaCtx, ps_random &rand,
 
 DeleteData::DeleteData(DmlConfig const &config) : config(config) {}
 
-void DeleteData::execute(TableRegistry &metaCtx, ps_random &rand,
+void DeleteData::execute(Context &metaCtx, ps_random &rand,
                          sql_variant::LoggedSQL *connection) const {
   auto const serverInfo = connection->serverInfo();
   auto const &dialect = sql_dialect::dialect_for(serverInfo);
@@ -142,12 +142,12 @@ void DeleteData::execute(TableRegistry &metaCtx, ps_random &rand,
 
 UpdateOneRow::UpdateOneRow(DmlConfig const &config) : config(config) {}
 
-void UpdateOneRow::execute(TableRegistry &metaCtx, ps_random &rand,
+void UpdateOneRow::execute(Context &metaCtx, ps_random &rand,
                            sql_variant::LoggedSQL *connection) const {
   auto const serverInfo = connection->serverInfo();
   auto const &dialect = sql_dialect::dialect_for(serverInfo);
 
-  auto const &tables = metaCtx.get<Table>();
+  auto const tables = metaCtx.get<Table>();
 
   table_cptr table = find_random_table(metaCtx, rand);
 
