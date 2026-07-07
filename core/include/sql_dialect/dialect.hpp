@@ -68,6 +68,9 @@ public:
   // dropping a column that participates in a FK without dropping the
   // constraint first
   [[nodiscard]] virtual bool canDropFkColumn() const = 0;
+  // pg drops the whole dependent index when an indexed column is dropped;
+  // mysql only removes the column from the index (index stays unless empty)
+  [[nodiscard]] virtual bool dropColumnRemovesWholeIndex() const = 0;
   [[nodiscard]] virtual std::size_t maxIndexColumns() const = 0;
   [[nodiscard]] virtual std::size_t maxIndexesPerTable() const = 0;
 

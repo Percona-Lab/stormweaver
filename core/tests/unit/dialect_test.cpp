@@ -105,6 +105,7 @@ TEST_CASE("pg addPartition / dropPartition", "[dialect]") {
   REQUIRE_FALSE(dialect.partitionsInlineInCreate());
   REQUIRE(dialect.supportsFkOnPartitionedTables());
   REQUIRE(dialect.canDropFkColumn());
+  REQUIRE(dialect.dropColumnRemovesWholeIndex());
   REQUIRE(dialect.maxIndexColumns() == 32);
 }
 
@@ -220,6 +221,7 @@ TEST_CASE("mysql addPartition / dropPartition", "[dialect]") {
   REQUIRE(dialect.partitionsInlineInCreate());
   REQUIRE_FALSE(dialect.supportsFkOnPartitionedTables());
   REQUIRE_FALSE(dialect.canDropFkColumn());
+  REQUIRE_FALSE(dialect.dropColumnRemovesWholeIndex());
   REQUIRE(dialect.maxIndexColumns() == 16);
   REQUIRE(dialect.maxIndexesPerTable() == 60);
 }

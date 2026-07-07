@@ -157,6 +157,10 @@ public:
   // mysql needs the FK constraint dropped before the column
   [[nodiscard]] bool canDropFkColumn() const override { return false; }
 
+  [[nodiscard]] bool dropColumnRemovesWholeIndex() const override {
+    return false;
+  }
+
   // innodb limits: 16 key parts per index, 64 keys per table (margin kept)
   [[nodiscard]] std::size_t maxIndexColumns() const override { return 16; }
 

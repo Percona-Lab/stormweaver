@@ -132,6 +132,10 @@ public:
 
   [[nodiscard]] bool canDropFkColumn() const override { return true; }
 
+  [[nodiscard]] bool dropColumnRemovesWholeIndex() const override {
+    return true;
+  }
+
   [[nodiscard]] std::size_t maxIndexColumns() const override { return 32; }
 
   [[nodiscard]] std::size_t maxIndexesPerTable() const override {
