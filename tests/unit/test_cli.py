@@ -64,3 +64,40 @@ def test_cli_records_missing_main_as_failed(tmp_path, monkeypatch, _restore_log_
     outcomes = list(Path("logs").glob("*/outcome"))
     assert len(outcomes) == 1
     assert "scenario result=failed" in outcomes[0].read_text()
+
+
+def _main_log(base=Path("logs")):
+    return next(base.glob("*/main.log")).read_text()
+
+
+def test_cli_expected_error_is_clean(tmp_path, monkeypatch, _restore_log_state):
+    monkeypatch.chdir(tmp_path)
+    scen = tmp_path / "scen.py"
+    scen.write_text("def main(args):\n    raise RuntimeError('rr not found')\n")
+    assert main([str(scen)]) == 1
+    log = _main_log()
+    assert "scenario failed: rr not found" in log
+    assert "Traceback" not in log
+
+
+def test_cli_expected_error_traceback_with_verbose(
+    tmp_path, monkeypatch, _restore_log_state
+):
+    monkeypatch.chdir(tmp_path)
+    scen = tmp_path / "scen.py"
+    scen.write_text("def main(args):\n    raise RuntimeError('rr not found')\n")
+    assert main(["-v", str(scen)]) == 1
+    assert "Traceback" in _main_log()
+
+
+def test_cli_unexpected_error_keeps_traceback(
+    tmp_path, monkeypatch, _restore_log_state
+):
+    monkeypatch.chdir(tmp_path)
+    scen = tmp_path / "scen.py"
+    scen.write_text("def main(args):\n    raise KeyError('oops')\n")
+    assert main([str(scen)]) == 1
+    log = _main_log()
+    assert "Traceback" in log
+    outcomes = list(Path("logs").glob("*/outcome"))
+    assert "scenario result=failed" in outcomes[0].read_text()

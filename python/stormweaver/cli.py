@@ -6,9 +6,13 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
+from stormweaver.entropy import EncryptionMismatchError
 from stormweaver.log import init_run_logging, record_outcome
 
 logger = logging.getLogger(__name__)
+
+# scenario-facing failures raised on purpose, message is enough for these
+EXPECTED_ERRORS = (RuntimeError, ValueError, EncryptionMismatchError)
 
 
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
@@ -81,6 +85,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 1
 
         result = module.main(args)
+    except EXPECTED_ERRORS as e:
+        logger.error("scenario failed: %s", e)
+        logger.debug("traceback:", exc_info=True)
+        record_outcome("scenario result=failed")
+        return 1
     except Exception:
         logger.exception("scenario failed")
         record_outcome("scenario result=failed")
