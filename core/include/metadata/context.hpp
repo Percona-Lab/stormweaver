@@ -319,6 +319,11 @@ public:
     return CatalogView<T>(reg_->get<T>(), txn_);
   }
 
+  // a TxnBuffer is attached iff a server-side transaction is open;
+  // TransactionAction maintains this (its post-implicit-commit tail runs
+  // sub-actions with the unbuffered context)
+  [[nodiscard]] bool inTransaction() const { return txn_ != nullptr; }
+
   ObjectId nextId() { return reg_->nextId(); }
 
   TableRegistry &registry() { return *reg_; }

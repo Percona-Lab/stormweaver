@@ -161,6 +161,24 @@ ActionRegistry initializeDefaultRegisty() {
                              .weight = 1000,
                              .type = ActionType::dml};
 
+  ActionFactory deleteSelected{.name = "delete_selected",
+                               .builder =
+                                   [](BuildContext const &bctx) {
+                                     return std::make_unique<SelectThenDelete>(
+                                         bctx.config.dml);
+                                   },
+                               .weight = 1000,
+                               .type = ActionType::dml};
+
+  ActionFactory updateSelected{.name = "update_selected",
+                               .builder =
+                                   [](BuildContext const &bctx) {
+                                     return std::make_unique<SelectThenUpdate>(
+                                         bctx.config.dml);
+                                   },
+                               .weight = 1000,
+                               .type = ActionType::dml};
+
   ActionFactory transaction{.name = "transaction",
                             .builder =
                                 [](BuildContext const &bctx) {
@@ -182,6 +200,8 @@ ActionRegistry initializeDefaultRegisty() {
   ar.insert(insertSomeData);
   ar.insert(deleteSomeData);
   ar.insert(updateOneRow);
+  ar.insert(deleteSelected);
+  ar.insert(updateSelected);
   ar.insert(transaction);
 
   return ar;

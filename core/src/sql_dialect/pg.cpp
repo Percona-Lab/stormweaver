@@ -124,6 +124,14 @@ public:
                        columnName, tableName, limit);
   }
 
+  [[nodiscard]] std::string randomRowsSelect(std::string_view tableName,
+                                             std::string_view columnName,
+                                             std::size_t limit,
+                                             LockClause lock) const override {
+    return fmt::format("SELECT {} FROM {} ORDER BY random() LIMIT {}{};",
+                       columnName, tableName, limit, lockClauseSuffix(lock));
+  }
+
   [[nodiscard]] bool partitionsInlineInCreate() const override { return false; }
 
   [[nodiscard]] bool supportsFkOnPartitionedTables() const override {

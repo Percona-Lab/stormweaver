@@ -1,4 +1,5 @@
 #include "action/transaction.hpp"
+#include "action/helper.hpp"
 #include "metadata/context.hpp"
 #include "sql_dialect/dialect.hpp"
 
@@ -10,30 +11,6 @@
 using namespace action;
 
 namespace {
-
-// rolls the server-side transaction back unless disarmed. the worker
-// reuses this connection for every subsequent action; leaking an open
-// transaction would poison all of them.
-class TxGuard {
-public:
-  explicit TxGuard(sql_variant::LoggedSQL *conn) : conn(conn) {}
-  TxGuard(TxGuard const &) = delete;
-  TxGuard &operator=(TxGuard const &) = delete;
-  void disarm() { armed = false; }
-  ~TxGuard() {
-    if (armed) {
-      // best effort; must never throw during unwind
-      try {
-        std::ignore = conn->executeQuery("ROLLBACK;");
-      } catch (...) { // NOLINT(bugprone-empty-catch)
-      }
-    }
-  }
-
-private:
-  sql_variant::LoggedSQL *conn;
-  bool armed = true;
-};
 
 sql_dialect::IsolationLevel pickIsolation(ps_random &rand,
                                           IsolationWeights const &w) {

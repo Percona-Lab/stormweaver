@@ -4,8 +4,11 @@
 #include "sql_dialect/dialect.hpp"
 
 #include <fmt/format.h>
+#include <fmt/ranges.h>
+#include <optional>
 #include <rfl.hpp>
 #include <utility>
+#include <vector>
 
 using namespace metadata;
 using namespace action;
@@ -54,6 +57,73 @@ std::string generate_value(metadata::Column const &col, ps_random &rand,
     return std::string("'") + rand.random_string(0, col.length) + "'";
   }
   return "";
+}
+
+sql_dialect::LockClause pick_lock(ps_random &rand,
+                                  action::LockWeights const &w) {
+  const std::size_t total = w.none + w.for_update + w.for_share;
+  if (total == 0) {
+    return sql_dialect::LockClause::none;
+  }
+  auto roll = rand.random_number<std::size_t>(1, total);
+  if (roll <= w.none) {
+    return sql_dialect::LockClause::none;
+  }
+  roll -= w.none;
+  if (roll <= w.for_update) {
+    return sql_dialect::LockClause::forUpdate;
+  }
+  return sql_dialect::LockClause::forShare;
+}
+
+std::vector<std::string> fetch_random_ids(sql_variant::LoggedSQL *connection,
+                                          sql_dialect::Dialect const &dialect,
+                                          std::string_view tableName,
+                                          std::string_view pkName,
+                                          std::size_t limit,
+                                          sql_dialect::LockClause lock) {
+  auto res = connection->executeQuery(
+      dialect.randomRowsSelect(tableName, pkName, limit, lock));
+  res.maybeThrow();
+  std::vector<std::string> ids;
+  if (res.data == nullptr) {
+    return ids;
+  }
+  const auto rows = res.data->numRows();
+  ids.reserve(rows);
+  for (std::size_t i = 0; i < rows; ++i) {
+    auto const row = res.data->nextRow();
+    if (!row.rowData.empty() && row.rowData[0]) {
+      ids.emplace_back(*row.rowData[0]);
+    }
+  }
+  return ids;
+}
+
+// opens a transaction (arming the guard) only when not already in one;
+// inside an enclosing transaction rollback is its owner's job
+void maybe_begin_own_trx(metadata::Context const &metaCtx,
+                         sql_variant::LoggedSQL *connection,
+                         sql_dialect::Dialect const &dialect,
+                         std::optional<action::TxGuard> &guard) {
+  if (metaCtx.inTransaction()) {
+    return;
+  }
+  for (auto const &stmt :
+       dialect.beginStatements(sql_dialect::IsolationLevel::serverDefault)) {
+    connection->executeQuery(stmt).maybeThrow();
+  }
+  guard.emplace(connection);
+}
+
+void maybe_commit_own_trx(std::optional<action::TxGuard> &guard,
+                          sql_variant::LoggedSQL *connection) {
+  if (!guard) {
+    return;
+  }
+  auto res = connection->executeQuery("COMMIT;");
+  guard->disarm(); // success or failure, the transaction is over
+  res.maybeThrow();
 }
 }; // namespace
 
@@ -141,6 +211,38 @@ void DeleteData::execute(Context &metaCtx, ps_random &rand,
       .maybeThrow();
 }
 
+SelectThenDelete::SelectThenDelete(DmlConfig const &config) : config(config) {}
+
+void SelectThenDelete::execute(Context &metaCtx, ps_random &rand,
+                               sql_variant::LoggedSQL *connection) const {
+  auto const serverInfo = connection->serverInfo();
+  auto const &dialect = sql_dialect::dialect_for(serverInfo);
+
+  table_cptr table = find_random_table(metaCtx, rand);
+
+  auto const &tableName = table->name;
+  // TODO: assumes we have a single column primary key as the first column.
+  // Currently always true.
+  auto const &pkName = table->columns[0].name;
+  // all randomness up front: server state must not shift the rand stream
+  auto const rows = rand.random_number(config.deleteMin, config.deleteMax);
+  auto const lock = pick_lock(rand, config.lockWeights);
+
+  std::optional<TxGuard> guard;
+  maybe_begin_own_trx(metaCtx, connection, dialect, guard);
+
+  auto const ids =
+      fetch_random_ids(connection, dialect, tableName, pkName, rows, lock);
+  if (!ids.empty()) {
+    connection
+        ->executeQuery(fmt::format("DELETE FROM {} WHERE {} IN ({});",
+                                   tableName, pkName, fmt::join(ids, ", ")))
+        .maybeThrow();
+  }
+
+  maybe_commit_own_trx(guard, connection);
+}
+
 UpdateOneRow::UpdateOneRow(DmlConfig const &config) : config(config) {}
 
 void UpdateOneRow::execute(Context &metaCtx, ps_random &rand,
@@ -180,4 +282,57 @@ void UpdateOneRow::execute(Context &metaCtx, ps_random &rand,
   sql << ";";
 
   connection->executeQuery(sql.str()).maybeThrow();
+}
+
+SelectThenUpdate::SelectThenUpdate(DmlConfig const &config) : config(config) {}
+
+void SelectThenUpdate::execute(Context &metaCtx, ps_random &rand,
+                               sql_variant::LoggedSQL *connection) const {
+  auto const serverInfo = connection->serverInfo();
+  auto const &dialect = sql_dialect::dialect_for(serverInfo);
+
+  auto const tables = metaCtx.get<Table>();
+
+  table_cptr table = find_random_table(metaCtx, rand);
+
+  auto const &tableName = table->name;
+  // TODO: assumes we have a single column primary key as the first column.
+  // Currently always true.
+  auto const &pkName = table->columns[0].name;
+  // all randomness up front: server state must not shift the rand stream
+  auto const rows = rand.random_number(config.updateMin, config.updateMax);
+  auto const lock = pick_lock(rand, config.lockWeights);
+
+  std::stringstream setClause;
+  bool first = true;
+  for (auto const &f : table->columns) {
+    // pk/partition-key columns get a single constant value; setting them
+    // on a multi-row update collapses every matched row into one key
+    if (!f.auto_increment && !f.primary_key && !f.partition_key) {
+      if (!first) {
+        setClause << ", ";
+      }
+      setClause << f.name;
+      setClause << " = ";
+      setClause << generate_value(f, rand, table->partitioning, tables,
+                                  dialect);
+      first = false;
+    }
+  }
+
+  std::optional<TxGuard> guard;
+  maybe_begin_own_trx(metaCtx, connection, dialect, guard);
+
+  auto const ids =
+      fetch_random_ids(connection, dialect, tableName, pkName, rows, lock);
+  // !first: table may have no updatable columns left (empty SET)
+  if (!ids.empty() && !first) {
+    connection
+        ->executeQuery(fmt::format("UPDATE {} SET {} WHERE {} IN ({});",
+                                   tableName, setClause.str(), pkName,
+                                   fmt::join(ids, ", ")))
+        .maybeThrow();
+  }
+
+  maybe_commit_own_trx(guard, connection);
 }

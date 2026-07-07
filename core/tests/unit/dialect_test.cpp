@@ -157,6 +157,17 @@ TEST_CASE("pg randomRowSubquery", "[dialect]") {
           "(SELECT id FROM foo1 ORDER BY random() LIMIT 1)");
 }
 
+TEST_CASE("pg randomRowsSelect", "[dialect]") {
+  auto const &dialect = pg_dialect();
+
+  REQUIRE(dialect.randomRowsSelect("foo1", "id", 5, LockClause::none) ==
+          "SELECT id FROM foo1 ORDER BY random() LIMIT 5;");
+  REQUIRE(dialect.randomRowsSelect("foo1", "id", 5, LockClause::forUpdate) ==
+          "SELECT id FROM foo1 ORDER BY random() LIMIT 5 FOR UPDATE;");
+  REQUIRE(dialect.randomRowsSelect("foo1", "id", 5, LockClause::forShare) ==
+          "SELECT id FROM foo1 ORDER BY random() LIMIT 5 FOR SHARE;");
+}
+
 TEST_CASE("pg typeName", "[dialect]") {
   auto const &dialect = pg_dialect();
 
@@ -306,6 +317,17 @@ TEST_CASE("mysql randomRowSubquery", "[dialect]") {
   REQUIRE(dialect.randomRowSubquery("foo1", "id", 1) ==
           "(SELECT id FROM (SELECT id FROM foo1 ORDER BY RAND() LIMIT 1) AS "
           "swrnd)");
+}
+
+TEST_CASE("mysql randomRowsSelect", "[dialect]") {
+  auto const &dialect = mysql_dialect();
+
+  REQUIRE(dialect.randomRowsSelect("foo1", "id", 5, LockClause::none) ==
+          "SELECT id FROM foo1 ORDER BY RAND() LIMIT 5;");
+  REQUIRE(dialect.randomRowsSelect("foo1", "id", 5, LockClause::forUpdate) ==
+          "SELECT id FROM foo1 ORDER BY RAND() LIMIT 5 FOR UPDATE;");
+  REQUIRE(dialect.randomRowsSelect("foo1", "id", 5, LockClause::forShare) ==
+          "SELECT id FROM foo1 ORDER BY RAND() LIMIT 5 FOR SHARE;");
 }
 
 TEST_CASE("mysql typeName", "[dialect]") {

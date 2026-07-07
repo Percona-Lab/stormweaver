@@ -118,3 +118,63 @@ def test_python_action_exception_is_recorded_not_fatal():
     finally:
         pg.stop()
         shutil.rmtree(datadir, ignore_errors=True)
+
+
+def test_select_then_modify_actions_run():
+    pg, datadir = _start_pg(26312)
+    try:
+        user = os.environ.get("PGUSER") or getpass.getuser()
+
+        def connect() -> sw.LoggedSQL:
+            return sw.connect_pg(
+                host="localhost",
+                port=pg.port,
+                dbname="pyact",
+                user=user,
+                log_name="pyact-selmod",
+            )
+
+        # copy, never mutate the process-wide default registry (same
+        # convention as scenario._base_registry)
+        registry = sw.ActionRegistry()
+        registry.use(sw.default_action_registry())
+        for name in [
+            "drop_table",
+            "alter_table",
+            "rename_table",
+            "create_index",
+            "drop_index",
+            "drop_partition",
+            "delete_some_data",
+            "update_one_row",
+        ]:
+            if registry.has(name):
+                registry.remove(name)
+
+        metadata = sw.Metadata()
+        workload = sw.Workload(
+            workers=2,
+            duration=5,
+            repeat=1,
+            registry=registry,
+            metadata=metadata,
+            node_factory=connect,
+            action_config=sw.AllConfig(),
+            seed=1,
+            worker_name_prefix="pyact-selmod-",
+        )
+        workload.run()
+
+        stats = workload.worker_statistics()
+        deletes = sum(s.action_success_count("delete_selected") for s in stats)
+        updates = sum(s.action_success_count("update_selected") for s in stats)
+        transactions = sum(s.action_success_count("transaction") for s in stats)
+        # transaction sub-actions draw from the same registry, so the new
+        # actions also run inside transactions here; partitioned tables stay
+        # in the mix to cover the partition-key SET-clause exclusion
+        assert deletes > 0
+        assert updates > 0
+        assert transactions > 0
+    finally:
+        pg.stop()
+        shutil.rmtree(datadir, ignore_errors=True)

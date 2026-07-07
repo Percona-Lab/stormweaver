@@ -160,6 +160,16 @@ public:
         columnName, columnName, tableName, limit);
   }
 
+  [[nodiscard]] std::string randomRowsSelect(std::string_view tableName,
+                                             std::string_view columnName,
+                                             std::size_t limit,
+                                             LockClause lock) const override {
+    // FOR UPDATE here locks every scanned row on innodb (whole table),
+    // unlike pg which locks only the returned rows; intentional chaos
+    return fmt::format("SELECT {} FROM {} ORDER BY RAND() LIMIT {}{};",
+                       columnName, tableName, limit, lockClauseSuffix(lock));
+  }
+
   [[nodiscard]] bool partitionsInlineInCreate() const override { return true; }
 
   [[nodiscard]] bool supportsFkOnPartitionedTables() const override {

@@ -22,6 +22,20 @@ enum class IsolationLevel : std::uint8_t {
   serializable
 };
 
+enum class LockClause : std::uint8_t { none, forUpdate, forShare };
+
+[[nodiscard]] constexpr std::string_view lockClauseSuffix(LockClause lock) {
+  switch (lock) {
+  case LockClause::forUpdate:
+    return " FOR UPDATE";
+  case LockClause::forShare:
+    return " FOR SHARE";
+  case LockClause::none:
+    break;
+  }
+  return "";
+}
+
 /* Stateless SQL renderers. One instance per flavor family; obtained via
    dialect_for(connection->serverInfo()) at the top of Action::execute().
    Version/variant gating happens inside implementations using the
@@ -61,6 +75,12 @@ public:
   [[nodiscard]] virtual std::string
   randomRowSubquery(std::string_view tableName, std::string_view columnName,
                     std::size_t limit) const = 0;
+
+  // standalone statement, unlike randomRowSubquery; FOR SHARE needs
+  // mysql 8.0+ (the only supported mysql line)
+  [[nodiscard]] virtual std::string
+  randomRowsSelect(std::string_view tableName, std::string_view columnName,
+                   std::size_t limit, LockClause lock) const = 0;
 
   // capabilities
   [[nodiscard]] virtual bool partitionsInlineInCreate() const = 0;

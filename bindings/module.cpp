@@ -245,10 +245,19 @@ NB_MODULE(_stormweaver, m) {
       .def_rw("max_column_count", &action::DdlConfig::max_column_count)
       .def_rw("access_methods", &action::DdlConfig::access_methods);
 
+  nb::class_<action::LockWeights>(m, "LockWeights")
+      .def(nb::init<>())
+      .def_rw("none", &action::LockWeights::none)
+      .def_rw("for_update", &action::LockWeights::for_update)
+      .def_rw("for_share", &action::LockWeights::for_share);
+
   nb::class_<action::DmlConfig>(m, "DmlConfig")
       .def(nb::init<>())
       .def_rw("delete_min", &action::DmlConfig::deleteMin)
-      .def_rw("delete_max", &action::DmlConfig::deleteMax);
+      .def_rw("delete_max", &action::DmlConfig::deleteMax)
+      .def_rw("update_min", &action::DmlConfig::updateMin)
+      .def_rw("update_max", &action::DmlConfig::updateMax)
+      .def_rw("lock_weights", &action::DmlConfig::lockWeights);
 
   nb::class_<action::IsolationWeights>(m, "IsolationWeights")
       .def(nb::init<>())

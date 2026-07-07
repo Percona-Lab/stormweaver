@@ -256,3 +256,14 @@ TEST_CASE("byName masking is id-keyed: reused old name resolves", "[context]") {
   REQUIRE(rec->id == nid);
   REQUIRE(tables.byName("renamed")->id == gid);
 }
+
+TEST_CASE("Context reports transaction presence", "[context]") {
+  TableRegistry reg;
+
+  Context direct(reg);
+  REQUIRE(!direct.inTransaction());
+
+  TxnBuffer<Table> txn;
+  Context buffered(reg, &txn);
+  REQUIRE(buffered.inTransaction());
+}

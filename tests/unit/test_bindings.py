@@ -70,6 +70,25 @@ def test_transaction_config_roundtrip():
         cfg.transaction.error_mode = "explode"
 
 
+def test_dml_config_roundtrip():
+    cfg = sw.AllConfig()
+    assert cfg.dml.update_min == 1
+    assert cfg.dml.update_max == 10
+    assert cfg.dml.lock_weights.none == 1
+    assert cfg.dml.lock_weights.for_update == 1
+    assert cfg.dml.lock_weights.for_share == 1
+    cfg.dml.update_min = 2
+    cfg.dml.update_max = 5
+    cfg.dml.lock_weights.none = 0
+    cfg.dml.lock_weights.for_update = 3
+    cfg.dml.lock_weights.for_share = 2
+    assert cfg.dml.update_min == 2
+    assert cfg.dml.update_max == 5
+    assert cfg.dml.lock_weights.none == 0
+    assert cfg.dml.lock_weights.for_update == 3
+    assert cfg.dml.lock_weights.for_share == 2
+
+
 def test_connect_mysql_exists_and_fails_cleanly():
     with pytest.raises(RuntimeError):
         sw.connect_mysql(host="127.0.0.1", port=1, log_name="mysql-nope")
