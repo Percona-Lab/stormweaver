@@ -96,6 +96,12 @@ public:
   [[nodiscard]] virtual bool dropColumnRemovesWholeIndex() const = 0;
   [[nodiscard]] virtual std::size_t maxIndexColumns() const = 0;
   [[nodiscard]] virtual std::size_t maxIndexesPerTable() const = 0;
+  // total key size the server accepts at CREATE INDEX time; max() when the
+  // server doesn't enforce one at create time
+  [[nodiscard]] virtual std::size_t maxIndexKeyBytes() const = 0;
+  // worst-case key bytes one column contributes as an index part
+  [[nodiscard]] virtual std::size_t
+  indexKeyPartBytes(metadata::Column const &col) const = 0;
 
   // pg: DDL rolls back with the transaction. mysql: DDL implicitly commits.
   [[nodiscard]] virtual bool transactionalDDL() const = 0;

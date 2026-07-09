@@ -1,5 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <limits>
+
 #include "sql_dialect/dialect.hpp"
 
 using namespace metadata;
@@ -290,6 +292,34 @@ TEST_CASE("mysql createIndex: key-prefix on TEXT/BYTEA columns", "[dialect]") {
   auto sql = dialect.createIndex(table, index, opts);
 
   REQUIRE(sql == "CREATE  INDEX idx2 ON foo3 (data(32) ASC, note(32) DESC);");
+}
+
+TEST_CASE("mysql index key byte estimates", "[dialect]") {
+  auto const &dialect = mysql_dialect();
+
+  REQUIRE(dialect.maxIndexKeyBytes() == 3072);
+
+  Column col;
+  col.type = ColumnType::VARCHAR;
+  col.length = 100;
+  // utf8mb4 worst case: 4 bytes per char
+  REQUIRE(dialect.indexKeyPartBytes(col) == 400);
+  col.type = ColumnType::CHAR;
+  REQUIRE(dialect.indexKeyPartBytes(col) == 400);
+  // text/blob indexed via fixed 32 prefix
+  col.type = ColumnType::TEXT;
+  REQUIRE(dialect.indexKeyPartBytes(col) == 128);
+  col.type = ColumnType::BYTEA;
+  REQUIRE(dialect.indexKeyPartBytes(col) == 32);
+  col.type = ColumnType::INT;
+  REQUIRE(dialect.indexKeyPartBytes(col) == 8);
+}
+
+TEST_CASE("pg has no create-time index key size limit", "[dialect]") {
+  auto const &dialect = pg_dialect();
+
+  REQUIRE(dialect.maxIndexKeyBytes() ==
+          std::numeric_limits<std::size_t>::max());
 }
 
 TEST_CASE("mysql dropIndex", "[dialect]") {

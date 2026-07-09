@@ -152,6 +152,16 @@ public:
     return std::numeric_limits<std::size_t>::max();
   }
 
+  // pg only enforces index row size on insert, not at create index time
+  [[nodiscard]] std::size_t maxIndexKeyBytes() const override {
+    return std::numeric_limits<std::size_t>::max();
+  }
+
+  [[nodiscard]] std::size_t
+  indexKeyPartBytes(Column const & /*col*/) const override {
+    return 0;
+  }
+
   [[nodiscard]] bool transactionalDDL() const override { return true; }
 
   [[nodiscard]] std::vector<std::string>

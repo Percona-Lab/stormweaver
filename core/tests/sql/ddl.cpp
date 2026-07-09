@@ -106,6 +106,38 @@ TEST_CASE("drop column keeps dependent index metadata in sync", "[ddl]") {
   }
 }
 
+// regression: random index over wide varchar columns must respect the
+// server's key size limit (mysql 1071: max key length is 3072 bytes)
+TEST_CASE("create index stays under server key size limit", "[ddl]") {
+  testutil::resetTestSchema();
+  std::string cols;
+  for (int i = 0; i < 16; ++i) {
+    cols += fmt::format(", v{} VARCHAR(100)", i);
+  }
+  sqlConnection
+      ->executeQuery(
+          fmt::format("CREATE TABLE wideidx (id INT PRIMARY KEY{});", cols))
+      .maybeThrow();
+
+  metadata::TableRegistry reg;
+  populateFromDatabase(reg);
+  metadata::Context ctx(reg);
+
+  ps_random rand{20260709};
+  action::DdlConfig config;
+
+  // 50 draws: without a key byte budget some draw picks enough varchar
+  // columns to exceed the limit
+  for (int i = 0; i < 50; ++i) {
+    action::CreateIndex ci(config);
+    REQUIRE_NOTHROW(ci.execute(ctx, rand, sqlConnection.get()));
+  }
+
+  metadata::TableRegistry fresh;
+  populateFromDatabase(fresh);
+  REQUIRE(metadata::normalize(reg) == metadata::normalize(fresh));
+}
+
 // regression: pg's DROP TABLE <partition> CASCADE also drops FK constraints
 // referencing the partitioned parent; the catalog sweep must follow
 TEST_CASE("drop partition sweeps foreign keys referencing the parent",

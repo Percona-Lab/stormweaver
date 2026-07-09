@@ -490,13 +490,26 @@ void CreateIndex::execute(Context &metaCtx, ps_random &rand,
                          std::min<std::size_t>(availableColumns.size() - 1,
                                                dialect.maxIndexColumns()));
 
-  for (std::size_t i = 0; i < columnCount; ++i) {
-    const std::string columnName = snap->columns[availableColumns[i]].name;
+  const std::size_t maxKeyBytes = dialect.maxIndexKeyBytes();
+  std::size_t keyBytes = 0;
+  for (std::size_t i = 0;
+       i < availableColumns.size() && newIndex.fields.size() < columnCount;
+       ++i) {
+    auto const &column = snap->columns[availableColumns[i]];
+    const auto partBytes = dialect.indexKeyPartBytes(column);
+    if (partBytes > maxKeyBytes - keyBytes) {
+      // skip: key would exceed server limit
+      continue;
+    }
+    keyBytes += partBytes;
     const bool ascending = rand.random_bool();
     newIndex.fields.emplace_back(metadata::IndexColumn{
-        .column_name = columnName,
+        .column_name = column.name,
         .ordering = ascending ? metadata::IndexOrdering::asc
                               : metadata::IndexOrdering::desc});
+  }
+  if (newIndex.fields.empty()) {
+    return;
   }
 
   newIndex.unique = rand.random_bool();

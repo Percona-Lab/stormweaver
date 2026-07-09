@@ -190,6 +190,28 @@ public:
 
   [[nodiscard]] std::size_t maxIndexesPerTable() const override { return 60; }
 
+  // innodb rejects keys over 3072 bytes (error 1071)
+  [[nodiscard]] std::size_t maxIndexKeyBytes() const override { return 3072; }
+
+  // utf8mb4 worst case: 4 bytes per char
+  [[nodiscard]] std::size_t
+  indexKeyPartBytes(Column const &col) const override {
+    switch (col.type) {
+    case ColumnType::CHAR:
+    case ColumnType::VARCHAR:
+      return col.length * 4;
+    case ColumnType::TEXT:
+      return kTextIndexPrefixLength * 4;
+    case ColumnType::BYTEA:
+      return kTextIndexPrefixLength;
+    case ColumnType::BOOL:
+    case ColumnType::INT:
+    case ColumnType::REAL:
+      break;
+    }
+    return 8;
+  }
+
   [[nodiscard]] bool transactionalDDL() const override { return false; }
 
   [[nodiscard]] std::vector<std::string>
