@@ -11,7 +11,7 @@ def test_mysql_params_smoke():
         node.safe_sql("INSERT INTO t VALUES (?, ?)", (1, "it's"))
         assert node.safe_sql("SELECT b FROM t WHERE a = ?", (1,)) == [["it's"]]
         assert node.sql_value("SELECT count(*) FROM t") == "1"
-        node.expect_error("exist", "DROP TABLE nope")
+        node.expect_error("exist|Unknown table", "DROP TABLE nope")
 
 
 if __name__ == "__main__":
