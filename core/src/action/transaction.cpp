@@ -105,6 +105,7 @@ void TransactionAction::execute(metadata::Context &metaCtx, ps_random &rand,
       // failures are counted, not rethrown, even in abort mode: the
       // transaction either already ended or was never touched.
       const auto queriesBefore = connection->getQueryCount();
+      bool subFailed = false;
       try {
         sub->execute(metaCtx, rand, connection);
         ++okCount;
@@ -114,8 +115,16 @@ void TransactionAction::execute(metadata::Context &metaCtx, ps_random &rand,
           throw;
         }
         ++failCount;
+        subFailed = true;
       } catch (ActionException const &) {
         ++failCount;
+        subFailed = true;
+      }
+      if (subFailed && connection->getQueryCount() > queriesBefore) {
+        // a DDL rejected before execution (e.g. unknown storage engine)
+        // does NOT implicitly commit - the transaction may still be open.
+        // explicit COMMIT closes it either way (no-op when already ended)
+        connection->executeQuery("COMMIT;").maybeThrow();
       }
       if (connection->getQueryCount() > queriesBefore) {
         // implicit commit happened: buffered work is durable now, the
