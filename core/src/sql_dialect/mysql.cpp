@@ -233,6 +233,17 @@ public:
     out.emplace_back("START TRANSACTION;");
     return out;
   }
+
+  [[nodiscard]] std::string concatExpr(std::string_view lhs,
+                                       std::string_view rhs) const override {
+    return fmt::format("CONCAT({}, {})", lhs, rhs);
+  }
+
+  // INTERSECT/EXCEPT landed in mysql 8.0.31
+  [[nodiscard]] bool
+  supportsIntersectExcept(sql_variant::ServerInfo const &info) const override {
+    return info.after_or_is(sql_variant::flavor::ANY_MYSQL, 80031);
+  }
 };
 
 } // namespace

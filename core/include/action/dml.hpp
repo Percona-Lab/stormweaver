@@ -2,6 +2,7 @@
 #pragma once
 
 #include "action/action.hpp"
+#include "querygen/config.hpp"
 
 #include <functional>
 
@@ -25,24 +26,27 @@ using TableLocator = std::function<metadata::table_cptr()>;
 
 class UpdateOneRow : public Action {
 public:
-  UpdateOneRow(DmlConfig const &config);
+  UpdateOneRow(DmlConfig const &config,
+               querygen::QueryGenConfig const &qgConfig);
 
   void execute(metadata::Context &metaCtx, ps_random &rand,
                sql_variant::LoggedSQL *connection) const override;
 
 private:
   DmlConfig config;
+  querygen::QueryGenConfig qgConfig;
 };
 
 class DeleteData : public Action {
 public:
-  DeleteData(DmlConfig const &config);
+  DeleteData(DmlConfig const &config, querygen::QueryGenConfig const &qgConfig);
 
   void execute(metadata::Context &metaCtx, ps_random &rand,
                sql_variant::LoggedSQL *connection) const override;
 
 private:
   DmlConfig config;
+  querygen::QueryGenConfig qgConfig;
 };
 
 /* SELECT random pks first, modify them in a second statement. Relies on
@@ -50,24 +54,40 @@ private:
    wraps itself in BEGIN...COMMIT. */
 class SelectThenDelete : public Action {
 public:
-  SelectThenDelete(DmlConfig const &config);
+  SelectThenDelete(DmlConfig const &config,
+                   querygen::QueryGenConfig const &qgConfig);
 
   void execute(metadata::Context &metaCtx, ps_random &rand,
                sql_variant::LoggedSQL *connection) const override;
 
 private:
   DmlConfig config;
+  querygen::QueryGenConfig qgConfig;
 };
 
 class SelectThenUpdate : public Action {
 public:
-  SelectThenUpdate(DmlConfig const &config);
+  SelectThenUpdate(DmlConfig const &config,
+                   querygen::QueryGenConfig const &qgConfig);
 
   void execute(metadata::Context &metaCtx, ps_random &rand,
                sql_variant::LoggedSQL *connection) const override;
 
 private:
   DmlConfig config;
+  querygen::QueryGenConfig qgConfig;
+};
+
+// executes one randomly generated standalone SELECT
+class SelectQuery : public Action {
+public:
+  SelectQuery(querygen::QueryGenConfig const &config);
+
+  void execute(metadata::Context &metaCtx, ps_random &rand,
+               sql_variant::LoggedSQL *connection) const override;
+
+private:
+  querygen::QueryGenConfig config;
 };
 
 class InsertData : public Action {

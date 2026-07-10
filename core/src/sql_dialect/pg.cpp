@@ -178,6 +178,16 @@ public:
     }
     return {"BEGIN;"};
   }
+
+  [[nodiscard]] std::string concatExpr(std::string_view lhs,
+                                       std::string_view rhs) const override {
+    return fmt::format("({} || {})", lhs, rhs);
+  }
+
+  [[nodiscard]] bool supportsIntersectExcept(
+      sql_variant::ServerInfo const & /*info*/) const override {
+    return true;
+  }
 };
 
 } // namespace

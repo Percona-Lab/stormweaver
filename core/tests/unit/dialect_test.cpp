@@ -400,6 +400,32 @@ TEST_CASE("transaction capabilities", "[dialect]") {
               "START TRANSACTION;"});
 }
 
+TEST_CASE("concatExpr per dialect", "[dialect]") {
+  REQUIRE(pg_dialect().concatExpr("a", "b") == "(a || b)");
+  REQUIRE(mysql_dialect().concatExpr("a", "b") == "CONCAT(a, b)");
+}
+
+TEST_CASE("lockOfSuffix", "[dialect]") {
+  REQUIRE(sql_dialect::lockOfSuffix(LockClause::forUpdate, "t0") ==
+          " FOR UPDATE OF t0");
+  REQUIRE(sql_dialect::lockOfSuffix(LockClause::forShare, "t1") ==
+          " FOR SHARE OF t1");
+  REQUIRE(sql_dialect::lockOfSuffix(LockClause::none, "t0") == "");
+}
+
+TEST_CASE("supportsIntersectExcept", "[dialect]") {
+  sql_variant::ServerInfo pgInfo{.flavor_ = sql_variant::flavor::postgres,
+                                 .version = 180000};
+  sql_variant::ServerInfo mysql80Info{.flavor_ = sql_variant::flavor::mysql,
+                                      .version = 80030};
+  sql_variant::ServerInfo mysql8031Info{.flavor_ = sql_variant::flavor::mysql,
+                                        .version = 80031};
+
+  REQUIRE(pg_dialect().supportsIntersectExcept(pgInfo));
+  REQUIRE_FALSE(mysql_dialect().supportsIntersectExcept(mysql80Info));
+  REQUIRE(mysql_dialect().supportsIntersectExcept(mysql8031Info));
+}
+
 TEST_CASE("dialect_for dispatches on flavor", "[dialect]") {
   sql_variant::ServerInfo mysqlInfo{.flavor_ = sql_variant::flavor::ps,
                                     .version = 80400};

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "metadata/table.hpp"
+#include "sql_dialect/lock_clause.hpp"
 #include "sql_variant/generic.hpp"
 
 #include <cstdint>
@@ -21,20 +22,6 @@ enum class IsolationLevel : std::uint8_t {
   repeatableRead,
   serializable
 };
-
-enum class LockClause : std::uint8_t { none, forUpdate, forShare };
-
-[[nodiscard]] constexpr std::string_view lockClauseSuffix(LockClause lock) {
-  switch (lock) {
-  case LockClause::forUpdate:
-    return " FOR UPDATE";
-  case LockClause::forShare:
-    return " FOR SHARE";
-  case LockClause::none:
-    break;
-  }
-  return "";
-}
 
 /* Stateless SQL renderers. One instance per flavor family; obtained via
    dialect_for(connection->serverInfo()) at the top of Action::execute().
@@ -108,6 +95,12 @@ public:
   // statements opening a transaction; executed in order
   [[nodiscard]] virtual std::vector<std::string>
   beginStatements(IsolationLevel level) const = 0;
+
+  // rendered concatenation of two already-rendered scalar expressions
+  [[nodiscard]] virtual std::string concatExpr(std::string_view lhs,
+                                               std::string_view rhs) const = 0;
+  [[nodiscard]] virtual bool
+  supportsIntersectExcept(sql_variant::ServerInfo const &info) const = 0;
 };
 
 Dialect const &pg_dialect();

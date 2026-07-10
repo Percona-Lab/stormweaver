@@ -1,12 +1,15 @@
 
 #include "action/dml.hpp"
 #include "action/helper.hpp"
+#include "querygen/generator.hpp"
+#include "querygen/render.hpp"
 #include "sql_dialect/dialect.hpp"
 
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <optional>
 #include <rfl.hpp>
+#include <spdlog/spdlog.h>
 #include <utility>
 #include <vector>
 
@@ -76,14 +79,9 @@ sql_dialect::LockClause pick_lock(ps_random &rand,
   return sql_dialect::LockClause::forShare;
 }
 
-std::vector<std::string> fetch_random_ids(sql_variant::LoggedSQL *connection,
-                                          sql_dialect::Dialect const &dialect,
-                                          std::string_view tableName,
-                                          std::string_view pkName,
-                                          std::size_t limit,
-                                          sql_dialect::LockClause lock) {
-  auto res = connection->executeQuery(
-      dialect.randomRowsSelect(tableName, pkName, limit, lock));
+std::vector<std::string> fetch_ids(sql_variant::LoggedSQL *connection,
+                                   std::string const &selectSql) {
+  auto res = connection->executeQuery(selectSql);
   res.maybeThrow();
   std::vector<std::string> ids;
   if (res.data == nullptr) {
@@ -188,7 +186,9 @@ void InsertData::execute(Context &metaCtx, ps_random &rand,
   connection->executeQuery(sql.str()).maybeThrow();
 }
 
-DeleteData::DeleteData(DmlConfig const &config) : config(config) {}
+DeleteData::DeleteData(DmlConfig const &config,
+                       querygen::QueryGenConfig const &qgConfig)
+    : config(config), qgConfig(qgConfig) {}
 
 void DeleteData::execute(Context &metaCtx, ps_random &rand,
                          sql_variant::LoggedSQL *connection) const {
@@ -198,6 +198,18 @@ void DeleteData::execute(Context &metaCtx, ps_random &rand,
   table_cptr table = find_random_table(metaCtx, rand);
 
   auto const &tableName = table->name;
+  auto const useGenerated =
+      rand.random_number<std::size_t>(1, 100) <= qgConfig.dml_predicate_prob;
+  if (useGenerated) {
+    querygen::Generator gen(metaCtx, rand, qgConfig, serverInfo);
+    auto pred = gen.generatePredicate(table, tableName);
+    connection
+        ->executeQuery(fmt::format("DELETE FROM {} WHERE {};", tableName,
+                                   querygen::render(pred, dialect)))
+        .maybeThrow();
+    return;
+  }
+
   // TODO: assumes we have a single column primary key as the first column.
   // Currently always true.
   auto const &pkName = table->columns[0].name;
@@ -211,7 +223,9 @@ void DeleteData::execute(Context &metaCtx, ps_random &rand,
       .maybeThrow();
 }
 
-SelectThenDelete::SelectThenDelete(DmlConfig const &config) : config(config) {}
+SelectThenDelete::SelectThenDelete(DmlConfig const &config,
+                                   querygen::QueryGenConfig const &qgConfig)
+    : config(config), qgConfig(qgConfig) {}
 
 void SelectThenDelete::execute(Context &metaCtx, ps_random &rand,
                                sql_variant::LoggedSQL *connection) const {
@@ -227,12 +241,19 @@ void SelectThenDelete::execute(Context &metaCtx, ps_random &rand,
   // all randomness up front: server state must not shift the rand stream
   auto const rows = rand.random_number(config.deleteMin, config.deleteMax);
   auto const lock = pick_lock(rand, config.lockWeights);
+  std::string selectSql;
+  if (rand.random_number<std::size_t>(1, 100) <= qgConfig.dml_pk_select_prob) {
+    querygen::Generator gen(metaCtx, rand, qgConfig, serverInfo);
+    auto spec = gen.generatePkSelect(table, {.limit = rows, .lock = lock});
+    selectSql = querygen::render(*spec, dialect);
+  } else {
+    selectSql = dialect.randomRowsSelect(tableName, pkName, rows, lock);
+  }
 
   std::optional<TxGuard> guard;
   maybe_begin_own_trx(metaCtx, connection, dialect, guard);
 
-  auto const ids =
-      fetch_random_ids(connection, dialect, tableName, pkName, rows, lock);
+  auto const ids = fetch_ids(connection, selectSql);
   if (!ids.empty()) {
     connection
         ->executeQuery(fmt::format("DELETE FROM {} WHERE {} IN ({});",
@@ -243,7 +264,9 @@ void SelectThenDelete::execute(Context &metaCtx, ps_random &rand,
   maybe_commit_own_trx(guard, connection);
 }
 
-UpdateOneRow::UpdateOneRow(DmlConfig const &config) : config(config) {}
+UpdateOneRow::UpdateOneRow(DmlConfig const &config,
+                           querygen::QueryGenConfig const &qgConfig)
+    : config(config), qgConfig(qgConfig) {}
 
 void UpdateOneRow::execute(Context &metaCtx, ps_random &rand,
                            sql_variant::LoggedSQL *connection) const {
@@ -258,6 +281,9 @@ void UpdateOneRow::execute(Context &metaCtx, ps_random &rand,
   // TODO: assumes we have a single column primary key as the first column.
   // Currently always true.
   auto const &pkName = table->columns[0].name;
+
+  auto const useGenerated =
+      rand.random_number<std::size_t>(1, 100) <= qgConfig.dml_predicate_prob;
 
   std::stringstream sql;
   sql << "UPDATE ";
@@ -277,14 +303,23 @@ void UpdateOneRow::execute(Context &metaCtx, ps_random &rand,
     }
   }
 
-  sql << fmt::format(" WHERE {} IN {}", pkName,
-                     dialect.randomRowSubquery(tableName, pkName, 1));
+  if (useGenerated) {
+    // generated predicate may hit many rows - that is the point
+    querygen::Generator gen(metaCtx, rand, qgConfig, serverInfo);
+    auto pred = gen.generatePredicate(table, tableName);
+    sql << fmt::format(" WHERE {}", querygen::render(pred, dialect));
+  } else {
+    sql << fmt::format(" WHERE {} IN {}", pkName,
+                       dialect.randomRowSubquery(tableName, pkName, 1));
+  }
   sql << ";";
 
   connection->executeQuery(sql.str()).maybeThrow();
 }
 
-SelectThenUpdate::SelectThenUpdate(DmlConfig const &config) : config(config) {}
+SelectThenUpdate::SelectThenUpdate(DmlConfig const &config,
+                                   querygen::QueryGenConfig const &qgConfig)
+    : config(config), qgConfig(qgConfig) {}
 
 void SelectThenUpdate::execute(Context &metaCtx, ps_random &rand,
                                sql_variant::LoggedSQL *connection) const {
@@ -302,6 +337,14 @@ void SelectThenUpdate::execute(Context &metaCtx, ps_random &rand,
   // all randomness up front: server state must not shift the rand stream
   auto const rows = rand.random_number(config.updateMin, config.updateMax);
   auto const lock = pick_lock(rand, config.lockWeights);
+  std::string selectSql;
+  if (rand.random_number<std::size_t>(1, 100) <= qgConfig.dml_pk_select_prob) {
+    querygen::Generator gen(metaCtx, rand, qgConfig, serverInfo);
+    auto spec = gen.generatePkSelect(table, {.limit = rows, .lock = lock});
+    selectSql = querygen::render(*spec, dialect);
+  } else {
+    selectSql = dialect.randomRowsSelect(tableName, pkName, rows, lock);
+  }
 
   std::stringstream setClause;
   bool first = true;
@@ -323,8 +366,7 @@ void SelectThenUpdate::execute(Context &metaCtx, ps_random &rand,
   std::optional<TxGuard> guard;
   maybe_begin_own_trx(metaCtx, connection, dialect, guard);
 
-  auto const ids =
-      fetch_random_ids(connection, dialect, tableName, pkName, rows, lock);
+  auto const ids = fetch_ids(connection, selectSql);
   // !first: table may have no updatable columns left (empty SET)
   if (!ids.empty() && !first) {
     connection
@@ -335,4 +377,36 @@ void SelectThenUpdate::execute(Context &metaCtx, ps_random &rand,
   }
 
   maybe_commit_own_trx(guard, connection);
+}
+
+SelectQuery::SelectQuery(querygen::QueryGenConfig const &config)
+    : config(config) {}
+
+void SelectQuery::execute(Context &metaCtx, ps_random &rand,
+                          sql_variant::LoggedSQL *connection) const {
+  auto const serverInfo = connection->serverInfo();
+  auto const &dialect = sql_dialect::dialect_for(serverInfo);
+
+  querygen::Generator gen(metaCtx, rand, config, serverInfo);
+  auto spec = gen.generate(querygen::Purpose::standalone, nullptr);
+  if (!spec) {
+    throw ActionException("empty-metadata", "No tables to select from");
+  }
+
+  // random join trees can explode; a timeout turns a runaway query into a
+  // regular action failure. reset is best-effort: inside a poisoned pg
+  // transaction it fails, but the rollback reverts the SET anyway
+  bool const isMysql = serverInfo.is_mysql_like();
+  connection
+      ->executeQuery(isMysql ? "SET SESSION max_execution_time = 10000;"
+                             : "SET statement_timeout = 10000;")
+      .maybeThrow();
+  auto res = connection->executeQuery(querygen::render(*spec, dialect));
+  std::ignore =
+      connection->executeQuery(isMysql ? "SET SESSION max_execution_time = 0;"
+                                       : "SET statement_timeout = 0;");
+  res.maybeThrow();
+  if (res.data != nullptr) {
+    spdlog::debug("select_query returned {} rows", res.data->numRows());
+  }
 }

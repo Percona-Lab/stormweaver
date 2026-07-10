@@ -13,6 +13,7 @@
 #include "metadata/context.hpp"
 #include "metadata/table.hpp"
 #include "py_action.hpp"
+#include "querygen/config.hpp"
 #include "random.hpp"
 #include "sql_variant/generic.hpp"
 #include "sql_variant/mysql.hpp"
@@ -408,11 +409,32 @@ NB_MODULE(_stormweaver, m) {
             }
           });
 
+  nb::class_<querygen::QueryGenConfig>(m, "QueryGenConfig")
+      .def(nb::init<>())
+      .def_rw("max_joins", &querygen::QueryGenConfig::max_joins)
+      .def_rw("max_expr_depth", &querygen::QueryGenConfig::max_expr_depth)
+      .def_rw("max_subquery_depth",
+              &querygen::QueryGenConfig::max_subquery_depth)
+      .def_rw("join_prob", &querygen::QueryGenConfig::join_prob)
+      .def_rw("subquery_prob", &querygen::QueryGenConfig::subquery_prob)
+      .def_rw("aggregate_prob", &querygen::QueryGenConfig::aggregate_prob)
+      .def_rw("cte_prob", &querygen::QueryGenConfig::cte_prob)
+      .def_rw("setop_prob", &querygen::QueryGenConfig::setop_prob)
+      .def_rw("window_prob", &querygen::QueryGenConfig::window_prob)
+      .def_rw("order_by_prob", &querygen::QueryGenConfig::order_by_prob)
+      .def_rw("limit_prob", &querygen::QueryGenConfig::limit_prob)
+      .def_rw("correlation_prob", &querygen::QueryGenConfig::correlation_prob)
+      .def_rw("dml_predicate_prob",
+              &querygen::QueryGenConfig::dml_predicate_prob)
+      .def_rw("dml_pk_select_prob",
+              &querygen::QueryGenConfig::dml_pk_select_prob);
+
   nb::class_<action::AllConfig>(m, "AllConfig")
       .def(nb::init<>())
       .def_rw("ddl", &action::AllConfig::ddl)
       .def_rw("dml", &action::AllConfig::dml)
-      .def_rw("transaction", &action::AllConfig::transaction);
+      .def_rw("transaction", &action::AllConfig::transaction)
+      .def_rw("querygen", &action::AllConfig::querygen);
 
   nb::class_<WorkloadParams>(m, "WorkloadParams")
       .def(nb::init<>())

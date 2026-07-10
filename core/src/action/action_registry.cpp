@@ -147,7 +147,7 @@ ActionRegistry initializeDefaultRegisty() {
                                .builder =
                                    [](BuildContext const &bctx) {
                                      return std::make_unique<DeleteData>(
-                                         bctx.config.dml);
+                                         bctx.config.dml, bctx.config.querygen);
                                    },
                                .weight = 1000,
                                .type = ActionType::dml};
@@ -156,7 +156,7 @@ ActionRegistry initializeDefaultRegisty() {
                              .builder =
                                  [](BuildContext const &bctx) {
                                    return std::make_unique<UpdateOneRow>(
-                                       bctx.config.dml);
+                                       bctx.config.dml, bctx.config.querygen);
                                  },
                              .weight = 1000,
                              .type = ActionType::dml};
@@ -165,7 +165,7 @@ ActionRegistry initializeDefaultRegisty() {
                                .builder =
                                    [](BuildContext const &bctx) {
                                      return std::make_unique<SelectThenDelete>(
-                                         bctx.config.dml);
+                                         bctx.config.dml, bctx.config.querygen);
                                    },
                                .weight = 1000,
                                .type = ActionType::dml};
@@ -174,10 +174,19 @@ ActionRegistry initializeDefaultRegisty() {
                                .builder =
                                    [](BuildContext const &bctx) {
                                      return std::make_unique<SelectThenUpdate>(
-                                         bctx.config.dml);
+                                         bctx.config.dml, bctx.config.querygen);
                                    },
                                .weight = 1000,
                                .type = ActionType::dml};
+
+  ActionFactory selectQuery{.name = "select_query",
+                            .builder =
+                                [](BuildContext const &bctx) {
+                                  return std::make_unique<SelectQuery>(
+                                      bctx.config.querygen);
+                                },
+                            .weight = 1000,
+                            .type = ActionType::dml};
 
   ActionFactory transaction{.name = "transaction",
                             .builder =
@@ -202,6 +211,7 @@ ActionRegistry initializeDefaultRegisty() {
   ar.insert(updateOneRow);
   ar.insert(deleteSelected);
   ar.insert(updateSelected);
+  ar.insert(selectQuery);
   ar.insert(transaction);
 
   return ar;
