@@ -1,6 +1,7 @@
 
 #include "sql_variant/generic.hpp"
 
+#include <cctype>
 #include <fmt/format.h>
 
 #include "logging.hpp"
@@ -54,6 +55,8 @@ QueryResult LoggedSQL::executeQuery(std::string const &query) const {
   if (!res.success()) {
     logger->error("Error while executing SQL statement: {} {}",
                   res.errorInfo.errorCode, res.errorInfo.errorMessage);
+  } else {
+    observeResult(query, res);
   }
 
   return res;
@@ -70,6 +73,8 @@ QueryResult LoggedSQL::executeParams(std::string const &query,
   if (!res.success()) {
     logger->error("Error while executing SQL statement: {} {}",
                   res.errorInfo.errorCode, res.errorInfo.errorMessage);
+  } else {
+    observeResult(query, res);
   }
 
   return res;
@@ -118,5 +123,148 @@ void LoggedSQL::resetAccumulatedSqlTime() {
 }
 
 std::uint64_t LoggedSQL::getQueryCount() const { return queryCount; }
+
+ActionNameScope::ActionNameScope(LoggedSQL &conn, std::string name)
+    : conn(conn), prev(conn.currentAction()) {
+  conn.setCurrentAction(std::move(name));
+}
+
+ActionNameScope::~ActionNameScope() { conn.setCurrentAction(std::move(prev)); }
+
+void LoggedSQL::setCurrentAction(std::string name) {
+  currentAction_ = std::move(name);
+}
+
+std::string const &LoggedSQL::currentAction() const { return currentAction_; }
+
+ActionNameScope LoggedSQL::scopedActionName(std::string name) {
+  return {*this, std::move(name)};
+}
+
+void LoggedSQL::recordTransactionOutcome(
+    statistics::TransactionOutcome const &outcome) {
+  txnOutcomes.push_back(outcome);
+}
+
+std::vector<statistics::RowObservation> LoggedSQL::drainRowObservations() {
+  return std::exchange(rowObservations, {});
+}
+
+std::vector<statistics::TransactionOutcome>
+LoggedSQL::drainTransactionOutcomes() {
+  return std::exchange(txnOutcomes, {});
+}
+
+void LoggedSQL::clearObservations() {
+  rowObservations.clear();
+  txnOutcomes.clear();
+}
+
+void LoggedSQL::observeResult(std::string const &query,
+                              QueryResult const &res) const {
+  const auto kind = classifyStatement(query);
+  // a row-shaped result has fields; DML/DDL results carry no fields even
+  // though res.data itself is always wrapped by the drivers
+  const bool hasData = res.data != nullptr && res.data->numFields() > 0;
+
+  const double ms =
+      static_cast<double>(res.executionTime.count()) / 1'000'000.0;
+  if (hasData) {
+    logger->info("Result: rows={} time={:.2f}ms", res.data->numRows(), ms);
+  } else if (kind == StmtKind::insert || kind == StmtKind::update ||
+             kind == StmtKind::del || kind == StmtKind::with) {
+    logger->info("Result: affected={} time={:.2f}ms", res.affectedRows, ms);
+  } else {
+    logger->info("Result: ok time={:.2f}ms", ms);
+  }
+
+  switch (kind) {
+  case StmtKind::select:
+    rowObservations.push_back({.action = currentAction_,
+                               .kind = "select",
+                               .rows = hasData ? res.data->numRows() : 0});
+    break;
+  case StmtKind::insert:
+    rowObservations.push_back(
+        {.action = currentAction_, .kind = "insert", .rows = res.affectedRows});
+    break;
+  case StmtKind::update:
+    rowObservations.push_back(
+        {.action = currentAction_, .kind = "update", .rows = res.affectedRows});
+    break;
+  case StmtKind::del:
+    rowObservations.push_back(
+        {.action = currentAction_, .kind = "delete", .rows = res.affectedRows});
+    break;
+  case StmtKind::with:
+    if (hasData) {
+      rowObservations.push_back({.action = currentAction_,
+                                 .kind = "select",
+                                 .rows = res.data->numRows()});
+    } else {
+      rowObservations.push_back(
+          {.action = currentAction_, .kind = "dml", .rows = res.affectedRows});
+    }
+    break;
+  case StmtKind::other:
+    break;
+  }
+}
+
+StmtKind classifyStatement(std::string_view query) {
+  std::size_t pos = 0;
+  while (pos < query.size()) {
+    const char c = query[pos];
+    if (std::isspace(static_cast<unsigned char>(c)) != 0) {
+      ++pos;
+      continue;
+    }
+    if (query.compare(pos, 2, "--") == 0) {
+      const auto eol = query.find('\n', pos);
+      if (eol == std::string_view::npos) {
+        return StmtKind::other;
+      }
+      pos = eol + 1;
+      continue;
+    }
+    if (query.compare(pos, 2, "/*") == 0) {
+      const auto end = query.find("*/", pos + 2);
+      if (end == std::string_view::npos) {
+        return StmtKind::other;
+      }
+      pos = end + 2;
+      continue;
+    }
+    break;
+  }
+
+  auto wordEnd = pos;
+  while (wordEnd < query.size() &&
+         (std::isalnum(static_cast<unsigned char>(query[wordEnd])) != 0 ||
+          query[wordEnd] == '_')) {
+    ++wordEnd;
+  }
+  std::string word(query.substr(pos, wordEnd - pos));
+  for (auto &ch : word) {
+    ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+  }
+
+  if (word == "select") {
+    return StmtKind::select;
+  }
+  if (word == "insert") {
+    return StmtKind::insert;
+  }
+  if (word == "update") {
+    return StmtKind::update;
+  }
+  if (word == "delete") {
+    return StmtKind::del;
+  }
+  if (word == "with") {
+    return StmtKind::with;
+  }
+  return StmtKind::other;
+}
 
 } // namespace sql_variant

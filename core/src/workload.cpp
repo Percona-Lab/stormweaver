@@ -162,6 +162,19 @@ void RandomWorker::run_thread(std::size_t duration_in_seconds) {
   thread = std::thread([this, duration_in_seconds]() {
     std::size_t connectionAttempts = 0;
 
+    // setup queries on this conn (create_random_tables etc) must not leak into
+    // the first action
+    sql_conn->clearObservations();
+
+    auto drainIntoStats = [&] {
+      for (auto const &obs : sql_conn->drainRowObservations()) {
+        stats.recordRows(obs.action, obs.kind, obs.rows);
+      }
+      for (auto const &txn : sql_conn->drainTransactionOutcomes()) {
+        stats.recordTransaction(txn);
+      }
+    };
+
     std::chrono::steady_clock::time_point begin =
         std::chrono::steady_clock::now();
     std::chrono::steady_clock::time_point now =
@@ -179,6 +192,7 @@ void RandomWorker::run_thread(std::size_t duration_in_seconds) {
 
       stats.startAction(actionFactory.name);
       sql_conn->resetAccumulatedSqlTime();
+      sql_conn->setCurrentAction(actionFactory.name);
 
       try {
         metadata::Context actionCtx(*metadata);
@@ -214,9 +228,13 @@ void RandomWorker::run_thread(std::size_t duration_in_seconds) {
             }
 
             logger->warn("Lost connection to the server, trying to reconnect");
+            // reconnect replaces the connection, drain before it is destroyed
+            drainIntoStats();
             reconnect();
           } else {
-            logger->error("Failed to connect 5 times, stopping worker");
+            logger->error("Failed to connect {} times, stopping worker",
+                          config.max_reconnect_attempts);
+            drainIntoStats();
             break;
           }
         }
@@ -227,12 +245,20 @@ void RandomWorker::run_thread(std::size_t duration_in_seconds) {
         logger->warn("Worker {} Action failed (other): {}", name, e.what());
       }
 
+      drainIntoStats();
+
       now = std::chrono::steady_clock::now();
     }
 
     stats.stop();
-    spdlog::info("Worker {} exiting", name);
-    spdlog::info("\n=== Worker {} Statistics ===\n{}", name, stats.report());
+    // post-loop utility queries (checksums, validation) must not accumulate
+    // under a stale action name
+    sql_conn->setCurrentAction("");
+    sql_conn->clearObservations();
+    spdlog::info("Worker {} finished: {} actions, {:.2f}% success, "
+                 "{:.2f} actions/sec",
+                 name, stats.getTotalActionCount(),
+                 stats.getOverallSuccessRate(), stats.getActionsPerSecond());
   });
 }
 

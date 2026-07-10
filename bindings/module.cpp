@@ -1,5 +1,6 @@
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/function.h>
+#include <nanobind/stl/map.h>
 #include <nanobind/stl/optional.h>
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
@@ -446,13 +447,18 @@ NB_MODULE(_stormweaver, m) {
       .def_rw("seed", &WorkloadParams::seed);
 
   // --- Statistics ---
+  // worker threads mutate their own stats while running - read only after join
 
   nb::class_<statistics::TimingStatistics>(m, "TimingStatistics")
       .def("avg_ms", &statistics::TimingStatistics::getAverageMs)
       .def("min_ms", &statistics::TimingStatistics::getMinMs)
       .def("max_ms", &statistics::TimingStatistics::getMaxMs)
       .def_ro("count", &statistics::TimingStatistics::count)
-      .def("has_data", &statistics::TimingStatistics::hasData);
+      .def("has_data", &statistics::TimingStatistics::hasData)
+      .def("histogram", [](statistics::TimingStatistics const &self) {
+        return std::vector<std::uint64_t>(self.histogram.buckets.begin(),
+                                          self.histogram.buckets.end());
+      });
 
   nb::class_<statistics::ActionStatistics>(m, "ActionStatistics")
       .def_ro("success_count", &statistics::ActionStatistics::successCount)
@@ -466,7 +472,40 @@ NB_MODULE(_stormweaver, m) {
               &statistics::ActionStatistics::sqlConflictCount)
       .def_ro("execution_timing",
               &statistics::ActionStatistics::executionTiming)
-      .def_ro("sql_timing", &statistics::ActionStatistics::sqlTiming);
+      .def_ro("sql_timing", &statistics::ActionStatistics::sqlTiming)
+      .def_ro("action_error_names",
+              &statistics::ActionStatistics::actionErrorNames)
+      .def_ro("sql_error_codes", &statistics::ActionStatistics::sqlErrorCodes)
+      .def("success_rate", &statistics::ActionStatistics::getSuccessRate)
+      .def("row_histograms", [](statistics::ActionStatistics const &self) {
+        std::map<std::string, std::vector<std::uint64_t>> out;
+        for (auto const &[kind, hist] : self.rowHistograms) {
+          out[kind] = std::vector<std::uint64_t>(hist.buckets.begin(),
+                                                 hist.buckets.end());
+        }
+        return out;
+      });
+
+  nb::class_<statistics::TransactionStatistics>(m, "TransactionStatistics")
+      .def_ro("committed", &statistics::TransactionStatistics::committed)
+      .def_ro("rolled_back_intentional",
+              &statistics::TransactionStatistics::rolledBackIntentional)
+      .def_ro("rolled_back_error",
+              &statistics::TransactionStatistics::rolledBackError)
+      .def_ro("implicit_commits",
+              &statistics::TransactionStatistics::implicitCommits)
+      .def_ro("savepoint_rollbacks",
+              &statistics::TransactionStatistics::savepointRollbacks)
+      .def_ro("sub_actions_ok",
+              &statistics::TransactionStatistics::subActionsOk)
+      .def_ro("sub_actions_fail",
+              &statistics::TransactionStatistics::subActionsFail)
+      .def("total", &statistics::TransactionStatistics::total)
+      .def("has_data", &statistics::TransactionStatistics::hasData)
+      .def("sub_histogram", [](statistics::TransactionStatistics const &self) {
+        return std::vector<std::uint64_t>(self.subActionsPerTxn.buckets.begin(),
+                                          self.subActionsPerTxn.buckets.end());
+      });
 
   nb::class_<statistics::WorkerStatistics>(m, "WorkerStatistics")
       .def("report", &statistics::WorkerStatistics::report)
@@ -503,7 +542,28 @@ NB_MODULE(_stormweaver, m) {
              auto it = self.actionStats.find(name);
              return it == self.actionStats.end() ? 0
                                                  : it->second.sqlConflictCount;
-           });
+           })
+      .def("action_names",
+           [](statistics::WorkerStatistics const &self) {
+             std::vector<std::string> names;
+             names.reserve(self.actionStats.size());
+             for (auto const &[name, stats] : self.actionStats) {
+               names.push_back(name);
+             }
+             return names;
+           })
+      .def("action_stats",
+           [](statistics::WorkerStatistics const &self, std::string const &name)
+               -> std::optional<statistics::ActionStatistics> {
+             auto it = self.actionStats.find(name);
+             if (it == self.actionStats.end()) {
+               return std::nullopt;
+             }
+             return it->second;
+           })
+      .def("transaction_stats", [](statistics::WorkerStatistics const &self) {
+        return self.txnStats;
+      });
 
   // --- Workers ---
 

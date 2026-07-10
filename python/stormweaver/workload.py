@@ -3,6 +3,8 @@ import logging
 from collections.abc import Callable
 
 import stormweaver._stormweaver as _stormweaver
+from stormweaver import log as swlog
+from stormweaver import stats_csv
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +51,7 @@ class Workload:
         # logger names, get-or-create per process, so they must never repeat
         self._cycle = 0
         self._live: list[_stormweaver.RandomWorker] = []
+        self._live_names: list[str] = []
         self._worker_stats: list[_stormweaver.WorkerStatistics] = []
         # node_factory can take the worker name (for per-worker SQL logs), or
         # nothing, for backwards compat with existing zero-arg factories
@@ -74,6 +77,7 @@ class Workload:
         self._cycle += 1
         workers: list[_stormweaver.RandomWorker] = []
         started: list[_stormweaver.RandomWorker] = []
+        names: list[str] = []
 
         try:
             for i in range(self.num_workers):
@@ -87,6 +91,7 @@ class Workload:
                 params.seed = self.seed
 
                 name = f"{self.worker_name_prefix}worker-{self._cycle}-{i + 1}"
+                names.append(name)
                 connector = (
                     (lambda n=name: self.node_factory(n))
                     if self._factory_wants_name
@@ -123,10 +128,12 @@ class Workload:
             raise
 
         self._live = workers
+        self._live_names = names
 
     def wait(self) -> None:
         """Join the running cycle's workers and capture their statistics."""
         workers, self._live = self._live, []
+        names, self._live_names = self._live_names, []
         if not workers:
             raise RuntimeError("no workload cycle is running")
 
@@ -138,10 +145,18 @@ class Workload:
         # statistics() ties the worker's lifetime to the returned
         # object (reference_internal), so keeping it here keeps the
         # worker's stats readable after the cycle ends.
+        cycle_stats: list[_stormweaver.WorkerStatistics] = []
         for w in workers:
             stats = w.statistics()
             self._reports.append(stats.report())
             self._worker_stats.append(stats)
+            cycle_stats.append(stats)
+
+        log_dir = swlog.log_dir()
+        if log_dir is not None:
+            stats_csv.append_stats(
+                log_dir, self._cycle, list(zip(names, cycle_stats, strict=True))
+            )
 
     def run(self) -> None:
         self._reports = []

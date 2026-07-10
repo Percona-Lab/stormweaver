@@ -89,6 +89,4 @@ def main(args):
             db_files_entropy(ctx.connect("verification"), ctx.datadir)
             logger.info("cycle %d/%d verified", cycle + 1, opts.repeat)
 
-        ctx.workload.print_report()
-
     print("Demo scenario completed successfully")

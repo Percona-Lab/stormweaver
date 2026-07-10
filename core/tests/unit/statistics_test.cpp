@@ -349,3 +349,127 @@ TEST_CASE("conflict bucket", "[statistics]") {
   REQUIRE(stats.actionStats.at("transaction").sqlConflictCount == 1);
   REQUIRE(stats.getTotalFailureCount() == 1);
 }
+
+TEST_CASE("RowHistogram buckets", "[statistics][histogram]") {
+  RowHistogram h;
+  REQUIRE_FALSE(h.hasData());
+  h.record(0);
+  h.record(1);
+  h.record(2);
+  h.record(10);
+  h.record(11);
+  h.record(100);
+  h.record(101);
+  h.record(1000);
+  h.record(1001);
+  h.record(50000);
+
+  REQUIRE(h.buckets[0] == 1); // 0
+  REQUIRE(h.buckets[1] == 1); // 1
+  REQUIRE(h.buckets[2] == 2); // 2-10
+  REQUIRE(h.buckets[3] == 2); // 11-100
+  REQUIRE(h.buckets[4] == 2); // 101-1000
+  REQUIRE(h.buckets[5] == 2); // 1000+
+  REQUIRE(h.total() == 10);
+  REQUIRE(h.hasData());
+}
+
+TEST_CASE("TimingHistogram buckets", "[statistics][histogram]") {
+  TimingStatistics timing;
+  timing.record(50us);  // <0.1ms
+  timing.record(500us); // 0.1-1ms
+  timing.record(5ms);   // 1-10ms
+  timing.record(50ms);  // 10-100ms
+  timing.record(500ms); // 100ms-1s
+  timing.record(5s);    // 1-10s
+  timing.record(15s);   // >10s
+  for (size_t i = 0; i < 7; ++i) {
+    REQUIRE(timing.histogram.buckets[i] == 1);
+  }
+  timing.reset();
+  REQUIRE(timing.histogram.buckets[0] == 0);
+}
+
+TEST_CASE("TimingHistogram boundary values round up",
+          "[statistics][histogram]") {
+  TimingStatistics timing;
+  timing.record(100us);
+  timing.record(1ms);
+  timing.record(10ms);
+  timing.record(100ms);
+  timing.record(1s);
+  timing.record(10s);
+
+  REQUIRE(timing.histogram.buckets[0] == 0);
+  REQUIRE(timing.histogram.buckets[1] == 1); // 100us -> 0.1-1ms
+  REQUIRE(timing.histogram.buckets[2] == 1); // 1ms -> 1-10ms
+  REQUIRE(timing.histogram.buckets[3] == 1); // 10ms -> 10-100ms
+  REQUIRE(timing.histogram.buckets[4] == 1); // 100ms -> 100ms-1s
+  REQUIRE(timing.histogram.buckets[5] == 1); // 1s -> 1-10s
+  REQUIRE(timing.histogram.buckets[6] == 1); // 10s -> >10s
+}
+
+TEST_CASE("WorkerStatistics recordRows", "[statistics][histogram]") {
+  WorkerStatistics ws;
+  ws.recordRows("select_all", "select", 0);
+  ws.recordRows("select_all", "select", 42);
+  ws.recordRows("update_one", "update", 1);
+
+  auto &sel = ws.actionStats["select_all"].rowHistograms["select"];
+  REQUIRE(sel.buckets[0] == 1);
+  REQUIRE(sel.buckets[3] == 1); // 42 -> 11-100
+  REQUIRE(ws.actionStats["update_one"].rowHistograms["update"].buckets[1] == 1);
+
+  ws.actionStats["select_all"].reset();
+  REQUIRE(ws.actionStats["select_all"].rowHistograms.empty());
+}
+
+TEST_CASE("TransactionStatistics folding", "[statistics][transaction]") {
+  WorkerStatistics ws;
+
+  TransactionOutcome committed;
+  committed.end = TransactionOutcome::End::committed;
+  committed.subOk = 3;
+  committed.subFail = 1;
+  committed.savepointRollbacks = 2;
+  ws.recordTransaction(committed);
+
+  TransactionOutcome rolledBack;
+  rolledBack.end = TransactionOutcome::End::rolledBackIntentional;
+  rolledBack.subOk = 2;
+  ws.recordTransaction(rolledBack);
+
+  TransactionOutcome failed;
+  failed.end = TransactionOutcome::End::rolledBackError;
+  failed.implicitCommits = 1;
+  ws.recordTransaction(failed);
+
+  REQUIRE(ws.txnStats.committed == 1);
+  REQUIRE(ws.txnStats.rolledBackIntentional == 1);
+  REQUIRE(ws.txnStats.rolledBackError == 1);
+  REQUIRE(ws.txnStats.implicitCommits == 1);
+  REQUIRE(ws.txnStats.savepointRollbacks == 2);
+  REQUIRE(ws.txnStats.subActionsOk == 5);
+  REQUIRE(ws.txnStats.subActionsFail == 1);
+  // sub-action counts: 4, 2, 0 -> buckets 2-10, 2-10, 0
+  REQUIRE(ws.txnStats.subActionsPerTxn.buckets[2] == 2);
+  REQUIRE(ws.txnStats.subActionsPerTxn.buckets[0] == 1);
+  REQUIRE(ws.txnStats.hasData());
+  REQUIRE(ws.txnStats.total() == 3);
+
+  ws.reset();
+  REQUIRE_FALSE(ws.txnStats.hasData());
+  REQUIRE(ws.txnStats.implicitCommits == 0);
+  REQUIRE(ws.txnStats.subActionsPerTxn.total() == 0);
+}
+
+TEST_CASE("TransactionOutcome default counts as rolledBackError",
+          "[statistics][transaction]") {
+  WorkerStatistics ws;
+  TransactionOutcome outcome; // unset default
+  ws.recordTransaction(outcome);
+
+  REQUIRE(ws.txnStats.rolledBackError == 1);
+  REQUIRE(ws.txnStats.committed == 0);
+  REQUIRE(ws.txnStats.rolledBackIntentional == 0);
+}

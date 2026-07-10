@@ -2,6 +2,7 @@
 #include "action/helper.hpp"
 #include "metadata/context.hpp"
 #include "sql_dialect/dialect.hpp"
+#include "statistics.hpp"
 
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
@@ -11,6 +12,28 @@
 using namespace action;
 
 namespace {
+
+// records exactly one outcome per started transaction (empty-pool return
+// and failed BEGIN record nothing, by design), even when an exception
+// unwinds past every catch below (guard rolled back -> default
+// rolledBackError)
+struct TxnRecorder {
+  sql_variant::LoggedSQL *conn;
+  statistics::TransactionOutcome out;
+
+  explicit TxnRecorder(sql_variant::LoggedSQL *conn) : conn(conn) {}
+  ~TxnRecorder() {
+    // best effort; must never throw during unwind
+    try {
+      conn->recordTransactionOutcome(out);
+    } catch (...) { // NOLINT(bugprone-empty-catch)
+    }
+  }
+  TxnRecorder(TxnRecorder const &) = delete;
+  TxnRecorder &operator=(TxnRecorder const &) = delete;
+  TxnRecorder(TxnRecorder &&) = delete;
+  TxnRecorder &operator=(TxnRecorder &&) = delete;
+};
 
 sql_dialect::IsolationLevel pickIsolation(ps_random &rand,
                                           IsolationWeights const &w) {
@@ -71,6 +94,8 @@ void TransactionAction::execute(metadata::Context &metaCtx, ps_random &rand,
     connection->executeQuery(stmt).maybeThrow();
   }
 
+  TxnRecorder rec(connection);
+
   metadata::TxnBuffer<metadata::Table> txn;
   metadata::Context trxCtx(metaCtx.registry(), &txn);
   auto &globalTables = metaCtx.registry().get<metadata::Table>();
@@ -85,8 +110,6 @@ void TransactionAction::execute(metadata::Context &metaCtx, ps_random &rand,
   bool inTrx = true; // false after a mysql implicit commit
   std::vector<Savepoint> savepoints;
   std::size_t spCounter = 0;
-  std::size_t okCount = 0;
-  std::size_t failCount = 0;
 
   for (std::size_t i = 0; i < subCount; ++i) {
     const auto w = rand.random_number<std::size_t>(0, pool.totalWeight());
@@ -107,17 +130,18 @@ void TransactionAction::execute(metadata::Context &metaCtx, ps_random &rand,
       const auto queriesBefore = connection->getQueryCount();
       bool subFailed = false;
       try {
+        auto scope = connection->scopedActionName(factory.name);
         sub->execute(metaCtx, rand, connection);
-        ++okCount;
+        ++rec.out.subOk;
       } catch (sql_variant::SqlException const &e) {
         if (e.serverGone()) {
           guard.disarm();
           throw;
         }
-        ++failCount;
+        ++rec.out.subFail;
         subFailed = true;
       } catch (ActionException const &) {
-        ++failCount;
+        ++rec.out.subFail;
         subFailed = true;
       }
       if (subFailed && connection->getQueryCount() > queriesBefore) {
@@ -133,22 +157,27 @@ void TransactionAction::execute(metadata::Context &metaCtx, ps_random &rand,
         inTrx = false;
         guard.disarm();
         savepoints.clear();
+        ++rec.out.implicitCommits;
+        rec.out.end = statistics::TransactionOutcome::End::committed;
       }
       continue;
     }
 
     if (!inTrx) {
-      // autocommit tail: publish directly via the caller's context
+      // autocommit tail: publish directly via the caller's context.
+      // failures here still count into this outcome's subFail even though
+      // the transaction already committed (implicitCommits disambiguates)
       try {
+        auto scope = connection->scopedActionName(factory.name);
         sub->execute(metaCtx, rand, connection);
-        ++okCount;
+        ++rec.out.subOk;
       } catch (sql_variant::SqlException const &e) {
         if (e.serverGone()) {
           throw;
         }
-        ++failCount;
+        ++rec.out.subFail;
       } catch (ActionException const &) {
-        ++failCount;
+        ++rec.out.subFail;
       }
       continue;
     }
@@ -158,8 +187,13 @@ void TransactionAction::execute(metadata::Context &metaCtx, ps_random &rand,
       connection->executeQuery(fmt::format("SAVEPOINT sp{};", sp)).maybeThrow();
       savepoints.push_back({.name = sp, .mark = txn.mark()});
       try {
-        sub->execute(trxCtx, rand, connection);
-        ++okCount;
+        // scope closed early: the rewind below is the transaction's SQL,
+        // not the sub-action's
+        {
+          auto scope = connection->scopedActionName(factory.name);
+          sub->execute(trxCtx, rand, connection);
+        }
+        ++rec.out.subOk;
         // pstress-style: sometimes rewind a chunk of the transaction
         if (rand.random_number<std::size_t>(1, 100) <=
             config.rollback_to_savepoint_probability) {
@@ -169,6 +203,7 @@ void TransactionAction::execute(metadata::Context &metaCtx, ps_random &rand,
               ->executeQuery(fmt::format("ROLLBACK TO SAVEPOINT sp{};",
                                          savepoints[pick].name))
               .maybeThrow();
+          ++rec.out.savepointRollbacks;
           txn.rollbackTo(savepoints[pick].mark, globalTables);
           // ROLLBACK TO destroys the later savepoints, keeps the target
           savepoints.resize(pick + 1);
@@ -188,21 +223,24 @@ void TransactionAction::execute(metadata::Context &metaCtx, ps_random &rand,
             ->executeQuery(fmt::format("ROLLBACK TO SAVEPOINT sp{};",
                                        savepoints.back().name))
             .maybeThrow();
+        ++rec.out.savepointRollbacks;
         txn.rollbackTo(savepoints.back().mark, globalTables);
-        ++failCount;
+        ++rec.out.subFail;
       } catch (ActionException const &) {
         // no SQL failed (e.g. empty-metadata skip); rewind for uniformity
         connection
             ->executeQuery(fmt::format("ROLLBACK TO SAVEPOINT sp{};",
                                        savepoints.back().name))
             .maybeThrow();
+        ++rec.out.savepointRollbacks;
         txn.rollbackTo(savepoints.back().mark, globalTables);
-        ++failCount;
+        ++rec.out.subFail;
       }
     } else { // abort mode: first failure kills the whole transaction
       try {
+        auto scope = connection->scopedActionName(factory.name);
         sub->execute(trxCtx, rand, connection);
-        ++okCount;
+        ++rec.out.subOk;
       } catch (sql_variant::SqlException const &e) {
         if (e.serverGone()) {
           guard.disarm();
@@ -225,13 +263,15 @@ void TransactionAction::execute(metadata::Context &metaCtx, ps_random &rand,
       auto res = connection->executeQuery("COMMIT;");
       guard.disarm();   // success or failure, the transaction is over
       res.maybeThrow(); // commit-time conflict: buffer discarded, reported
+      rec.out.end = statistics::TransactionOutcome::End::committed;
       txn.publishAll(globalTables);
     } else {
       guard.disarm();
       connection->executeQuery("ROLLBACK;").maybeThrow();
+      rec.out.end = statistics::TransactionOutcome::End::rolledBackIntentional;
     }
   }
 
   spdlog::debug("transaction: {} sub-actions, {} ok, {} failed, in_trx={}",
-                subCount, okCount, failCount, inTrx);
+                subCount, rec.out.subOk, rec.out.subFail, inTrx);
 }

@@ -35,7 +35,7 @@ This will:
 2. Start PostgreSQL and create a test database
 3. Create a handful of random tables
 4. Run a 4-worker, 30-second randomized workload, twice
-5. Print the per-worker statistics report
+5. Write per-worker statistics as CSV files into the run's log directory
 6. Validate the in-memory metadata against the live schema (see the known limitation in [Determinism](determinism.md))
 
 ## What's next?

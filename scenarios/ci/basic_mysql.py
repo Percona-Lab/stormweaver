@@ -18,8 +18,6 @@ def main(args):
             ctx.workload.run()
             logger.info("cycle %d/%d done", cycle + 1, opts.repeat)
 
-        ctx.workload.print_report()
-
         ctx.validate_metadata_or_warn()
 
     print("Scenario completed successfully")

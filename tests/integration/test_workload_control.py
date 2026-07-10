@@ -84,3 +84,38 @@ def test_worker_names_unique_across_runs(pg):
     wl.run()
     assert len(names) == 2
     assert names[0] != names[1]
+
+
+def test_csv_statistics_written(pg, tmp_path, monkeypatch):
+    import csv
+
+    from stormweaver import log as swlog
+
+    monkeypatch.setattr(swlog, "_run_dir", tmp_path)
+
+    wl = sw.Workload(
+        workers=1,
+        duration=1,
+        registry=_registry(),
+        metadata=sw.Metadata(),
+        node_factory=_factory(pg, []),
+        worker_name_prefix="csv-",
+    )
+    wl.run()
+
+    log_dir = swlog.log_dir()
+    assert log_dir is not None
+
+    with open(log_dir / "stats.csv", newline="") as f:
+        rows = list(csv.DictReader(f))
+    ours = [r for r in rows if r["worker"].startswith("csv-")]
+    assert ours
+    assert ours[0]["action"] == "py_select"
+    assert int(ours[0]["success"]) > 0
+
+    with open(log_dir / "histograms.csv", newline="") as f:
+        hrows = list(csv.DictReader(f))
+    hours = [r for r in hrows if r["worker"].startswith("csv-")]
+    assert any(r["stmt_kind"] == "select" for r in hours)
+    # SELECT <number> returns one row every time
+    assert all(int(r["rows_1"]) > 0 for r in hours if r["stmt_kind"] == "select")

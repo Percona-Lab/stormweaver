@@ -8,11 +8,61 @@
 
 namespace statistics {
 
+void RowHistogram::record(uint64_t rows) {
+  if (rows == 0) {
+    buckets[0]++;
+  } else if (rows == 1) {
+    buckets[1]++;
+  } else if (rows <= 10) {
+    buckets[2]++;
+  } else if (rows <= 100) {
+    buckets[3]++;
+  } else if (rows <= 1000) {
+    buckets[4]++;
+  } else {
+    buckets[5]++;
+  }
+}
+
+uint64_t RowHistogram::total() const {
+  uint64_t sum = 0;
+  for (auto b : buckets) {
+    sum += b;
+  }
+  return sum;
+}
+
+bool RowHistogram::hasData() const { return total() > 0; }
+
+void RowHistogram::reset() { buckets.fill(0); }
+
+void TimingHistogram::record(std::chrono::nanoseconds duration) {
+  const auto ns = duration.count();
+  if (ns < 100'000) { // <0.1ms
+    buckets[0]++;
+  } else if (ns < 1'000'000) { // <1ms
+    buckets[1]++;
+  } else if (ns < 10'000'000) { // <10ms
+    buckets[2]++;
+  } else if (ns < 100'000'000) { // <100ms
+    buckets[3]++;
+  } else if (ns < 1'000'000'000) { // <1s
+    buckets[4]++;
+  } else if (ns < 10'000'000'000) { // <10s
+    buckets[5]++;
+  } else {
+    buckets[6]++;
+  }
+}
+
+void TimingHistogram::reset() { buckets.fill(0); }
+
 void TimingStatistics::record(std::chrono::nanoseconds duration) {
   totalTime += duration;
   minTime = std::min(minTime, duration);
   maxTime = std::max(maxTime, duration);
   count++;
+  histogram.record(duration);
 }
 
 double TimingStatistics::getAverageMs() const {
@@ -42,9 +92,46 @@ void TimingStatistics::reset() {
   minTime = std::chrono::nanoseconds::max();
   maxTime = std::chrono::nanoseconds{0};
   count = 0;
+  histogram.reset();
 }
 
 bool TimingStatistics::hasData() const { return count > 0; }
+
+void TransactionStatistics::record(const TransactionOutcome &outcome) {
+  switch (outcome.end) {
+  case TransactionOutcome::End::committed:
+    committed++;
+    break;
+  case TransactionOutcome::End::rolledBackIntentional:
+    rolledBackIntentional++;
+    break;
+  case TransactionOutcome::End::rolledBackError:
+    rolledBackError++;
+    break;
+  }
+  implicitCommits += outcome.implicitCommits;
+  savepointRollbacks += outcome.savepointRollbacks;
+  subActionsOk += outcome.subOk;
+  subActionsFail += outcome.subFail;
+  subActionsPerTxn.record(outcome.subOk + outcome.subFail);
+}
+
+uint64_t TransactionStatistics::total() const {
+  return committed + rolledBackIntentional + rolledBackError;
+}
+
+bool TransactionStatistics::hasData() const { return total() > 0; }
+
+void TransactionStatistics::reset() {
+  committed = 0;
+  rolledBackIntentional = 0;
+  rolledBackError = 0;
+  implicitCommits = 0;
+  savepointRollbacks = 0;
+  subActionsOk = 0;
+  subActionsFail = 0;
+  subActionsPerTxn.reset();
+}
 
 namespace {
 std::chrono::nanoseconds calculateExecutionTime(
@@ -104,6 +191,10 @@ void ActionStatistics::recordConflict(const std::string &errorCode,
   sqlTiming.record(sqlTime);
 }
 
+void ActionStatistics::recordRows(const std::string &kind, uint64_t rows) {
+  rowHistograms[kind].record(rows);
+}
+
 uint64_t ActionStatistics::getTotalCount() const {
   return successCount + actionFailureCount + sqlFailureCount +
          otherFailureCount + sqlConflictCount;
@@ -130,6 +221,7 @@ void ActionStatistics::reset() {
   sqlConflictCount = 0;
   actionErrorNames.clear();
   sqlErrorCodes.clear();
+  rowHistograms.clear();
   executionTiming.reset();
   sqlTiming.reset();
   startTime = std::chrono::high_resolution_clock::time_point{};
@@ -169,6 +261,15 @@ void WorkerStatistics::recordConflict(const std::string &actionName,
   actionStats[actionName].recordConflict(errorCode, sqlTime);
 }
 
+void WorkerStatistics::recordRows(const std::string &actionName,
+                                  const std::string &kind, uint64_t rows) {
+  actionStats[actionName].recordRows(kind, rows);
+}
+
+void WorkerStatistics::recordTransaction(const TransactionOutcome &outcome) {
+  txnStats.record(outcome);
+}
+
 void WorkerStatistics::start() {
   startTime = std::chrono::steady_clock::now();
   endTime = startTime;
@@ -178,6 +279,7 @@ void WorkerStatistics::stop() { endTime = std::chrono::steady_clock::now(); }
 
 void WorkerStatistics::reset() {
   actionStats.clear();
+  txnStats.reset();
   startTime = std::chrono::steady_clock::now();
   endTime = startTime;
 }

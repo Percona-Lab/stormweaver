@@ -12,6 +12,8 @@
 #include <utility>
 #include <vector>
 
+#include "statistics.hpp"
+
 namespace sql_variant {
 
 enum class flavor : std::uint8_t {
@@ -103,6 +105,12 @@ enum class ErrorClass : std::uint8_t {
 // flavor-specific mappings, implemented in postgresql.cpp / mysql.cpp
 ErrorClass classify_pg_sqlstate(std::string_view sqlstate);
 ErrorClass classify_mysql_errno(unsigned int errcode);
+
+enum class StmtKind : std::uint8_t { select, insert, update, del, with, other };
+
+// first-keyword classification; tolerates leading whitespace,
+// -- line comments and /* */ block comments, case-insensitive
+[[nodiscard]] StmtKind classifyStatement(std::string_view query);
 
 class SqlException : public std::exception {
 public:
@@ -225,6 +233,23 @@ protected:
   ServerInfo serverInfo_;
 };
 
+class LoggedSQL;
+
+// restores the connection's previous action name on destruction
+class ActionNameScope {
+public:
+  ActionNameScope(LoggedSQL &conn, std::string name);
+  ~ActionNameScope();
+  ActionNameScope(ActionNameScope const &) = delete;
+  ActionNameScope &operator=(ActionNameScope const &) = delete;
+  ActionNameScope(ActionNameScope &&) = delete;
+  ActionNameScope &operator=(ActionNameScope &&) = delete;
+
+private:
+  LoggedSQL &conn;
+  std::string prev;
+};
+
 class LoggedSQL {
 public:
   ServerInfo serverInfo() const;
@@ -255,11 +280,29 @@ public:
   // callers detect whether an opaque operation actually sent SQL
   std::uint64_t getQueryCount() const;
 
+  void setCurrentAction(std::string name);
+  [[nodiscard]] std::string const &currentAction() const;
+  [[nodiscard]] ActionNameScope scopedActionName(std::string name);
+
+  void recordTransactionOutcome(statistics::TransactionOutcome const &outcome);
+
+  // return-and-clear; the worker drains after every action
+  std::vector<statistics::RowObservation> drainRowObservations();
+  std::vector<statistics::TransactionOutcome> drainTransactionOutcomes();
+  // drop anything accumulated outside the worker loop (setup queries)
+  void clearObservations();
+
 private:
+  void observeResult(std::string const &query, QueryResult const &res) const;
+
   std::unique_ptr<GenericSQL> sql;
   std::shared_ptr<spdlog::logger> logger;
   mutable std::chrono::nanoseconds accumulatedSqlTime{0};
   mutable std::uint64_t queryCount{0};
+
+  std::string currentAction_;
+  mutable std::vector<statistics::RowObservation> rowObservations;
+  std::vector<statistics::TransactionOutcome> txnOutcomes;
 };
 
 } // namespace sql_variant

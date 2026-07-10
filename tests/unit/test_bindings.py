@@ -96,3 +96,27 @@ def test_connect_mysql_exists_and_fails_cleanly():
 
 def test_worker_exposes_checksums():
     assert callable(getattr(sw.Worker, "calculate_database_checksums", None))
+
+
+def test_statistics_bindings_exposed():
+    core = sw._stormweaver
+    for name in ("action_names", "action_stats", "transaction_stats"):
+        assert callable(getattr(core.WorkerStatistics, name, None))
+    for name in ("row_histograms", "success_rate"):
+        assert callable(getattr(core.ActionStatistics, name, None))
+    assert hasattr(core.ActionStatistics, "action_error_names")
+    assert hasattr(core.ActionStatistics, "sql_error_codes")
+    assert callable(getattr(core.TimingStatistics, "histogram", None))
+    assert hasattr(core, "TransactionStatistics")
+    for field in (
+        "committed",
+        "rolled_back_intentional",
+        "rolled_back_error",
+        "implicit_commits",
+        "savepoint_rollbacks",
+        "sub_actions_ok",
+        "sub_actions_fail",
+    ):
+        assert hasattr(core.TransactionStatistics, field)
+    for name in ("total", "has_data", "sub_histogram"):
+        assert callable(getattr(core.TransactionStatistics, name, None))
