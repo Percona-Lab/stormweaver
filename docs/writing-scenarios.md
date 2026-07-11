@@ -12,11 +12,26 @@ stormweaver <scenario.py> -c <config> -i <install dir> [common options] [scenari
 
 * `-c/--config` - TOML config file, default `config/stormweaver.toml` (see [Config parameters](config-parameters.md))
 * `-i/--install-dir` - database installation directory; falls back to `pgroot` in the config file
+* `-v/--verbose` / `-q/--quiet` - console verbosity (debug / warnings only)
+* `--log-mode`/`--log-splits` - log layout, see [Unified logging](#unified-logging)
 * everything else is scenario-specific and lands in `args.extra`
 
-A run creates, relative to the current working directory: `datadirs/` (one subdirectory per server, via `Config.datadir()`) and `logs/<timestamp>-<scenario name>/` (main log, per-server log, per-worker/per-connection SQL logs). Backup-testing scenarios additionally create `backups/` and `archive/` (see below).
+A run creates, relative to the current working directory: `datadirs/` (one subdirectory per server, via `Config.datadir()`) and `logs/<timestamp>-<scenario name>/`. In the default split mode that run directory holds the main log plus per-server, per-worker and per-connection SQL logs; in unified mode everything goes into a single `main.log` instead. Backup-testing scenarios additionally create `backups/` and `archive/` (see below).
 
 **Caveat: don't run from a deeply nested CWD.** PostgreSQL puts its Unix domain socket in the data directory (`unix_socket_directories` points at `datadirs/datadir_<name>`), and the kernel's socket path limit is about 107 bytes. A long enough working directory path pushes the socket path over that limit and `pg_ctl start` fails with no obviously-related error. Run from somewhere shallow (e.g. the repo root).
+
+## Unified logging
+
+Unified mode routes everything - scenario messages, server lifecycle, per-connection SQL statements - into one chronological `main.log`. Enable it with any of (highest precedence first): the `--log-mode unified` flag, `STORMWEAVER_LOG_MODE=unified` in the environment, or a `LOG_MODE = "unified"` module-level attribute in the scenario file. To also keep the split per-connection/worker files, add `--log-splits`, `STORMWEAVER_LOG_SPLITS=1`, or `LOG_SPLITS = True`. `-q` only quiets the console: the unified `main.log` always keeps full INFO detail.
+
+Notable moments appear as structured event lines of the shape `KIND key=value key="quoted value"`. The kinds are `RUN` (run header: scenario, argv, cwd, `STORMWEAVER_*` env), `STEP` (script phase begin/end), `ASSERT` (a check, `status=pass`/`status=fail` with expected/actual fields), `NODE` (server lifecycle: init/start/stop/kill/promote), `DUMP` (multi-line context such as a traceback or server log tail - the block lines that follow are prefixed with `| `), and `OUTCOME` (final result). Mark your own script phases with `stormweaver.events.step`:
+
+```python
+from stormweaver import events
+
+with events.step("restore from backup"):
+    ...
+```
 
 ## `scenario.parse`
 

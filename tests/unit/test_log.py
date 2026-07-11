@@ -1,6 +1,7 @@
 import datetime
 import logging
 import re
+from pathlib import Path
 
 import pytest
 import stormweaver._stormweaver as _stormweaver
@@ -12,10 +13,13 @@ LINE_RE = re.compile(
 
 
 @pytest.fixture(autouse=True)
-def _restore_log_state():
+def _restore_log_state(tmp_path):
     saved = swlog._run_dir
+    saved_mode = swlog._mode
     yield
     swlog._run_dir = saved
+    swlog._mode = saved_mode
+    _stormweaver.init_core_logging(str(tmp_path), swlog._forward, 2)
 
 
 def test_init_logging_creates_dir_and_main_log(tmp_path):
@@ -118,3 +122,76 @@ def test_record_outcome_noop_without_run_dir(tmp_path, monkeypatch):
 def test_record_outcome_swallows_os_errors(tmp_path, monkeypatch):
     monkeypatch.setattr(swlog, "_run_dir", tmp_path / "gone" / "deeper")
     swlog.record_outcome("scenario result=passed")
+
+
+def test_unified_named_logger_reaches_main_log(tmp_path):
+    run_dir = swlog.init_logging(tmp_path / "run", mode="unified")
+    _stormweaver._file_log(
+        "sql-conn-uni1", "sql-conn-uni1.log", 2, "Statement: SELECT 1"
+    )
+    assert swlog.log_mode() == "unified"
+    content = (run_dir / "main.log").read_text()
+    assert "[INFO] sql-conn-uni1: Statement: SELECT 1" in content
+    assert not (run_dir / "sql-conn-uni1.log").exists()
+
+
+def test_unified_splits_also_write_files(tmp_path):
+    run_dir = swlog.init_logging(tmp_path / "run", mode="unified", splits=True)
+    _stormweaver._file_log("sql-conn-uni2", "sql-conn-uni2.log", 2, "hello")
+    assert "sql-conn-uni2: hello" in (run_dir / "main.log").read_text()
+    assert "hello" in (run_dir / "sql-conn-uni2.log").read_text()
+
+
+def test_quiet_unified_keeps_info_in_main_log(tmp_path):
+    run_dir = swlog.init_logging(
+        tmp_path / "run", level=logging.WARNING, mode="unified"
+    )
+    _stormweaver._file_log(
+        "sql-conn-quiet1", "sql-conn-quiet1.log", 2, "Statement: SELECT 1"
+    )
+    logging.getLogger("test.quiet").info("ASSERT status=pass kind=x")
+    content = (run_dir / "main.log").read_text()
+    assert "sql-conn-quiet1: Statement: SELECT 1" in content
+    assert "ASSERT status=pass" in content
+
+
+def test_split_mode_keeps_named_loggers_out_of_main_log(tmp_path):
+    run_dir = swlog.init_logging(tmp_path / "run")
+    _stormweaver._file_log("sql-conn-split1", "sql-conn-split1.log", 2, "hello")
+    assert "sql-conn-split1" not in (run_dir / "main.log").read_text()
+    assert "hello" in (run_dir / "sql-conn-split1.log").read_text()
+
+
+def test_init_logging_rejects_unknown_mode(tmp_path):
+    with pytest.raises(ValueError):
+        swlog.init_logging(tmp_path / "run", mode="both")
+
+
+def test_console_filter_hides_connection_noise():
+    def rec(name):
+        return logging.LogRecord(name, logging.INFO, "", 0, "m", None, None)
+
+    assert swlog._console_filter(rec("sql-conn-x")) is False
+    assert swlog._console_filter(rec("worker-1-1")) is False
+    assert swlog._console_filter(rec("test.node")) is True
+
+
+def test_record_outcome_logs_event(tmp_path):
+    run_dir = swlog.init_logging(tmp_path / "run")
+    swlog.record_outcome("scenario result=passed")
+    assert "OUTCOME scenario result=passed" in (run_dir / "main.log").read_text()
+
+
+def test_ensure_logging_defaults_to_unified(monkeypatch):
+    from stormweaver.testing import util
+
+    calls = {}
+
+    def fake_init(name, mode="split", splits=False):
+        calls.update(name=name, mode=mode)
+        return Path("x")
+
+    monkeypatch.setattr(swlog, "_run_dir", None)
+    monkeypatch.setattr(util.swlog, "init_run_logging", fake_init)
+    util.ensure_logging()
+    assert calls["mode"] == "unified"

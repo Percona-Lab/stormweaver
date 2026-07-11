@@ -13,10 +13,10 @@ def alloc_port(low: int = 26600, high: int = 27000) -> int:
     raise RuntimeError(f"no free port in range {low}-{high}")
 
 
-def ensure_logging(name: str = "testing") -> None:
+def ensure_logging(name: str = "testing", mode: str = "unified") -> None:
     """Idempotent run-log init: standalone runs have no fixture to do it."""
     if swlog.log_dir() is None:
-        swlog.init_run_logging(name)
+        swlog.init_run_logging(name, mode=mode)
 
 
 def pg_install_dir() -> str:

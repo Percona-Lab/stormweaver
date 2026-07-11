@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 import stormweaver as sw
+from stormweaver import events
 from stormweaver import log as swlog
 
 # reserved port bands (keep disjoint): scenarios 15432-15531, these session/
@@ -19,6 +20,14 @@ from stormweaver import log as swlog
 # PYTEST_XDIST_WORKER if parallelism is ever adopted.
 _ports = itertools.count(25500)
 _log_ids = itertools.count(1)
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addini(
+        "stormweaver_log_mode",
+        "stormweaver run-log layout: unified or split",
+        default="unified",
+    )
 
 
 def _detect_pg_dir() -> str | None:
@@ -66,10 +75,13 @@ def _server(pg_install_dir: str) -> Iterator[sw.Postgres]:
 
 
 @pytest.fixture(scope="session")
-def sw_log_dir() -> Path:
+def sw_log_dir(pytestconfig: pytest.Config) -> Path:
     # always create the pytest run dir: earlier unit tests may have left
     # log_dir() pointing at a throwaway tmp_path
-    return swlog.init_run_logging("pytest")
+    mode = pytestconfig.getini("stormweaver_log_mode")
+    d = swlog.init_run_logging("pytest", mode=mode)
+    events.emit_run_header(scenario="pytest", mode=mode)
+    return d
 
 
 @pytest.fixture

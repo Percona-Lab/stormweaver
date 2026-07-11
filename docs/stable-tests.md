@@ -50,3 +50,7 @@ def test_seeded_single_worker_workload(postgres_server_session, sw_connect):
 (trimmed from `tests/stable/test_stable_example.py`)
 
 A single-worker seeded workload like this is fully deterministic (see [Determinism](determinism.md)), which is what makes it safe to assert on in a stable test - unlike a full randomized multi-worker run, it won't flake.
+
+## Logging
+
+pytest sessions default to unified logging: each session writes one `main.log` into its run directory under `logs/` (ini option `stormweaver_log_mode = split` reverts to per-connection files). The testing framework's `safe_sql`/`sql_value`/`expect_error`/`poll_until`/`wait_for_log` helpers write `ASSERT` events into that log - `status=pass` on success, `status=fail` with the expected/actual values on failure - and a failure is followed by `DUMP` blocks with the traceback, the offending result rows, and a server log tail. See [Unified logging](writing-scenarios.md#unified-logging) for the event grammar.

@@ -110,22 +110,37 @@ NB_MODULE(_stormweaver, m) {
   m.def(
       "init_core_logging",
       [](std::string const &log_dir,
-         std::function<void(int, std::string const &)> sink, int level) {
+         std::function<void(int, std::string const &, std::string const &)>
+             sink,
+         int level, bool unified, bool splits) {
         logging::set_log_dir(log_dir);
+        logging::set_unified(unified, splits);
         logging::set_python_sink(std::move(sink));
         logging::set_level(level);
       },
-      nb::arg("log_dir"), nb::arg("sink"), nb::arg("level"));
+      nb::arg("log_dir"), nb::arg("sink"), nb::arg("level"),
+      nb::arg("unified") = false, nb::arg("splits") = false);
 
   m.def("shutdown_core_logging", []() {
-    // drop the python callable while the interpreter is still alive
-    logging::set_python_sink([](int, std::string const &) {});
+    // drop the python callable while the interpreter is still alive.
+    // empty function, not empty-bodied lambda: sink short-circuits on falsy
+    logging::set_python_sink(
+        std::function<void(int, std::string const &, std::string const &)>{});
   });
 
   // test hook: emit through the core default logger like spdlog::info does
   m.def("_core_log", [](int level, std::string const &msg) {
     spdlog::default_logger()->log(static_cast<spdlog::level::level_enum>(level),
                                   msg);
+  });
+
+  // test hook: emit through a named file logger like workers/connections do
+  m.def("_file_log", [](std::string const &name, std::string const &filename,
+                        int level, std::string const &msg) {
+    auto logger = logging::make_file_logger(name, filename);
+    logger->log(static_cast<spdlog::level::level_enum>(level), msg);
+    logger->flush();
+    spdlog::drop(name);
   });
 
   // --- SQL Layer ---

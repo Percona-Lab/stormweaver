@@ -1,3 +1,4 @@
+from stormweaver.events import step
 from stormweaver.testing.files import read_file_bytes
 from stormweaver.testing.node import MySqlTestNode, PgTestNode, Rows, TestConn, TestNode
 from stormweaver.testing.process import command_fails, command_ok, run_bin
@@ -24,4 +25,5 @@ __all__ = [
     "pg_install_dir",
     "read_file_bytes",
     "run_bin",
+    "step",
 ]

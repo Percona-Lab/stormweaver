@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 
 import pytest
+from stormweaver import cli
 from stormweaver import log as swlog
 from stormweaver.cli import main, parse_args
 
@@ -56,14 +57,22 @@ def test_cli_records_failed_outcome(tmp_path, monkeypatch, _restore_log_state):
     assert "scenario result=failed" in outcomes[0].read_text()
 
 
-def test_cli_records_missing_main_as_failed(tmp_path, monkeypatch, _restore_log_state):
+def test_cli_missing_main_no_run_dir(tmp_path, monkeypatch, capsys):
     monkeypatch.chdir(tmp_path)
     scen = tmp_path / "scen.py"
     scen.write_text("x = 1\n")
     assert main([str(scen)]) == 1
-    outcomes = list(Path("logs").glob("*/outcome"))
-    assert len(outcomes) == 1
-    assert "scenario result=failed" in outcomes[0].read_text()
+    assert "no main()" in capsys.readouterr().err
+    assert not Path("logs").exists()
+
+
+def test_cli_load_error_no_run_dir(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    scen = tmp_path / "scen.py"
+    scen.write_text("this is not python\n")
+    assert main([str(scen)]) == 1
+    assert "failed to load scenario" in capsys.readouterr().err
+    assert not Path("logs").exists()
 
 
 def _main_log(base=Path("logs")):
@@ -143,3 +152,81 @@ def test_cli_systemexit_odd_payload(tmp_path, monkeypatch, _restore_log_state):
     assert "scenario failed: weird" in _main_log()
     outcomes = list(Path("logs").glob("*/outcome"))
     assert "scenario result=failed" in outcomes[0].read_text()
+
+
+def _scenario(tmp_path, header=""):
+    f = tmp_path / "scen.py"
+    f.write_text(header + "def main(args):\n    return 0\n")
+    return f
+
+
+@pytest.fixture
+def init_calls(monkeypatch, tmp_path):
+    monkeypatch.delenv("STORMWEAVER_LOG_MODE", raising=False)
+    monkeypatch.delenv("STORMWEAVER_LOG_SPLITS", raising=False)
+    calls = {}
+
+    def fake_init(name, level, mode="split", splits=False):
+        calls.update(name=name, mode=mode, splits=splits)
+        return tmp_path
+
+    monkeypatch.setattr(cli, "init_run_logging", fake_init)
+    return calls
+
+
+def test_default_mode_is_split(tmp_path, init_calls):
+    assert cli.main([str(_scenario(tmp_path))]) == 0
+    assert init_calls["mode"] == "split"
+    assert init_calls["splits"] is False
+
+
+def test_scenario_declares_unified(tmp_path, init_calls):
+    scen = _scenario(tmp_path, 'LOG_MODE = "unified"\n')
+    assert cli.main([str(scen)]) == 0
+    assert init_calls["mode"] == "unified"
+
+
+def test_env_overrides_scenario(tmp_path, init_calls, monkeypatch):
+    monkeypatch.setenv("STORMWEAVER_LOG_MODE", "split")
+    scen = _scenario(tmp_path, 'LOG_MODE = "unified"\n')
+    assert cli.main([str(scen)]) == 0
+    assert init_calls["mode"] == "split"
+
+
+def test_flag_overrides_env(tmp_path, init_calls, monkeypatch):
+    monkeypatch.setenv("STORMWEAVER_LOG_MODE", "split")
+    assert cli.main([str(_scenario(tmp_path)), "--log-mode", "unified"]) == 0
+    assert init_calls["mode"] == "unified"
+
+
+def test_scenario_splits_attr(tmp_path, init_calls):
+    scen = _scenario(tmp_path, 'LOG_MODE = "unified"\nLOG_SPLITS = True\n')
+    assert cli.main([str(scen)]) == 0
+    assert init_calls["splits"] is True
+
+
+def test_splits_env(tmp_path, init_calls, monkeypatch):
+    monkeypatch.setenv("STORMWEAVER_LOG_SPLITS", "1")
+    assert cli.main([str(_scenario(tmp_path))]) == 0
+    assert init_calls["splits"] is True
+
+
+def test_splits_flag(tmp_path, init_calls):
+    assert cli.main([str(_scenario(tmp_path)), "--log-splits"]) == 0
+    assert init_calls["splits"] is True
+
+
+def test_bad_scenario_mode_rejected(tmp_path, init_calls, capsys):
+    scen = _scenario(tmp_path, 'LOG_MODE = "both"\n')
+    assert cli.main([str(scen)]) == 1
+    assert "log mode" in capsys.readouterr().err
+
+
+def test_run_header_first_event(tmp_path, monkeypatch, _restore_log_state):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("STORMWEAVER_LOG_MODE", raising=False)
+    assert main([str(_scenario(tmp_path))]) == 0
+    first = _main_log().splitlines()[0]
+    assert "RUN " in first
+    assert "scenario=scen" in first
+    assert "mode=split" in first
