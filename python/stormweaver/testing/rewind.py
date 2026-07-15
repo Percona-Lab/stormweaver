@@ -2,7 +2,8 @@ from pathlib import Path
 from types import TracebackType
 from typing import Self
 
-import stormweaver.testing as st
+from stormweaver.testing.node import PgTestNode
+from stormweaver.testing.process import command_ok
 
 
 class RewindDriver:
@@ -17,8 +18,8 @@ class RewindDriver:
     def __init__(self, install_dir: str | Path, *, debug: bool = False) -> None:
         self.install_dir = install_dir
         self.debug = debug
-        self.primary: st.PgTestNode | None = None
-        self.standby: st.PgTestNode | None = None
+        self.primary: PgTestNode | None = None
+        self.standby: PgTestNode | None = None
 
     def __enter__(self) -> Self:
         return self
@@ -43,7 +44,7 @@ class RewindDriver:
     def initdb_args(self) -> list[str] | None:
         return None
 
-    def configure_primary(self, primary: st.PgTestNode) -> None:
+    def configure_primary(self, primary: PgTestNode) -> None:
         # post-fresh setup (extensions, keys, roles); default none
         pass
 
@@ -53,8 +54,8 @@ class RewindDriver:
 
     # lifecycle
 
-    def setup_primary(self) -> st.PgTestNode:
-        primary = st.PgTestNode.fresh(
+    def setup_primary(self) -> PgTestNode:
+        primary = PgTestNode.fresh(
             self.install_dir,
             name="rwprimary",
             config=self.primary_config(),
@@ -64,10 +65,10 @@ class RewindDriver:
         self.primary = primary
         return primary
 
-    def create_standby(self) -> st.PgTestNode:
+    def create_standby(self) -> PgTestNode:
         assert self.primary is not None
         backup = self.primary.basebackup()
-        self.standby = st.PgTestNode.from_backup(backup, self.primary, name="rwstandby")
+        self.standby = PgTestNode.from_backup(backup, self.primary, name="rwstandby")
         return self.standby
 
     def promote_standby(self) -> None:
@@ -98,7 +99,7 @@ class RewindDriver:
                     "--no-sync",
                     f"--config-file={saved_conf}",
                 )
-                st.command_ok(cp, f"{self.rewind_bin} local")
+                command_ok(cp, f"{self.rewind_bin} local")
             elif mode == "remote":
                 cp = primary.run_bin(
                     self.rewind_bin,
@@ -110,7 +111,7 @@ class RewindDriver:
                     "--write-recovery-conf",
                     f"--config-file={saved_conf}",
                 )
-                st.command_ok(cp, f"{self.rewind_bin} remote")
+                command_ok(cp, f"{self.rewind_bin} remote")
                 assert (primary.datadir / "standby.signal").exists()
                 if user:
                     standby.safe_sql(f"ALTER ROLE {user} WITH REPLICATION")
@@ -128,7 +129,7 @@ class RewindDriver:
                     "--restore-target-wal",
                     f"--config-file={primary.datadir}/postgresql.conf",
                 )
-                st.command_ok(cp, f"{self.rewind_bin} archive")
+                command_ok(cp, f"{self.rewind_bin} archive")
             else:
                 raise ValueError(f"unknown rewind mode: {mode}")
 

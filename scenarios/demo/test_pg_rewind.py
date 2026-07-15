@@ -1,6 +1,6 @@
 import stormweaver.testing as st
 from conftest import PG_DIR, requires_pg
-from rewind import RewindDriver
+from stormweaver.testing.rewind import RewindDriver
 
 pytestmark = requires_pg
 

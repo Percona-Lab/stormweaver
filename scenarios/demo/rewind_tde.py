@@ -1,9 +1,9 @@
 from pathlib import Path
 
 import stormweaver.testing as st
-from rewind import RewindDriver
 from stormweaver.keyrings import pg_tde as tde_sql
 from stormweaver.keyrings.base import Keyring
+from stormweaver.testing.rewind import RewindDriver
 
 # minimal grants the perl test uses so rewind_user can drive a remote rewind
 REWIND_USER_SQL = """
