@@ -1,5 +1,5 @@
 from stormweaver.events import step
-from stormweaver.testing.files import read_file_bytes
+from stormweaver.testing.files import check_mode_recursive, read_file_bytes
 from stormweaver.testing.node import MySqlTestNode, PgTestNode, Rows, TestConn, TestNode
 from stormweaver.testing.process import command_fails, command_ok, run_bin
 from stormweaver.testing.runner import main
@@ -17,6 +17,7 @@ __all__ = [
     "TestConn",
     "TestNode",
     "alloc_port",
+    "check_mode_recursive",
     "command_fails",
     "command_ok",
     "ensure_logging",

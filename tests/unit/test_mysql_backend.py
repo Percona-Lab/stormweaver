@@ -1,5 +1,6 @@
 import subprocess
 
+import pytest
 import stormweaver as sw
 
 
@@ -136,6 +137,15 @@ def test_stop_when_never_started_does_not_crash(tmp_path, monkeypatch):
     monkeypatch.setattr(subprocess, "run", fake_run)
     my.stop()
     assert my._proc is None
+
+
+def test_mysql_stop_rejects_immediate(tmp_path):
+    my = sw.MySQL(
+        install_dir="/opt/mysql", datadir=str(tmp_path / "d"), port=23306, init=False
+    )
+    my._proc = FakeProc()
+    with pytest.raises(ValueError):
+        my.stop(mode="immediate")
 
 
 def test_is_running_false_initially(tmp_path):

@@ -299,11 +299,8 @@ def single_pg(
     if preload:
         settings["shared_preload_libraries"] = ",".join(preload)
     if archive:
-        Path("archive").mkdir(exist_ok=True)
         settings |= {
             "summarize_wal": "on",
-            "archive_mode": "on",
-            "archive_command": f"cp %p {Path('archive').resolve()}/%f",
             "max_wal_senders": "3",
         }
     if extra_config:
@@ -314,8 +311,11 @@ def single_pg(
         datadir=datadir,
         port=opts.config.free_port(),
         wrapper=wrapper or getattr(opts, "wrapper", None),
+        archive_dir=Path("archive").resolve() if archive else None,
     )
     pg.add_config(settings)
+    if archive:
+        pg.enable_archiving()
     pg.start()
     try:
         if not pg.wait_ready():

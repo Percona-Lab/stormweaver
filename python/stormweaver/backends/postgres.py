@@ -1,8 +1,12 @@
 import getpass
 import logging
 import os
+import shutil
 import signal
 import subprocess
+import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -21,13 +25,21 @@ class Postgres(DatabaseBackend):
         init: bool = True,
         port: int | None = None,
         wrapper: ServerWrapper | None = None,
+        archive_dir: str | Path | None = None,
+        initdb_args: list[str] | None = None,
     ) -> None:
         self.install_dir = Path(install_dir)
         self.datadir = Path(datadir)
+        self.archive_dir = (
+            Path(archive_dir)
+            if archive_dir is not None
+            else self.datadir.parent / f"{self.datadir.name}_archive"
+        )
         self._port = str(port) if port else None
         self.wrapper = wrapper
         self._proc: subprocess.Popen[bytes] | None = None
         self._session = 0
+        self._initdb_args = list(initdb_args) if initdb_args else []
 
         if init:
             self.initialize()
@@ -45,7 +57,13 @@ class Postgres(DatabaseBackend):
         logger.info("Initializing datadir at %s", self.datadir)
         self.datadir.mkdir(parents=True, exist_ok=True)
         result = subprocess.run(
-            [self._bin("initdb"), "-D", str(self.datadir), "--no-sync"],
+            [
+                self._bin("initdb"),
+                "-D",
+                str(self.datadir),
+                "--no-sync",
+                *self._initdb_args,
+            ],
             capture_output=True,
             text=True,
         )
@@ -71,6 +89,61 @@ class Postgres(DatabaseBackend):
         with open(conf_file, "a") as f:
             for k, v in settings.items():
                 f.write(f"{k} = '{v}'\n")
+
+    def enable_archiving(self) -> None:
+        self.archive_dir.mkdir(parents=True, exist_ok=True)
+        self.archive_dir.chmod(0o700)
+        self.add_config(
+            {
+                "archive_mode": "on",
+                "archive_command": f'cp "%p" "{self.archive_dir.resolve()}/%f"',
+            }
+        )
+
+    def set_signal(self, kind: str) -> None:
+        if kind not in ("recovery", "standby"):
+            raise ValueError(f"unknown signal kind: {kind}")
+        # PGDATA files are 0600; touch() would honor umask (0644)
+        sig = self.datadir / f"{kind}.signal"
+        sig.touch()
+        sig.chmod(0o600)
+
+    def enable_restoring(
+        self, source: Postgres | str | Path, signal: str | None = None
+    ) -> None:
+        archive = source.archive_dir if isinstance(source, Postgres) else Path(source)
+        if not archive.is_dir():
+            raise RuntimeError(f"archive dir does not exist: {archive}")
+        self.add_config({"restore_command": f'cp "{archive.resolve()}/%f" "%p"'})
+        if signal is not None:
+            self.set_signal(signal)
+
+    def move_wal_to_archive(self) -> None:
+        """Relocate pg_wal contents into archive_dir; server must be stopped."""
+        wal = self.datadir / "pg_wal"
+        self.archive_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(wal, self.archive_dir, dirs_exist_ok=True)
+        shutil.rmtree(wal)
+        wal.mkdir()
+        wal.chmod(0o700)
+        self.archive_dir.chmod(0o700)
+
+    @contextmanager
+    def preserve_config(self) -> Iterator[Path]:
+        """Save postgresql.conf aside, yield the saved path, restore on exit.
+
+        The yielded copy is what pg_rewind's --config-file wants: a valid
+        conf that survives the datadir copy being overwritten.
+        """
+        conf = self.datadir / "postgresql.conf"
+        tmp = Path(tempfile.mkdtemp(prefix="sw-conf-", dir="/tmp"))
+        saved = tmp / "postgresql.conf"
+        shutil.copy2(conf, saved)
+        try:
+            yield saved
+        finally:
+            shutil.move(str(saved), conf)
+            shutil.rmtree(tmp, ignore_errors=True)
 
     def add_hba(
         self, host_type: str, database: str, user: str, address: str, method: str
@@ -109,8 +182,10 @@ class Postgres(DatabaseBackend):
             )
         logger.info("PostgreSQL starting, pid %s", self._proc.pid)
 
-    def stop(self, timeout: float = 10) -> None:
-        logger.info("Stopping PostgreSQL")
+    def stop(self, timeout: float = 10, mode: str = "fast") -> None:
+        if mode not in ("smart", "fast", "immediate"):
+            raise ValueError(f"unknown stop mode: {mode}")
+        logger.info("Stopping PostgreSQL (mode=%s)", mode)
         timeout = self._timeout(timeout)
         result = subprocess.run(
             [
@@ -119,7 +194,7 @@ class Postgres(DatabaseBackend):
                 "-D",
                 str(self.datadir),
                 "-m",
-                "fast",
+                mode,
                 "-t",
                 str(int(timeout)),
             ],

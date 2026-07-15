@@ -29,6 +29,35 @@ class FakeProc:
         self.returncode = -9
 
 
+def test_initdb_args_forwarded(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        subprocess, "run", lambda cmd, **k: calls.append(cmd) or FakeCompleted()
+    )
+    sw.Postgres(
+        install_dir="/opt/pg",
+        datadir=str(tmp_path / "d"),
+        port=26100,
+        init=True,
+        initdb_args=["--data-checksums"],
+    )
+    initdb_cmd = calls[0]
+    assert initdb_cmd[0].endswith("initdb")
+    assert "--data-checksums" in initdb_cmd
+
+
+def test_initdb_default_argv_unchanged(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        subprocess, "run", lambda cmd, **k: calls.append(cmd) or FakeCompleted()
+    )
+    sw.Postgres(
+        install_dir="/opt/pg", datadir=str(tmp_path / "d"), port=26100, init=True
+    )
+    initdb_cmd = calls[0]
+    assert initdb_cmd == ["/opt/pg/bin/initdb", "-D", str(tmp_path / "d"), "--no-sync"]
+
+
 def test_postgres_is_backend(tmp_path):
     pg = sw.Postgres(
         install_dir="/opt/pg", datadir=str(tmp_path / "d"), port=26100, init=False
@@ -68,6 +97,45 @@ def test_is_running_reflects_proc_state(tmp_path):
     assert pg.is_running() is True
     pg._proc.returncode = 0
     assert pg.is_running() is False
+
+
+def test_stop_default_mode_is_fast(tmp_path, monkeypatch):
+    pg = sw.Postgres(
+        install_dir="/opt/pg", datadir=str(tmp_path / "d"), port=26100, init=False
+    )
+    pg._proc = FakeProc()
+    pg._session = 1
+    calls = []
+    monkeypatch.setattr(
+        subprocess, "run", lambda cmd, **k: calls.append(cmd) or FakeCompleted()
+    )
+    pg.stop()
+    cmd = calls[0]
+    assert cmd[cmd.index("-m") + 1] == "fast"
+
+
+def test_stop_immediate_mode(tmp_path, monkeypatch):
+    pg = sw.Postgres(
+        install_dir="/opt/pg", datadir=str(tmp_path / "d"), port=26100, init=False
+    )
+    pg._proc = FakeProc()
+    pg._session = 1
+    calls = []
+    monkeypatch.setattr(
+        subprocess, "run", lambda cmd, **k: calls.append(cmd) or FakeCompleted()
+    )
+    pg.stop(mode="immediate")
+    cmd = calls[0]
+    assert cmd[cmd.index("-m") + 1] == "immediate"
+
+
+def test_stop_rejects_bad_mode(tmp_path):
+    pg = sw.Postgres(
+        install_dir="/opt/pg", datadir=str(tmp_path / "d"), port=26100, init=False
+    )
+    pg._proc = FakeProc()
+    with pytest.raises(ValueError):
+        pg.stop(mode="bogus")
 
 
 def test_kill_sends_sigkill_to_server_pid(tmp_path, monkeypatch):
@@ -312,3 +380,128 @@ def test_server_log_path_is_public(tmp_path):
         install_dir="/opt/pg", datadir=str(tmp_path / "d"), port=26100, init=False
     )
     assert pg.server_log_path.name.startswith("server-")
+
+
+def test_archive_dir_default_and_override(tmp_path):
+    pg = sw.Postgres(
+        install_dir="/opt/pg", datadir=str(tmp_path / "d"), port=26100, init=False
+    )
+    assert pg.archive_dir == tmp_path / "d_archive"
+
+    pg2 = sw.Postgres(
+        install_dir="/opt/pg",
+        datadir=str(tmp_path / "d"),
+        port=26100,
+        init=False,
+        archive_dir=str(tmp_path / "arch"),
+    )
+    assert pg2.archive_dir == tmp_path / "arch"
+
+
+def test_enable_archiving_creates_dir_and_config(tmp_path):
+    datadir = tmp_path / "d"
+    datadir.mkdir()
+    pg = sw.Postgres(
+        install_dir="/opt/pg", datadir=str(datadir), port=26100, init=False
+    )
+    pg.enable_archiving()
+    assert pg.archive_dir.is_dir()
+    assert (pg.archive_dir.stat().st_mode & 0o777) == 0o700
+    conf = (datadir / "postgresql.conf").read_text()
+    assert "archive_mode = 'on'" in conf
+    assert f'''archive_command = 'cp "%p" "{pg.archive_dir.resolve()}/%f"''' in conf
+
+
+def test_set_signal(tmp_path):
+    datadir = tmp_path / "d"
+    datadir.mkdir()
+    pg = sw.Postgres(
+        install_dir="/opt/pg", datadir=str(datadir), port=26100, init=False
+    )
+    pg.set_signal("recovery")
+    assert (datadir / "recovery.signal").exists()
+    pg.set_signal("standby")
+    assert (datadir / "standby.signal").exists()
+    with pytest.raises(ValueError, match="bogus"):
+        pg.set_signal("bogus")
+
+
+def test_enable_restoring_missing_archive_raises(tmp_path):
+    datadir = tmp_path / "d"
+    datadir.mkdir()
+    pg = sw.Postgres(
+        install_dir="/opt/pg", datadir=str(datadir), port=26100, init=False
+    )
+    with pytest.raises(RuntimeError, match="archive"):
+        pg.enable_restoring(tmp_path / "nonexistent")
+
+
+def test_enable_restoring_from_source_node(tmp_path):
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    source = sw.Postgres(
+        install_dir="/opt/pg", datadir=str(src_dir), port=26100, init=False
+    )
+    source.archive_dir.mkdir()
+
+    datadir = tmp_path / "d"
+    datadir.mkdir()
+    pg = sw.Postgres(
+        install_dir="/opt/pg", datadir=str(datadir), port=26101, init=False
+    )
+    pg.enable_restoring(source, signal="recovery")
+    conf = (datadir / "postgresql.conf").read_text()
+    assert f'''restore_command = 'cp "{source.archive_dir.resolve()}/%f" "%p"''' in conf
+    assert (datadir / "recovery.signal").exists()
+
+
+def test_move_wal_to_archive(tmp_path):
+    datadir = tmp_path / "d"
+    wal = datadir / "pg_wal"
+    (wal / "archive_status").mkdir(parents=True)
+    (wal / "000000010000000000000001").write_text("w1")
+    pg = sw.Postgres(
+        install_dir="/opt/pg", datadir=str(datadir), port=26100, init=False
+    )
+    pg.archive_dir.mkdir()
+    (pg.archive_dir / "existing").write_text("old")
+
+    pg.move_wal_to_archive()
+
+    assert (pg.archive_dir / "000000010000000000000001").read_text() == "w1"
+    assert (pg.archive_dir / "existing").read_text() == "old"
+    assert wal.is_dir() and not any(wal.iterdir())
+    assert (wal.stat().st_mode & 0o777) == 0o700
+    assert (pg.archive_dir.stat().st_mode & 0o777) == 0o700
+
+
+def test_preserve_config_restores_content_and_mode(tmp_path):
+    datadir = tmp_path / "d"
+    datadir.mkdir()
+    conf = datadir / "postgresql.conf"
+    conf.write_text("original = 'yes'\n")
+    conf.chmod(0o640)
+    pg = sw.Postgres(
+        install_dir="/opt/pg", datadir=str(datadir), port=26100, init=False
+    )
+    with pg.preserve_config() as saved:
+        assert saved.read_text() == "original = 'yes'\n"
+        assert saved != conf
+        conf.write_text("clobbered by rewind\n")
+    assert conf.read_text() == "original = 'yes'\n"
+    assert (conf.stat().st_mode & 0o777) == 0o640
+    assert not saved.exists()
+
+
+def test_preserve_config_restores_on_exception(tmp_path):
+    datadir = tmp_path / "d"
+    datadir.mkdir()
+    conf = datadir / "postgresql.conf"
+    conf.write_text("original\n")
+    pg = sw.Postgres(
+        install_dir="/opt/pg", datadir=str(datadir), port=26100, init=False
+    )
+    with pytest.raises(RuntimeError, match="boom"), pg.preserve_config():
+        conf.write_text("clobbered\n")
+        raise RuntimeError("boom")
+    assert conf.read_text() == "original\n"

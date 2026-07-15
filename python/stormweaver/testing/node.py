@@ -230,9 +230,9 @@ class TestNode:
             )
         self._node_event("start")
 
-    def stop(self, timeout: float = 10.0) -> None:
+    def stop(self, timeout: float = 10.0, mode: str = "fast") -> None:
         self._default = None
-        self.db.stop(timeout)
+        self.db.stop(timeout, mode)
         self._node_event("stop")
 
     def kill(self) -> None:
@@ -407,6 +407,7 @@ class PgTestNode(TestNode):
         port: int | None = None,
         basedir: str | Path | None = None,
         wrapper: ServerWrapper | None = None,
+        initdb_args: list[str] | None = None,
     ) -> Self:
         ensure_logging()
         owned = basedir is None
@@ -417,6 +418,7 @@ class PgTestNode(TestNode):
                 datadir=base / name,
                 port=port or alloc_port(),
                 wrapper=wrapper,
+                initdb_args=initdb_args,
             )
         except BaseException:
             if owned:
@@ -494,6 +496,12 @@ class PgTestNode(TestNode):
         if file is not None:
             args += ["-f", file]
         return self.run_bin("psql", *args, input=sql)
+
+    @property
+    def server_version_num(self) -> int:
+        val = self.sql_value("SHOW server_version_num")
+        assert val is not None
+        return int(val)
 
     def relation_filepath(self, table: str) -> Path:
         rel = self.sql_value("SELECT pg_relation_filepath($1)", (table,))

@@ -54,16 +54,12 @@ def main(args):
 
             shutil.rmtree(ctx.datadir)
             shutil.copytree("backups/backup_0", ctx.datadir)
-            (Path(ctx.datadir) / "recovery.signal").touch()
+            # own archive: single_pg pointed archive_dir at ./archive
+            ctx.pg.enable_restoring(ctx.pg, signal="recovery")
 
             # assumes postgres runs in the host timezone, same as the lua original
             target = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(t))
-            ctx.pg.add_config(
-                {
-                    "restore_command": f'cp {Path("archive").resolve()}/%f "%p"',
-                    "recovery_target_time": target,
-                }
-            )
+            ctx.pg.add_config({"recovery_target_time": target})
 
             # the server log file persists across restarts, capture the offset
             # now or wait_for_log below could match a stale pause message from

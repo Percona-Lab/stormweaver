@@ -145,7 +145,11 @@ class MySQL(DatabaseBackend):
             text=True,
         )
 
-    def stop(self, timeout: float = 10.0) -> None:
+    def stop(self, timeout: float = 10.0, mode: str = "fast") -> None:
+        if mode == "immediate":
+            raise ValueError("MySQL backend supports graceful shutdown only")
+        if mode not in ("smart", "fast"):
+            raise ValueError(f"unknown stop mode: {mode}")
         logger.info("Stopping MySQL")
         self._admin("shutdown")
         self._reap("stop", self._timeout(timeout))

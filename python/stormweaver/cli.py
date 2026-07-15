@@ -84,6 +84,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
 
+    # let a scenario import sibling modules (helpers, conftest) from its own
+    # directory, matching how pytest puts the test dir on sys.path
+    scenario_dir = str(Path(args.scenario).resolve().parent)
+    if scenario_dir not in sys.path:
+        sys.path.insert(0, scenario_dir)
+
     # module load happens before logging init so LOG_MODE can steer it;
     # import-time failures only reach stderr
     try:

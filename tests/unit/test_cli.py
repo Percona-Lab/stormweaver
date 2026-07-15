@@ -154,6 +154,18 @@ def test_cli_systemexit_odd_payload(tmp_path, monkeypatch, _restore_log_state):
     assert "scenario result=failed" in outcomes[0].read_text()
 
 
+def test_cli_scenario_imports_sibling(tmp_path, monkeypatch, _restore_log_state):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "helper.py").write_text("X = 42\n")
+    scen = tmp_path / "scen.py"
+    scen.write_text(
+        "from helper import X\ndef main(args):\n    assert X == 42\n    return 0\n"
+    )
+    assert main([str(scen), "-i", "/x"]) == 0
+    outcomes = list(Path("logs").glob("*/outcome"))
+    assert "scenario result=passed" in outcomes[0].read_text()
+
+
 def _scenario(tmp_path, header=""):
     f = tmp_path / "scen.py"
     f.write_text(header + "def main(args):\n    return 0\n")

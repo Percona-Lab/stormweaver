@@ -72,7 +72,7 @@ def standby_from_backup(
     )
     # backup carries the primary's config; appended overrides win (last wins)
     pg.add_config(_standby_config(named, port, primary, name))
-    (named / "standby.signal").touch()
+    pg.set_signal("standby")
 
     node = node_cls(pg, primary.dbname, name)
     node._owned_dir = _owned_parent(named)
@@ -91,7 +91,7 @@ def rejoin_as_standby(node: PgTestNode, new_primary: PgTestNode) -> None:
     so restore this node's own port/socket and point it at the new primary.
     """
     node.db.add_config(_standby_config(node.datadir, node.port, new_primary, node.name))
-    (node.datadir / "standby.signal").touch()
+    node.db.set_signal("standby")
     node.start()
 
 
