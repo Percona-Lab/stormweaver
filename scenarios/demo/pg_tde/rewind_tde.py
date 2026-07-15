@@ -1,8 +1,8 @@
 from pathlib import Path
 
 import stormweaver.testing as st
-from stormweaver.keyrings import pg_tde as tde_sql
 from stormweaver.keyrings.base import Keyring
+from stormweaver.tde import PgTde
 from stormweaver.testing.rewind import RewindDriver
 
 # minimal grants the perl test uses so rewind_user can drive a remote rewind
@@ -49,31 +49,10 @@ class TdeRewind(RewindDriver):
         return "rewind_user"
 
     def configure_primary(self, primary: st.PgTestNode) -> None:
-        primary.safe_sql("CREATE EXTENSION IF NOT EXISTS pg_tde")
-        primary.safe_sql(
-            tde_sql.add_provider_sql(self.keyring, "global", "wal-provider")
-        )
-        primary.safe_sql(
-            "SELECT pg_tde_create_key_using_global_key_provider"
-            "('wal-key', 'wal-provider')"
-        )
-        primary.safe_sql(
-            "SELECT pg_tde_set_server_key_using_global_key_provider"
-            "('wal-key', 'wal-provider')"
-        )
-        primary.safe_sql(
-            tde_sql.add_provider_sql(self.keyring, "database", "db-provider")
-        )
-        primary.safe_sql(
-            "SELECT pg_tde_create_key_using_database_key_provider"
-            "('db-key', 'db-provider')"
-        )
-        primary.safe_sql(
-            "SELECT pg_tde_set_key_using_database_key_provider('db-key', 'db-provider')"
-        )
-        # turn on WAL encryption + tde_heap default, then restart to apply
-        primary.db.add_config(
-            {"pg_tde.wal_encrypt": "on", "default_table_access_method": "tde_heap"}
-        )
+        tde = PgTde(primary, self.keyring)
+        # global server WAL key + database key + wal_encrypt (see PgTde.setup)
+        tde.setup(wal=True)
+        # tde_heap default + apply the ALTER SYSTEM wal_encrypt via a restart
+        primary.db.add_config({"default_table_access_method": "tde_heap"})
         primary.restart()
         primary.safe_sql(REWIND_USER_SQL)
