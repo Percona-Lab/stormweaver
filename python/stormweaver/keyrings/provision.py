@@ -173,6 +173,7 @@ class ContainerService(RunningService):
         cmd: Sequence[str] = (),
         env: Mapping[str, str] | None = None,
         mounts: Sequence[tuple[Path, str]] = (),
+        world_readable: Sequence[str] = (),  # container paths to a+r after ready
         ports: Mapping[int, int] | None = None,  # host -> container
         user: str | None = None,
         pre_start: Iterable[Path] = (),
@@ -188,6 +189,7 @@ class ContainerService(RunningService):
         self.cmd = list(cmd)
         self.env = dict(env) if env else {}
         self.mounts = list(mounts)
+        self.world_readable = list(world_readable)
         self.ports = dict(ports) if ports else {}
         self.user = user
         self.pre_start = list(pre_start)
@@ -223,11 +225,23 @@ class ContainerService(RunningService):
             raise RuntimeError(f"{self.what}: {self.runtime} run failed: {cp.stderr}")
         try:
             wait_ready(self.ready, self.what, self._logs, self.ready_timeout)
+            self._make_readable()
             if self.on_started is not None:
                 self.on_started()
         except BaseException:
             self.stop()
             raise
+
+    def _make_readable(self) -> None:
+        # rootless runtimes remap the in-container writer to a host subuid whose
+        # 0600 files we can't read; a+r (as container root) lets host + clients
+        # consume the throwaway files the container drops in a shared mount.
+        for path in self.world_readable:
+            argv = [self.runtime, "exec", "-u", "0", self.name]
+            argv += ["chmod", "-R", "a+r", path]
+            cp = subprocess.run(argv, capture_output=True, text=True)
+            if cp.returncode != 0:
+                raise RuntimeError(f"{self.what}: chmod {path} failed: {cp.stderr}")
 
     def stop(self) -> None:
         subprocess.run(

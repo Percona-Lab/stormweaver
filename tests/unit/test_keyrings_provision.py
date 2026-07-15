@@ -1,4 +1,5 @@
 import socket
+import subprocess
 
 import pytest
 from stormweaver.keyrings import provision
@@ -77,6 +78,41 @@ def test_container_run_args(tmp_path):
     assert args[8:10] == ["-e", "A=1"]
     assert args[10:12] == ["--user", "0"]
     assert args[12:] == ["img:1", "-c", "/data/kms.toml"]
+
+
+def _readable_svc():
+    return ContainerService(
+        "podman",
+        name="sw-kr-x-1",
+        image="img:1",
+        what="x",
+        ready=lambda: True,
+        world_readable=["/out", "/data"],
+    )
+
+
+def test_make_readable_chmods_each_path(monkeypatch):
+    calls = []
+
+    def fake_run(argv, **kw):
+        calls.append(argv)
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setattr(provision.subprocess, "run", fake_run)
+    _readable_svc()._make_readable()
+    assert calls == [
+        ["podman", "exec", "-u", "0", "sw-kr-x-1", "chmod", "-R", "a+r", "/out"],
+        ["podman", "exec", "-u", "0", "sw-kr-x-1", "chmod", "-R", "a+r", "/data"],
+    ]
+
+
+def test_make_readable_raises_on_failure(monkeypatch):
+    def fake_run(argv, **kw):
+        return subprocess.CompletedProcess(argv, 1, "", "boom")
+
+    monkeypatch.setattr(provision.subprocess, "run", fake_run)
+    with pytest.raises(RuntimeError, match="chmod /out failed: boom"):
+        _readable_svc()._make_readable()
 
 
 def test_detect_runtime_none(monkeypatch):

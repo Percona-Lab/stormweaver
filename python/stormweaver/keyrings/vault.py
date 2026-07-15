@@ -101,6 +101,8 @@ def open_container(cfg: dict[str, Any], workdir: Path, runtime: str) -> VaultKey
             "-dev-cluster-json=/out/cluster.json",
         ],
         mounts=[(out, "/out")],
+        # container writes cluster.json + tls certs here; host reads them back
+        world_readable=["/out"],
         ports={port: CONTAINER_PORT},
         ready=provision.file_ready(cluster_json),
         pre_start=[cluster_json],
