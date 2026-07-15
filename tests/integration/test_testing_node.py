@@ -61,3 +61,12 @@ def test_cleanup_removes_dir():
     assert d.exists()
     node.close()
     assert not d.exists()
+
+
+def test_poll_start_after_kill():
+    with st.PgTestNode.fresh(PG_DIR, name="pollstart") as node:
+        node.safe_sql("CREATE TABLE t (x int)")
+        node.safe_sql("INSERT INTO t VALUES (1)")
+        node.kill()
+        node.poll_start()
+        assert node.sql_value("SELECT count(*) FROM t") == "1"

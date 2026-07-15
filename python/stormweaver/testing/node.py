@@ -459,6 +459,22 @@ class PgTestNode(TestNode):
         self.db.promote()
         self._node_event("promote")
 
+    def poll_start(self, timeout: float = 60.0) -> None:
+        """Start after a crash (kill), retrying transient start failures.
+
+        pg_ctl start can briefly fail while a killed server is still doing
+        crash recovery; keep trying until the node is ready or timeout.
+        """
+        deadline = time.monotonic() + timeout
+        while True:
+            try:
+                self.start()
+                return
+            except Exception:
+                if time.monotonic() >= deadline:
+                    raise
+                time.sleep(0.5)
+
     def wait_for_catchup(self, standby: PgTestNode, timeout: float = 60.0) -> None:
         cluster.wait_for_catchup(self, standby, timeout)
 
