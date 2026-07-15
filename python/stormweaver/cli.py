@@ -6,6 +6,7 @@ import sys
 import traceback
 from collections.abc import Sequence
 from pathlib import Path
+from types import ModuleType
 
 from stormweaver.entropy import EncryptionMismatchError
 from stormweaver.events import emit_run_header
@@ -17,9 +18,17 @@ logger = logging.getLogger(__name__)
 EXPECTED_ERRORS = (RuntimeError, ValueError, EncryptionMismatchError)
 
 
-def parse_args(argv: Sequence[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(prog="stormweaver", allow_abbrev=False)
-    parser.add_argument("scenario", help="Scenario file to execute")
+def build_parser(
+    *, add_help: bool = True, scenario_required: bool = True
+) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="stormweaver", allow_abbrev=False, add_help=add_help
+    )
+    parser.add_argument(
+        "scenario",
+        nargs=None if scenario_required else "?",
+        help="Scenario file to execute",
+    )
     parser.add_argument(
         "-c",
         "--config",
@@ -54,16 +63,57 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         action="store_true",
         help="Only log warnings and errors",
     )
-    # unknown args go to the scenario (args.extra), scenarios parse them
-    # themselves; the cost is that a typo in a stormweaver flag is no longer
-    # rejected here
-    args, extra = parser.parse_known_args(argv)
-    args.extra = extra
-    return args
+    return parser
+
+
+def _load_scenario(path: str) -> tuple[ModuleType | None, str | None]:
+    """Import a scenario file. Returns (module, error): one is always None."""
+    spec = importlib.util.spec_from_file_location("scenario", path)
+    if spec is None or spec.loader is None:
+        return None, f"Error: cannot load scenario file: {path}"
+
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+
+    # let a scenario import sibling modules (helpers, conftest) from its own
+    # directory, matching how pytest puts the test dir on sys.path
+    scenario_dir = str(Path(path).resolve().parent)
+    if scenario_dir not in sys.path:
+        sys.path.insert(0, scenario_dir)
+
+    # module load happens before logging init so LOG_MODE can steer it;
+    # import-time failures only reach stderr
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        traceback.print_exc()
+        return None, f"Error: failed to load scenario: {path}"
+
+    return module, None
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    args = parse_args(sys.argv[1:] if argv is None else argv)
+    argv = list(sys.argv[1:] if argv is None else argv)
+
+    # phase 1: grab the scenario path without triggering --help or choking on
+    # scenario-specific flags, so we can import the scenario and let it add its
+    # own options to the real parser below
+    pre = build_parser(add_help=False, scenario_required=False)
+    pre_args, _ = pre.parse_known_args(argv)
+
+    module = None
+    if pre_args.scenario is not None and os.path.isfile(pre_args.scenario):
+        module, error = _load_scenario(pre_args.scenario)
+        if error:
+            print(error, file=sys.stderr)
+            return 1
+
+    # phase 2: full parse with the scenario's options folded in, so --help
+    # lists everything and unknown/mistyped flags are rejected
+    parser = build_parser()
+    if module is not None and hasattr(module, "add_arguments"):
+        module.add_arguments(parser)
+    args = parser.parse_args(argv)
 
     if args.verbose:
         level = logging.DEBUG
@@ -76,28 +126,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"Error: scenario file not found: {args.scenario}", file=sys.stderr)
         return 1
 
-    spec = importlib.util.spec_from_file_location("scenario", args.scenario)
-    if spec is None or spec.loader is None:
-        print(f"Error: cannot load scenario file: {args.scenario}", file=sys.stderr)
-        return 1
-
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-
-    # let a scenario import sibling modules (helpers, conftest) from its own
-    # directory, matching how pytest puts the test dir on sys.path
-    scenario_dir = str(Path(args.scenario).resolve().parent)
-    if scenario_dir not in sys.path:
-        sys.path.insert(0, scenario_dir)
-
-    # module load happens before logging init so LOG_MODE can steer it;
-    # import-time failures only reach stderr
-    try:
-        spec.loader.exec_module(module)
-    except Exception:
-        traceback.print_exc()
-        print(f"Error: failed to load scenario: {args.scenario}", file=sys.stderr)
-        return 1
+    # file exists, so phase 1 already imported it (or bailed out)
+    assert module is not None
 
     if not hasattr(module, "main"):
         print(

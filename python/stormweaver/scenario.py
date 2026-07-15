@@ -24,45 +24,42 @@ from stormweaver.wrappers import ServerWrapper, make_wrapper
 logger = logging.getLogger(__name__)
 
 
-def parse(
-    args: argparse.Namespace,
-    extend: Callable[[argparse.ArgumentParser], None] | None = None,
-) -> argparse.Namespace:
-    """Parse common scenario options out of args.extra (cli passthrough)."""
-    parser = argparse.ArgumentParser(prog="scenario")
-    parser.add_argument("--duration", type=int, default=10, help="workload seconds")
-    parser.add_argument("--workers", type=int, default=5, help="number of workers")
-    parser.add_argument("--repeat", type=int, default=5, help="workload cycles")
-    parser.add_argument("--tde", choices=["on", "on_wal", "off"], default="off")
-    parser.add_argument("--pgsm", choices=["on", "off"], default="off")
-    parser.add_argument("--clear-logs", action="store_true")
-    wrap = parser.add_mutually_exclusive_group()
+def add_common_arguments(parser: argparse._ActionsContainer) -> None:
+    """Register the options every scenario shares; call from add_arguments()."""
+    group = parser.add_argument_group("common scenario options")
+    group.add_argument("--duration", type=int, default=10, help="workload seconds")
+    group.add_argument("--workers", type=int, default=5, help="number of workers")
+    group.add_argument("--repeat", type=int, default=5, help="workload cycles")
+    group.add_argument("--tde", choices=["on", "on_wal", "off"], default="off")
+    group.add_argument("--pgsm", choices=["on", "off"], default="off")
+    group.add_argument("--clear-logs", action="store_true")
+    wrap = group.add_mutually_exclusive_group()
     wrap.add_argument(
         "--wrapper", choices=["rr", "valgrind"], help="run servers under a preset tool"
     )
     wrap.add_argument(
         "--wrapper-cmd", help="run servers under an arbitrary command prefix"
     )
-    parser.add_argument(
+    group.add_argument(
         "--wrapper-arg",
         action="append",
         default=[],
         help="extra argument for the wrapper tool, repeatable",
     )
-    parser.add_argument(
+    group.add_argument(
         "--keep-traces", action="store_true", help="keep traces of clean sessions too"
     )
-    if extend:
-        extend(parser)
-    opts = parser.parse_args(args.extra)
 
+
+def finalize(opts: argparse.Namespace) -> argparse.Namespace:
+    """Post-process parsed options: build wrapper, load config, resolve dirs."""
     # replaces the preset name with a ready-to-use wrapper object
     opts.wrapper = make_wrapper(
         opts.wrapper, opts.wrapper_cmd, opts.wrapper_arg, opts.keep_traces
     )
 
-    opts.config = Config.load(args.config)
-    opts.install_dir = args.install_dir or opts.config.pgroot
+    opts.config = Config.load(opts.config)
+    opts.install_dir = opts.install_dir or opts.config.pgroot
     if not opts.install_dir:
         raise RuntimeError(
             "database install dir required: use -i or set pgroot in config"

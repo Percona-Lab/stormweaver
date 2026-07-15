@@ -15,8 +15,12 @@ RECOVERY_PAUSE_MSG = "pausing at the end of recovery"
 RECOVERY_TIMEOUT = 200
 
 
+def add_arguments(parser):
+    scenario.add_common_arguments(parser)
+
+
 def main(args):
-    opts = scenario.parse(args)
+    opts = scenario.finalize(args)
     scenario.fresh_dir("backups", "archive")
 
     with scenario.single_pg(opts, archive=True) as ctx:

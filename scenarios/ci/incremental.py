@@ -12,8 +12,12 @@ from stormweaver import scenario
 logger = logging.getLogger("scenario.incremental")
 
 
+def add_arguments(parser):
+    scenario.add_common_arguments(parser)
+
+
 def main(args):
-    opts = scenario.parse(args)
+    opts = scenario.finalize(args)
     scenario.fresh_dir("backups", "archive")
 
     # archive=True also enables summarize_wal, required for incremental

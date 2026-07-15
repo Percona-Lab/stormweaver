@@ -22,10 +22,12 @@ requires_mysql = pytest.mark.skipif(
 def make_opts(tmp_path, *extra, install_dir=PG_DIR):
     cfg = tmp_path / "stormweaver.toml"
     cfg.write_text(f'[default]\ndatadir_root = "{tmp_path / "datadirs"}"\n')
-    args = argparse.Namespace(
-        config=str(cfg), install_dir=str(install_dir), extra=list(extra)
-    )
-    return scenario.parse(args)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", default=str(cfg))
+    parser.add_argument("--install-dir", default=str(install_dir))
+    scenario.add_common_arguments(parser)
+    args = parser.parse_args(list(extra))
+    return scenario.finalize(args)
 
 
 @requires_pg

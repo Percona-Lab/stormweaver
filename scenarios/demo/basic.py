@@ -18,11 +18,16 @@ from stormweaver.entropy import db_files_entropy
 logger = logging.getLogger("scenario.basic")
 
 
-def main(args):
-    # scenario.parse handles the common options every scenario shares:
+def add_arguments(parser):
+    # add_common_arguments registers the options every scenario shares:
     # --duration, --workers, --repeat, --tde, --pgsm, --clear-logs.
-    # extend= customizes the parser; this demo encrypts by default.
-    opts = scenario.parse(args, extend=lambda p: p.set_defaults(tde="on"))
+    # set_defaults customizes them; this demo encrypts by default.
+    scenario.add_common_arguments(parser)
+    parser.set_defaults(tde="on")
+
+
+def main(args):
+    opts = scenario.finalize(args)
 
     # worker 1/2/3 and workers[2] below are hardcoded, so fewer workers breaks the demo
     if opts.workers < 4:

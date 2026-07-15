@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from stormweaver import cli
 from stormweaver import log as swlog
-from stormweaver.cli import main, parse_args
+from stormweaver.cli import main
 
 
 @pytest.fixture
@@ -19,22 +19,42 @@ def _restore_log_state():
     logging.root.handlers[:] = saved_handlers
 
 
-def test_extra_args_collected():
-    args = parse_args(["scen.py", "-i", "/pg", "--repeat", "7"])
-    assert args.scenario == "scen.py"
-    assert args.install_dir == "/pg"
-    assert args.extra == ["--repeat", "7"]
+ADD_ARGS_SCENARIO = (
+    "def add_arguments(parser):\n"
+    "    parser.add_argument('--mode', choices=['local', 'remote'], default='local')\n"
+    "def main(args):\n"
+    "    assert args.mode == 'remote'\n"
+    "    return 0\n"
+)
 
 
-def test_no_extra_args_is_empty_list():
-    args = parse_args(["scen.py"])
-    assert args.extra == []
+def test_scenario_option_reaches_main(tmp_path, _restore_log_state):
+    scen = tmp_path / "scen.py"
+    scen.write_text(ADD_ARGS_SCENARIO)
+    assert main([str(scen), "--mode", "remote"]) == 0
 
 
-def test_prefix_like_scenario_flag_not_swallowed():
-    args = parse_args(["scen.py", "--conf", "x"])
-    assert args.config == "config/stormweaver.toml"
-    assert args.extra == ["--conf", "x"]
+def test_help_shows_scenario_options(tmp_path, capsys):
+    scen = tmp_path / "scen.py"
+    scen.write_text(ADD_ARGS_SCENARIO)
+    with pytest.raises(SystemExit) as e:
+        main([str(scen), "--help"])
+    assert e.value.code == 0
+    assert "--mode" in capsys.readouterr().out
+
+
+def test_unknown_flag_rejected(tmp_path):
+    scen = tmp_path / "scen.py"
+    scen.write_text("def main(args):\n    return 0\n")
+    with pytest.raises(SystemExit):
+        main([str(scen), "--repeat", "7"])
+
+
+def test_no_abbrev_for_config(tmp_path):
+    scen = tmp_path / "scen.py"
+    scen.write_text("def main(args):\n    return 0\n")
+    with pytest.raises(SystemExit):
+        main([str(scen), "--conf", "x"])
 
 
 def test_cli_records_scenario_outcome(tmp_path, monkeypatch, _restore_log_state):

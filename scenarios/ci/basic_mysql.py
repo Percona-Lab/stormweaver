@@ -8,10 +8,13 @@ from stormweaver import scenario
 logger = logging.getLogger("scenario.basic_mysql")
 
 
+def add_arguments(parser):
+    scenario.add_common_arguments(parser)
+    parser.set_defaults(duration=30, workers=4, repeat=2)
+
+
 def main(args):
-    opts = scenario.parse(
-        args, extend=lambda p: p.set_defaults(duration=30, workers=4, repeat=2)
-    )
+    opts = scenario.finalize(args)
 
     with scenario.single_mysql(opts) as ctx:
         for cycle in range(opts.repeat):

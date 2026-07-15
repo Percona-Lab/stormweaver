@@ -5,16 +5,22 @@ import pytest
 from stormweaver import scenario
 
 
-def make_args(tmp_path, extra=None, install_dir="", pgroot=""):
+def make_opts(tmp_path, extra=None, install_dir="", pgroot="", extend=None):
+    """Emulate the cli: build a parser, add scenario opts, parse, finalize."""
     cfg = tmp_path / "stormweaver.toml"
     cfg.write_text(f'[default]\npgroot = "{pgroot}"\n')
-    return argparse.Namespace(
-        config=str(cfg), install_dir=install_dir, extra=extra or []
-    )
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", default=str(cfg))
+    parser.add_argument("--install-dir", default=install_dir)
+    scenario.add_common_arguments(parser)
+    if extend:
+        extend(parser)
+    args = parser.parse_args(extra or [])
+    return scenario.finalize(args)
 
 
 def test_parse_defaults(tmp_path):
-    opts = scenario.parse(make_args(tmp_path, install_dir="/opt/pg"))
+    opts = make_opts(tmp_path, install_dir="/opt/pg")
     assert opts.duration == 10
     assert opts.workers == 5
     assert opts.repeat == 5
@@ -24,23 +30,22 @@ def test_parse_defaults(tmp_path):
 
 
 def test_parse_options(tmp_path):
-    args = make_args(
+    opts = make_opts(
         tmp_path,
         extra=["--duration", "3", "--workers", "2", "--repeat", "7", "--tde", "on"],
         install_dir="/opt/pg",
     )
-    opts = scenario.parse(args)
     assert (opts.duration, opts.workers, opts.repeat, opts.tde) == (3, 2, 7, "on")
 
 
 def test_parse_install_dir_from_config(tmp_path):
-    opts = scenario.parse(make_args(tmp_path, pgroot="/from/config"))
+    opts = make_opts(tmp_path, pgroot="/from/config")
     assert opts.install_dir == "/from/config"
 
 
 def test_parse_requires_install_dir(tmp_path):
     with pytest.raises(RuntimeError, match="install dir"):
-        scenario.parse(make_args(tmp_path))
+        make_opts(tmp_path)
 
 
 def test_parse_extend(tmp_path):
@@ -48,7 +53,7 @@ def test_parse_extend(tmp_path):
         parser.add_argument("--extra-flag", type=int, default=42)
         parser.set_defaults(duration=30)
 
-    opts = scenario.parse(make_args(tmp_path, install_dir="/opt/pg"), extend=extend)
+    opts = make_opts(tmp_path, install_dir="/opt/pg", extend=extend)
     assert opts.extra_flag == 42
     assert opts.duration == 30
 
@@ -101,8 +106,7 @@ def test_parse_clear_logs_triggers_cleanup(tmp_path, monkeypatch):
     monkeypatch.setattr(
         scenario, "_clear_old_logs", lambda: called.setdefault("hit", True)
     )
-    args = make_args(tmp_path, extra=["--clear-logs"], install_dir="/opt/pg")
-    scenario.parse(args)
+    make_opts(tmp_path, extra=["--clear-logs"], install_dir="/opt/pg")
     assert called.get("hit")
 
 
@@ -130,39 +134,36 @@ def test_wait_for_log_timeout(tmp_path):
 
 
 def test_parse_no_wrapper_by_default(tmp_path):
-    opts = scenario.parse(make_args(tmp_path, install_dir="/opt/pg"))
+    opts = make_opts(tmp_path, install_dir="/opt/pg")
     assert opts.wrapper is None
 
 
 def test_parse_wrapper_cmd(tmp_path):
     from stormweaver.wrappers import ExecPrefixWrapper
 
-    args = make_args(tmp_path, extra=["--wrapper-cmd", "env"], install_dir="/opt/pg")
-    opts = scenario.parse(args)
+    opts = make_opts(tmp_path, extra=["--wrapper-cmd", "env"], install_dir="/opt/pg")
     assert isinstance(opts.wrapper, ExecPrefixWrapper)
     assert opts.wrapper.argv == ["env"]
 
 
 def test_parse_wrapper_and_cmd_conflict(tmp_path):
-    args = make_args(
-        tmp_path,
-        extra=["--wrapper", "rr", "--wrapper-cmd", "env"],
-        install_dir="/opt/pg",
-    )
     with pytest.raises(SystemExit):
-        scenario.parse(args)
+        make_opts(
+            tmp_path,
+            extra=["--wrapper", "rr", "--wrapper-cmd", "env"],
+            install_dir="/opt/pg",
+        )
 
 
 def test_parse_wrapper_rr(tmp_path, monkeypatch):
     from stormweaver.wrappers import RRWrapper
 
     monkeypatch.setattr(RRWrapper, "preflight", lambda self: None)
-    args = make_args(
+    opts = make_opts(
         tmp_path,
         extra=["--wrapper", "rr", "--wrapper-arg=--chaos", "--keep-traces"],
         install_dir="/opt/pg",
     )
-    opts = scenario.parse(args)
     assert isinstance(opts.wrapper, RRWrapper)
     assert opts.wrapper.extra_args == ["--chaos"]
     assert opts.wrapper.keep_all is True

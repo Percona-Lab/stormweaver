@@ -182,29 +182,31 @@ def test_pg_tde_rewind_bad_args(tmp_path):
         assert _snapshot(target) == before
 
 
+def add_arguments(parser):
+    from stormweaver import keyrings
+
+    parser.add_argument("--mode", choices=MODES, default="local")
+    parser.add_argument("--cipher", choices=CIPHERS, default="aes_128")
+    parser.add_argument("--keyring", choices=list(keyrings.KINDS), default="file")
+
+
 def main(args):
-    import argparse
     import shutil
     import tempfile
 
     from stormweaver import keyrings
 
-    parser = argparse.ArgumentParser(prog="test_pg_rewind_tde", allow_abbrev=False)
-    parser.add_argument("--mode", choices=MODES, default="local")
-    parser.add_argument("--cipher", choices=CIPHERS, default="aes_128")
-    parser.add_argument("--keyring", choices=list(keyrings.KINDS), default="file")
-    opts = parser.parse_args(args.extra)
     install_dir = args.install_dir or TDE_DIR
     # /tmp keeps the unix socket path under the 107-byte AF_UNIX limit
     workdir = Path(tempfile.mkdtemp(prefix="sw-rewind-", dir="/tmp"))
     try:
-        with keyrings.open_keyring(opts.keyring, workdir / "keyring") as keyring:
-            run_rewind_scenario(install_dir, opts.mode, opts.cipher, keyring)
+        with keyrings.open_keyring(args.keyring, workdir / "keyring") as keyring:
+            run_rewind_scenario(install_dir, args.mode, args.cipher, keyring)
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
     print(
-        f"pg_tde rewind scenario passed: mode={opts.mode} cipher={opts.cipher}"
-        f" keyring={opts.keyring}"
+        f"pg_tde rewind scenario passed: mode={args.mode} cipher={args.cipher}"
+        f" keyring={args.keyring}"
     )
     return 0
 
