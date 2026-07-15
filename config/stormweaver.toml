@@ -4,3 +4,28 @@ pgroot = "" # path to the postgres installation
 datadir_root = "datadirs"
 port_start = 15432
 port_end = 15531
+
+# keyring service provisioning for pg_tde tests; sections optional.
+# provision: auto | executable | container | external
+# auto picks: binary on PATH -> container runtime -> unavailable.
+# external is never auto-picked and needs the endpoint fields below.
+#[keyring.vault]
+#provision = "auto"
+#bin = "bao"
+#image = "openbao/openbao:2.5.4"
+#runtime = "podman"          # container runtime override
+#url = "https://vault.example.com:8200"
+#token_file = "/secrets/token"
+#ca_cert = "/secrets/ca.pem"
+#mount_path = "secret"
+#namespace = ""
+
+#[keyring.kmip]
+#provision = "auto"
+#bin = "cosmian_kms"
+#image = "ghcr.io/cosmian/kms:5.21.0"
+#host = "kms.example.com"
+#port = 5696
+#client_cert = "/secrets/client.pem"
+#client_key = "/secrets/client.key"
+#ca_cert = "/secrets/ca.pem"

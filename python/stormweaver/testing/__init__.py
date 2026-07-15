@@ -6,8 +6,10 @@ from stormweaver.testing.runner import main
 from stormweaver.testing.util import (
     alloc_port,
     ensure_logging,
+    keyring_params,
     mysql_install_dir,
     pg_install_dir,
+    require_managed,
 )
 
 __all__ = [
@@ -21,10 +23,12 @@ __all__ = [
     "command_fails",
     "command_ok",
     "ensure_logging",
+    "keyring_params",
     "main",
     "mysql_install_dir",
     "pg_install_dir",
     "read_file_bytes",
+    "require_managed",
     "run_bin",
     "step",
 ]

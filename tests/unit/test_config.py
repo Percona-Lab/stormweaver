@@ -61,3 +61,26 @@ def test_config_datadir_per_name(tmp_path):
     cfg_file.write_text('[default]\npgroot = "/opt/pg"\n')
     cfg = sw.Config.load(str(cfg_file))
     assert cfg.datadir("primary") != cfg.datadir("replica")
+
+
+def test_alloc_port_bindable():
+    from stormweaver.config import alloc_port
+
+    port = alloc_port(26600, 26700)
+    assert 26600 <= port < 26700
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", port))
+
+
+def test_config_keyrings_section(tmp_path):
+    cfg = _config(
+        tmp_path,
+        '[keyring.vault]\nprovision = "external"\nurl = "https://h:8200"\n',
+    )
+    assert cfg.keyrings["vault"]["provision"] == "external"
+    assert cfg.keyrings["vault"]["url"] == "https://h:8200"
+
+
+def test_config_keyrings_default_empty(tmp_path):
+    cfg = _config(tmp_path, "[default]\n")
+    assert cfg.keyrings == {}

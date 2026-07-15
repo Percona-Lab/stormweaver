@@ -65,3 +65,24 @@ def test_init_tde_globally_statements():
 def test_failure_raises():
     with pytest.raises(RuntimeError, match="boom"):
         tde.init_tde_only_for_db(FailingConn(), "/k")
+
+
+def test_init_tde_with_keyring_object():
+    from pathlib import Path
+
+    from stormweaver.keyrings.vault import VaultKeyring
+
+    conn = FakeConn()
+    kr = VaultKeyring(
+        url="https://127.0.0.1:8200",
+        mount_path="secret",
+        token_file=Path("/w/token"),
+        ca_cert=Path("/w/ca.pem"),
+    )
+    tde.init_tde_only_for_db(conn, kr)
+    assert "pg_tde_add_database_key_provider_vault_v2" in conn.queries[2]
+    assert "'https://127.0.0.1:8200'" in conn.queries[2]
+
+    conn2 = FakeConn()
+    tde.init_tde_globally(conn2, kr)
+    assert "pg_tde_add_global_key_provider_vault_v2" in conn2.queries[2]

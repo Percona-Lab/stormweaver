@@ -19,6 +19,15 @@ def _bindable(port: int) -> bool:
     return True
 
 
+def alloc_port(low: int = 26600, high: int = 27000) -> int:
+    """Random free port; random start avoids collisions between parallel runs."""
+    for _ in range(200):
+        port = random.randrange(low, high)
+        if _bindable(port):
+            return port
+    raise RuntimeError(f"no free port in range {low}-{high}")
+
+
 class Config:
     def __init__(self, data: dict[str, Any]) -> None:
         self._data = data
@@ -28,6 +37,7 @@ class Config:
         self.port_start: int = defaults.get("port_start", 15432)
         self.port_end: int = defaults.get("port_end", 15531)
         self._allocated_ports: set[int] = set()
+        self.keyrings: dict[str, Any] = data.get("keyring", {})
 
     @classmethod
     def load(cls, path: str | Path) -> Config:

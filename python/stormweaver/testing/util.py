@@ -1,16 +1,8 @@
-import random
+import os
+from typing import Any
 
 from stormweaver import log as swlog
-from stormweaver.config import _bindable
-
-
-def alloc_port(low: int = 26600, high: int = 27000) -> int:
-    """Random free port; random start avoids collisions between parallel runs."""
-    for _ in range(200):
-        port = random.randrange(low, high)
-        if _bindable(port):
-            return port
-    raise RuntimeError(f"no free port in range {low}-{high}")
+from stormweaver.config import alloc_port as alloc_port
 
 
 def ensure_logging(name: str = "testing", mode: str = "unified") -> None:
@@ -36,3 +28,39 @@ def mysql_install_dir() -> str:
     if d is None:
         raise RuntimeError("no mysql installation found, set STORMWEAVER_MYSQL_DIR")
     return d
+
+
+def keyring_params() -> list[Any]:
+    """Parametrize values over keyring kinds; unavailable kinds skip-marked.
+
+    With STORMWEAVER_KEYRINGS set only the forced kinds appear (selection
+    already hard-errors on forced-but-unavailable kinds).
+    """
+    # local import: keep pytest out of plain `import stormweaver.testing`
+    import pytest
+
+    from stormweaver import keyrings
+
+    selected = keyrings.selected_keyrings()
+    if os.environ.get("STORMWEAVER_KEYRINGS"):
+        return [pytest.param(k) for k in selected]
+    return [
+        pytest.param(k)
+        if k in selected
+        else pytest.param(
+            k, marks=pytest.mark.skip(reason=f"keyring {k!r} not available")
+        )
+        for k in keyrings.KINDS
+    ]
+
+
+def require_managed(keyring: Any) -> None:
+    """Skip the calling test unless stormweaver controls the keyring's service.
+
+    Lifecycle-dependent tests (fresh-restart negative paths) call this so an
+    external/serviceless keyring skips instead of failing.
+    """
+    import pytest
+
+    if not keyring.managed:
+        pytest.skip(f"keyring {keyring.kind!r} service not managed by stormweaver")

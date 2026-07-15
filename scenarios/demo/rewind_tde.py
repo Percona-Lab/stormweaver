@@ -2,6 +2,8 @@ from pathlib import Path
 
 import stormweaver.testing as st
 from rewind import RewindDriver
+from stormweaver.keyrings import pg_tde as tde_sql
+from stormweaver.keyrings.base import Keyring
 
 # minimal grants the perl test uses so rewind_user can drive a remote rewind
 REWIND_USER_SQL = """
@@ -24,12 +26,12 @@ class TdeRewind(RewindDriver):
         install_dir: str | Path,
         *,
         cipher: str,
-        keyring: Path,
+        keyring: Keyring,
         debug: bool = False,
     ) -> None:
         super().__init__(install_dir, debug=debug)
         self.cipher = cipher
-        self.keyring = Path(keyring)
+        self.keyring = keyring
 
     def primary_config(self) -> dict[str, str]:
         # cipher must be set before key creation so keys use the right cipher
@@ -47,10 +49,9 @@ class TdeRewind(RewindDriver):
         return "rewind_user"
 
     def configure_primary(self, primary: st.PgTestNode) -> None:
-        kr = str(self.keyring)
         primary.safe_sql("CREATE EXTENSION IF NOT EXISTS pg_tde")
         primary.safe_sql(
-            "SELECT pg_tde_add_global_key_provider_file('wal-provider', $1)", (kr,)
+            tde_sql.add_provider_sql(self.keyring, "global", "wal-provider")
         )
         primary.safe_sql(
             "SELECT pg_tde_create_key_using_global_key_provider"
@@ -61,7 +62,7 @@ class TdeRewind(RewindDriver):
             "('wal-key', 'wal-provider')"
         )
         primary.safe_sql(
-            "SELECT pg_tde_add_database_key_provider_file('db-provider', $1)", (kr,)
+            tde_sql.add_provider_sql(self.keyring, "database", "db-provider")
         )
         primary.safe_sql(
             "SELECT pg_tde_create_key_using_database_key_provider"

@@ -1,4 +1,9 @@
+from pathlib import Path
 from typing import Any
+
+from stormweaver.keyrings import pg_tde as tde_sql
+from stormweaver.keyrings.base import Keyring
+from stormweaver.keyrings.file import FileKeyring
 
 
 def _execute(conn: Any, query: str) -> None:
@@ -7,14 +12,16 @@ def _execute(conn: Any, query: str) -> None:
         raise RuntimeError(f"pg_tde setup failed: {query}: {result.error_message}")
 
 
-def init_tde_only_for_db(conn: Any, keyring_path: str) -> None:
-    """Set up per-database encryption with a file key provider."""
+def _keyring(keyring: str | Keyring) -> Keyring:
+    return FileKeyring(Path(keyring)) if isinstance(keyring, str) else keyring
+
+
+def init_tde_only_for_db(conn: Any, keyring: str | Keyring) -> None:
+    """Set up per-database encryption; a str is a file keyring path."""
+    kr = _keyring(keyring)
     _execute(conn, "CREATE EXTENSION IF NOT EXISTS pg_tde;")
     _execute(conn, "SET default_table_access_method = tde_heap;")
-    _execute(
-        conn,
-        f"SELECT pg_tde_add_database_key_provider_file('reg_file', '{keyring_path}');",
-    )
+    _execute(conn, tde_sql.add_provider_sql(kr, "database", "reg_file") + ";")
     _execute(
         conn,
         "SELECT pg_tde_create_key_using_database_key_provider("
@@ -27,14 +34,12 @@ def init_tde_only_for_db(conn: Any, keyring_path: str) -> None:
     )
 
 
-def init_tde_globally(conn: Any, keyring_path: str) -> None:
+def init_tde_globally(conn: Any, keyring: str | Keyring) -> None:
     """Set up global encryption incl. server key, default key, WAL encryption."""
+    kr = _keyring(keyring)
     _execute(conn, "CREATE EXTENSION IF NOT EXISTS pg_tde;")
     _execute(conn, "SET default_table_access_method = tde_heap;")
-    _execute(
-        conn,
-        f"SELECT pg_tde_add_global_key_provider_file('reg_file', '{keyring_path}');",
-    )
+    _execute(conn, tde_sql.add_provider_sql(kr, "global", "reg_file") + ";")
     _execute(
         conn,
         "SELECT pg_tde_create_key_using_global_key_provider("

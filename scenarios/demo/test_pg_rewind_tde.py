@@ -4,13 +4,19 @@ import pytest
 import stormweaver.testing as st
 from conftest import TDE_DIR, requires_pg_tde
 from rewind_tde import TdeRewind
+from stormweaver.keyrings import open_keyring
+from stormweaver.keyrings.base import Keyring
+from stormweaver.keyrings.file import FileKeyring
 
 pytestmark = requires_pg_tde
 
 
 def test_tde_rewind_driver_smoke(tmp_path):
     with TdeRewind(
-        TDE_DIR, cipher="aes_128", keyring=tmp_path / "kr.per", debug=True
+        TDE_DIR,
+        cipher="aes_128",
+        keyring=FileKeyring(tmp_path / "kr.per"),
+        debug=True,
     ) as rw:
         p = rw.setup_primary()
         p.safe_sql("CREATE TABLE t (d text)")
@@ -34,11 +40,17 @@ CIPHERS = ["aes_128", "aes_256"]
 @pytest.mark.parametrize("cipher", CIPHERS)
 @pytest.mark.parametrize("mode", MODES)
 def test_pg_tde_rewind(mode, cipher, tmp_path):
-    run_rewind_scenario(TDE_DIR, mode, cipher, tmp_path / "kr.per")
+    run_rewind_scenario(TDE_DIR, mode, cipher, FileKeyring(tmp_path / "kr.per"))
 
 
-def run_rewind_scenario(install_dir, mode: str, cipher: str, keyring) -> None:
-    with TdeRewind(install_dir, cipher=cipher, keyring=Path(keyring), debug=True) as rw:
+@pytest.mark.parametrize("kind", st.keyring_params())
+def test_pg_tde_rewind_keyrings(kind, tmp_path):
+    with open_keyring(kind, tmp_path / "keyring") as keyring:
+        run_rewind_scenario(TDE_DIR, "local", "aes_128", keyring)
+
+
+def run_rewind_scenario(install_dir, mode: str, cipher: str, keyring: Keyring) -> None:
+    with TdeRewind(install_dir, cipher=cipher, keyring=keyring, debug=True) as rw:
         p = rw.setup_primary()
         has_tablespace = p.server_version_num >= 170000
 
@@ -121,7 +133,10 @@ def _snapshot(root: Path) -> dict[str, int]:
 
 def test_pg_tde_rewind_bad_args(tmp_path):
     with TdeRewind(
-        TDE_DIR, cipher="aes_128", keyring=tmp_path / "kr.per", debug=True
+        TDE_DIR,
+        cipher="aes_128",
+        keyring=FileKeyring(tmp_path / "kr.per"),
+        debug=True,
     ) as rw:
         p = rw.setup_primary()
         p.safe_sql("CREATE TABLE tbl1 (d text)")
@@ -172,18 +187,25 @@ def main(args):
     import shutil
     import tempfile
 
+    from stormweaver import keyrings
+
     parser = argparse.ArgumentParser(prog="test_pg_rewind_tde", allow_abbrev=False)
     parser.add_argument("--mode", choices=MODES, default="local")
     parser.add_argument("--cipher", choices=CIPHERS, default="aes_128")
+    parser.add_argument("--keyring", choices=list(keyrings.KINDS), default="file")
     opts = parser.parse_args(args.extra)
     install_dir = args.install_dir or TDE_DIR
     # /tmp keeps the unix socket path under the 107-byte AF_UNIX limit
     workdir = Path(tempfile.mkdtemp(prefix="sw-rewind-", dir="/tmp"))
     try:
-        run_rewind_scenario(install_dir, opts.mode, opts.cipher, workdir / "kr.per")
+        with keyrings.open_keyring(opts.keyring, workdir / "keyring") as keyring:
+            run_rewind_scenario(install_dir, opts.mode, opts.cipher, keyring)
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
-    print(f"pg_tde rewind scenario passed: mode={opts.mode} cipher={opts.cipher}")
+    print(
+        f"pg_tde rewind scenario passed: mode={opts.mode} cipher={opts.cipher}"
+        f" keyring={opts.keyring}"
+    )
     return 0
 
 
