@@ -1,5 +1,9 @@
+from pathlib import Path
+
 import pytest
 from stormweaver import tde
+from stormweaver.keyrings.file import FileKeyring
+from stormweaver.tde import PgTde
 
 
 class FakeResult:
@@ -86,3 +90,78 @@ def test_init_tde_with_keyring_object():
     conn2 = FakeConn()
     tde.init_tde_globally(conn2, kr)
     assert "pg_tde_add_global_key_provider_vault_v2" in conn2.queries[2]
+
+
+class FakeNode:
+    def __init__(self, values=None):
+        self.queries = []
+        self._values = values or {}
+        self.disk = {}  # table -> bytes, returned by read_relation_file
+
+    def safe_sql(self, query, params=None):
+        self.queries.append(query)
+        return []
+
+    def sql_value(self, query, params=None):
+        self.queries.append(query)
+        return self._values.get(query)
+
+    def read_relation_file(self, table):
+        return self.disk.get(table, b"")
+
+
+def test_pgtde_setup_wal_matches_rewind_sequence():
+    node = FakeNode()
+    kr = FileKeyring(Path("/tmp/k.per"))
+    PgTde(node, kr).setup(wal=True)
+    q = node.queries
+    assert q[0].startswith("CREATE EXTENSION")
+    assert "pg_tde_add_global_key_provider_file('wal-provider'" in q[1]
+    assert (
+        "pg_tde_create_key_using_global_key_provider('wal-key', 'wal-provider')" in q[2]
+    )
+    assert (
+        "pg_tde_set_server_key_using_global_key_provider('wal-key', 'wal-provider')"
+        in q[3]
+    )
+    assert "pg_tde_add_database_key_provider_file('db-provider'" in q[4]
+    assert (
+        "pg_tde_create_key_using_database_key_provider('db-key', 'db-provider')" in q[5]
+    )
+    assert "pg_tde_set_key_using_database_key_provider('db-key', 'db-provider')" in q[6]
+    assert "pg_tde.wal_encrypt = on" in q[7]
+
+
+def test_pgtde_setup_database_only():
+    node = FakeNode()
+    kr = FileKeyring(Path("/tmp/k.per"))
+    PgTde(node, kr).setup(scope="database")
+    joined = "\n".join(node.queries)
+    assert "wal_encrypt" not in joined
+    assert "global_key_provider" not in joined
+    assert "pg_tde_add_database_key_provider_file('provider'" in node.queries[1]
+
+
+def test_pgtde_add_provider_keyring_override():
+    node = FakeNode()
+    default_kr = FileKeyring(Path("/tmp/default.per"))
+    other_kr = FileKeyring(Path("/tmp/other.per"))
+    tde = PgTde(node, default_kr)
+    tde.add_provider("global", "g", keyring=other_kr)
+    assert "/tmp/other.per" in node.queries[0]
+
+
+def test_pgtde_is_encrypted_bool():
+    node = FakeNode(values={"SELECT pg_tde_is_encrypted('t1')": "t"})
+    assert PgTde(node, FileKeyring(Path("/k"))).is_encrypted("t1") is True
+    node2 = FakeNode(values={"SELECT pg_tde_is_encrypted('t1')": "f"})
+    assert PgTde(node2, FileKeyring(Path("/k"))).is_encrypted("t1") is False
+
+
+def test_pgtde_assert_on_disk():
+    node = FakeNode()
+    node.disk["plain"] = b"...multitude..."
+    tde = PgTde(node, FileKeyring(Path("/k")))
+    tde.assert_on_disk("plain", "multitud")
+    node.disk["enc"] = b"\x00\x01\x02ciphertext"
+    tde.assert_not_on_disk("enc", "multitud")
