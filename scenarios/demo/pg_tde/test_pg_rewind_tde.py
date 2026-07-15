@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 import stormweaver.testing as st
-from conftest import TDE_DIR, requires_pg_tde
+from _pgtde import TDE_DIR, requires_pg_tde
 from rewind_tde import TdeRewind
 from stormweaver.keyrings import open_keyring
 from stormweaver.keyrings.base import Keyring
