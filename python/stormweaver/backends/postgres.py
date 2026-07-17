@@ -90,6 +90,10 @@ class Postgres(DatabaseBackend):
             for k, v in settings.items():
                 f.write(f"{k} = '{v}'\n")
 
+    def reset_auto_conf(self) -> None:
+        """Drop ALTER SYSTEM leftovers; call while the server is stopped."""
+        (self.datadir / "postgresql.auto.conf").unlink(missing_ok=True)
+
     def enable_archiving(self) -> None:
         self.archive_dir.mkdir(parents=True, exist_ok=True)
         self.archive_dir.chmod(0o700)

@@ -195,11 +195,13 @@ std::string PostgreSQL::serverInfoString() const {
   return ""; // TODO
 }
 
-ServerInfo PostgreSQL::calculateServerInfo() { // TODO
+ServerInfo PostgreSQL::calculateServerInfo() const {
   std::uint64_t server_version = 0;
-  flavor flav = flavor::postgres;
+  if (connection != nullptr) {
+    server_version = static_cast<std::uint64_t>(connection->server_version());
+  }
 
-  return {.flavor_ = flav, .version = server_version};
+  return {.flavor_ = flavor::postgres, .version = server_version};
 }
 
 std::string PostgreSQL::hostInfo() const {

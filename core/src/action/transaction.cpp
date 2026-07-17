@@ -68,10 +68,11 @@ TransactionAction::TransactionAction(AllConfig config,
                                      ActionRegistry const &pool)
     : allConfig(std::move(config)),
       poolAll(pool.filtered([](ActionFactory const &f) {
-        return f.type != ActionType::transaction;
+        return f.type != ActionType::transaction && f.txn_safe;
       })),
       poolNoDdl(pool.filtered([](ActionFactory const &f) {
-        return f.type != ActionType::transaction && f.type != ActionType::ddl;
+        return f.type != ActionType::transaction && f.type != ActionType::ddl &&
+               f.txn_safe;
       })) {}
 
 void TransactionAction::execute(metadata::Context &metaCtx, ps_random &rand,

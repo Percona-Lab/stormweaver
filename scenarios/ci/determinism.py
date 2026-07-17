@@ -41,6 +41,7 @@ import sys
 import tempfile
 
 import stormweaver as sw
+from stormweaver import variables
 from stormweaver.log import init_logging
 
 SEED = 987654321
@@ -124,6 +125,13 @@ def run_once(run_dir: str, install_dir: str, port: int) -> None:
 
         action_config = sw.AllConfig()
         action_config.ddl.access_methods = ["heap"]
+
+        # session-only toggles: global/reload changes interleave across
+        # workers nondeterministically; safe-tier session values do not
+        # change statement outcomes, so sequences stay comparable
+        var_pool = variables.preset("postgres", max_tier=variables.Tier.safe)
+        action_config.variables = var_pool.to_config()
+        registry.get("set_session_variable").weight = 5
 
         user = os.environ.get("PGUSER") or getpass.getuser()
 

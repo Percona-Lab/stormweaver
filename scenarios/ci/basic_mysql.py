@@ -10,7 +10,7 @@ logger = logging.getLogger("scenario.basic_mysql")
 
 def add_arguments(parser):
     scenario.add_common_arguments(parser)
-    parser.set_defaults(duration=30, workers=4, repeat=2)
+    parser.set_defaults(duration=30, workers=4, repeat=2, var_fuzz="safe")
 
 
 def main(args):

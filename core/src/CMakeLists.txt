@@ -6,6 +6,7 @@ set(LIBRARY_SOURCES
     action/dml.cpp
     action/helper.cpp
     action/transaction.cpp
+    action/variable.cpp
     querygen/generator.cpp
     querygen/render.cpp
     checksum.cpp

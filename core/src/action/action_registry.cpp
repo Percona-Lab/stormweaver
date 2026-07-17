@@ -6,6 +6,7 @@
 #include "action/action_registry.hpp"
 #include "action/dml.hpp"
 #include "action/transaction.hpp"
+#include "action/variable.hpp"
 
 namespace {
 
@@ -213,6 +214,43 @@ ActionRegistry initializeDefaultRegisty() {
   ar.insert(updateSelected);
   ar.insert(selectQuery);
   ar.insert(transaction);
+
+  // dormant (weight 0) until a scenario raises weights + supplies a pool
+  // via AllConfig.variables. must stay last: weight-offset-0 lookup quirk.
+  ActionFactory setSessionVariable{.name = "set_session_variable",
+                                   .builder =
+                                       [](BuildContext const &bctx) {
+                                         return std::make_unique<SetVariable>(
+                                             bctx.config.variables,
+                                             VariableMechanism::session);
+                                       },
+                                   .weight = 0,
+                                   .type = ActionType::other};
+
+  ActionFactory setGlobalVariable{.name = "set_global_variable",
+                                  .builder =
+                                      [](BuildContext const &bctx) {
+                                        return std::make_unique<SetVariable>(
+                                            bctx.config.variables,
+                                            VariableMechanism::global);
+                                      },
+                                  .weight = 0,
+                                  .type = ActionType::other};
+
+  ActionFactory reloadGlobalVariable{.name = "reload_global_variable",
+                                     .builder =
+                                         [](BuildContext const &bctx) {
+                                           return std::make_unique<SetVariable>(
+                                               bctx.config.variables,
+                                               VariableMechanism::reload);
+                                         },
+                                     .weight = 0,
+                                     .type = ActionType::other,
+                                     .txn_safe = false};
+
+  ar.insert(setSessionVariable);
+  ar.insert(setGlobalVariable);
+  ar.insert(reloadGlobalVariable);
 
   return ar;
 }

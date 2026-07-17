@@ -6,6 +6,7 @@
 #include "action/ddl.hpp"
 #include "action/dml.hpp"
 #include "action/transaction_config.hpp"
+#include "action/variable.hpp"
 #include "querygen/config.hpp"
 
 namespace action {
@@ -16,6 +17,7 @@ struct AllConfig {
   CustomConfig custom;
   TransactionConfig transaction;
   querygen::QueryGenConfig querygen;
+  VariableConfig variables;
 };
 
 } // namespace action

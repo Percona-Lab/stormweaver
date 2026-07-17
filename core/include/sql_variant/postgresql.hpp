@@ -38,6 +38,6 @@ private:
   ServerParams params;
   std::unique_ptr<pqxx::connection> connection;
 
-  [[nodiscard]] static ServerInfo calculateServerInfo();
+  [[nodiscard]] ServerInfo calculateServerInfo() const;
 };
 } // namespace sql_variant

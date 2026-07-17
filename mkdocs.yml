@@ -12,6 +12,7 @@ nav:
   - Writing scenarios: writing-scenarios.md
   - Python actions: python-actions.md
   - Transactions: transactions.md
+  - Variable fuzzing: variable-fuzzing.md
   - Stable tests: stable-tests.md
   - Determinism: determinism.md
   - Server wrappers: wrappers.md

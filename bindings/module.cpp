@@ -425,6 +425,99 @@ NB_MODULE(_stormweaver, m) {
             }
           });
 
+  nb::class_<action::VariableSpec>(m, "VariableSpec")
+      .def(nb::init<>())
+      .def_rw("name", &action::VariableSpec::name)
+      .def_rw("weight", &action::VariableSpec::weight)
+      .def_rw("min_version", &action::VariableSpec::min_version)
+      .def_rw("max_version", &action::VariableSpec::max_version)
+      .def_prop_rw(
+          "flavor",
+          // only ANY_PG/ANY_MYSQL ever reach here via the setter below;
+          // not a general flavor->string mapper (ps/pxc/mysql/postgres/ppg
+          // would misreport as postgres)
+          [](action::VariableSpec const &s) {
+            return s.flavor == sql_variant::flavor::ANY_MYSQL
+                       ? std::string("mysql")
+                       : std::string("postgres");
+          },
+          [](action::VariableSpec &s, std::string const &v) {
+            if (v == "postgres") {
+              s.flavor = sql_variant::flavor::ANY_PG;
+            } else if (v == "mysql") {
+              s.flavor = sql_variant::flavor::ANY_MYSQL;
+            } else {
+              throw std::invalid_argument("flavor: postgres|mysql");
+            }
+          })
+      .def_prop_rw(
+          "mechanisms",
+          [](action::VariableSpec const &s) {
+            std::vector<std::string> out;
+            using M = action::VariableMechanism;
+            if ((s.mechanisms & static_cast<std::uint8_t>(M::session)) != 0) {
+              out.emplace_back("session");
+            }
+            if ((s.mechanisms & static_cast<std::uint8_t>(M::global)) != 0) {
+              out.emplace_back("global");
+            }
+            if ((s.mechanisms & static_cast<std::uint8_t>(M::reload)) != 0) {
+              out.emplace_back("reload");
+            }
+            if ((s.mechanisms & static_cast<std::uint8_t>(M::startup)) != 0) {
+              out.emplace_back("startup");
+            }
+            return out;
+          },
+          [](action::VariableSpec &s, std::vector<std::string> const &v) {
+            using M = action::VariableMechanism;
+            std::uint8_t mask = 0;
+            for (auto const &name : v) {
+              if (name == "session") {
+                mask |= static_cast<std::uint8_t>(M::session);
+              } else if (name == "global") {
+                mask |= static_cast<std::uint8_t>(M::global);
+              } else if (name == "reload") {
+                mask |= static_cast<std::uint8_t>(M::reload);
+              } else if (name == "startup") {
+                mask |= static_cast<std::uint8_t>(M::startup);
+              } else {
+                throw std::invalid_argument(
+                    "mechanism: session|global|reload|startup");
+              }
+            }
+            s.mechanisms = mask;
+          })
+      .def("set_choices",
+           [](action::VariableSpec &s, std::vector<std::string> const &values) {
+             s.generator = action::VariableChoices{values};
+           })
+      .def(
+          "set_int_range",
+          // range validation (non-negative, min<=max) happens python-side
+          // (task 5); this ctor trusts it, see variable.cpp
+          [](action::VariableSpec &s, std::int64_t min, std::int64_t max,
+             std::int64_t step, std::string const &suffix) {
+            s.generator = action::VariableIntRange{min, max, step, suffix};
+          },
+          nb::arg("min"), nb::arg("max"), nb::arg("step") = 1,
+          nb::arg("suffix") = "")
+      .def("set_bool", [](action::VariableSpec &s) {
+        s.generator = action::VariableBool{};
+      });
+
+  nb::class_<action::VariableConfig>(m, "VariableConfig")
+      .def(nb::init<>())
+      // elements are copies; mutate specs by assigning a whole new list
+      .def_prop_rw(
+          "specs",
+          [](action::VariableConfig const &c)
+              -> std::vector<action::VariableSpec> { return c.specs; },
+          [](action::VariableConfig &c, std::vector<action::VariableSpec> v) {
+            c.specs = std::move(v);
+          },
+          nb::rv_policy::copy);
+
   nb::class_<querygen::QueryGenConfig>(m, "QueryGenConfig")
       .def(nb::init<>())
       .def_rw("max_joins", &querygen::QueryGenConfig::max_joins)
@@ -450,7 +543,8 @@ NB_MODULE(_stormweaver, m) {
       .def_rw("ddl", &action::AllConfig::ddl)
       .def_rw("dml", &action::AllConfig::dml)
       .def_rw("transaction", &action::AllConfig::transaction)
-      .def_rw("querygen", &action::AllConfig::querygen);
+      .def_rw("querygen", &action::AllConfig::querygen)
+      .def_rw("variables", &action::AllConfig::variables);
 
   nb::class_<WorkloadParams>(m, "WorkloadParams")
       .def(nb::init<>())

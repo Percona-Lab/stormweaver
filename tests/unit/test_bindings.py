@@ -120,3 +120,55 @@ def test_statistics_bindings_exposed():
         assert hasattr(core.TransactionStatistics, field)
     for name in ("total", "has_data", "sub_histogram"):
         assert callable(getattr(core.TransactionStatistics, name, None))
+
+
+def test_variable_spec_roundtrip():
+    s = sw.VariableSpec()
+    s.name = "work_mem"
+    s.flavor = "postgres"
+    s.mechanisms = ["session", "startup"]
+    s.weight = 20
+    s.min_version = 150000
+    s.set_choices(["'64MB'", "'256MB'"])
+    assert s.name == "work_mem"
+    assert s.flavor == "postgres"
+    assert set(s.mechanisms) == {"session", "startup"}
+    assert s.weight == 20
+    assert s.min_version == 150000
+
+    s.flavor = "mysql"
+    assert s.flavor == "mysql"
+
+    with pytest.raises(ValueError):
+        s.flavor = "oracle"
+    with pytest.raises(ValueError):
+        s.mechanisms = ["telepathy"]
+
+
+def test_variable_config_attaches_to_all_config():
+    s = sw.VariableSpec()
+    s.name = "jit"
+    s.flavor = "postgres"
+    s.mechanisms = ["session"]
+    s.set_bool()
+
+    cfg = sw.VariableConfig()
+    cfg.specs = [s]
+    assert len(cfg.specs) == 1
+    assert cfg.specs[0].name == "jit"
+
+    ac = sw.AllConfig()
+    ac.variables = cfg
+    assert len(ac.variables.specs) == 1
+
+
+def test_variable_actions_dormant_in_default_registry():
+    for flavor in ("pg", "mysql"):
+        reg = sw.default_action_registry(flavor)
+        for name in (
+            "set_session_variable",
+            "set_global_variable",
+            "reload_global_variable",
+        ):
+            assert reg.has(name)
+            assert reg.get(name).weight == 0

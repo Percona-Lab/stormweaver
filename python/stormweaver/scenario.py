@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import stormweaver._stormweaver as _sw
+from stormweaver import events, variables
 from stormweaver import log as swlog
 from stormweaver.backends.base import DatabaseBackend
 from stormweaver.backends.mysql import MySQL
@@ -30,6 +31,13 @@ def add_common_arguments(parser: argparse._ActionsContainer) -> None:
     group.add_argument("--duration", type=int, default=10, help="workload seconds")
     group.add_argument("--workers", type=int, default=5, help="number of workers")
     group.add_argument("--repeat", type=int, default=5, help="workload cycles")
+    group.add_argument("--seed", type=int, default=0, help="workload seed, 0 = random")
+    group.add_argument(
+        "--var-fuzz",
+        choices=["off", "safe", "semantics", "disruptive"],
+        default="off",
+        help="server variable fuzzing up to the given tier",
+    )
     group.add_argument("--tde", choices=["on", "on_wal", "off"], default="off")
     group.add_argument("--pgsm", choices=["on", "off"], default="off")
     group.add_argument("--clear-logs", action="store_true")
@@ -188,6 +196,7 @@ class ScenarioContext:
             action_config=action_config,
             worker_name_prefix=self._name_prefix,
             worker_setup=worker_setup,
+            seed=getattr(opts, "seed", 0),
         )
 
     def _access_methods(self) -> list[str]:
@@ -213,6 +222,23 @@ class ScenarioContext:
         # the metadata rework; do not fail scenarios on this.
         if not self.make_worker("validator").validate_metadata():
             logger.warning("metadata validation failed (known limitation, ignored)")
+
+    def use_variables(
+        self,
+        pool: variables.VariablePool,
+        session_weight: int = 5,
+        global_weight: int = 5,
+        reload_weight: int = 5,
+    ) -> None:
+        """Attach a variable pool; call before workload.run()."""
+        assert self.workload.action_config is not None
+        self.workload.action_config.variables = pool.to_config()
+        for name, weight in (
+            ("set_session_variable", session_weight),
+            ("set_global_variable", global_weight),
+            ("reload_global_variable", reload_weight),
+        ):
+            self.registry.get(name).weight = weight
 
 
 class PgContext(ScenarioContext):
@@ -300,6 +326,13 @@ def single_pg(
             "summarize_wal": "on",
             "max_wal_senders": "3",
         }
+    var_pool = None
+    if getattr(opts, "var_fuzz", "off") != "off":
+        var_pool = variables.preset("postgres", max_tier=variables.Tier[opts.var_fuzz])
+        rolled = var_pool.roll_startup(variables.startup_rng(getattr(opts, "seed", 0)))
+        for name, value in rolled.items():
+            events.emit("STARTUP_VARIABLE", name=name, value=value)
+        settings |= rolled
     if extra_config:
         settings |= extra_config
 
@@ -323,6 +356,8 @@ def single_pg(
         ctx = PgContext(
             opts, pg, dbname, registry, keyring, conn_settings, worker_setup
         )
+        if var_pool is not None:
+            ctx.use_variables(var_pool)
 
         if opts.tde == "on":
             init_tde_only_for_db(ctx.connect("tde-init"), str(keyring))
@@ -385,7 +420,15 @@ def single_mysql(
         port=opts.config.free_port(),
         wrapper=wrapper or getattr(opts, "wrapper", None),
     )
-    my.add_config({"max_connections": "200"} | (extra_config or {}))
+    settings = {"max_connections": "200"}
+    var_pool = None
+    if getattr(opts, "var_fuzz", "off") != "off":
+        var_pool = variables.preset("mysql", max_tier=variables.Tier[opts.var_fuzz])
+        rolled = var_pool.roll_startup(variables.startup_rng(getattr(opts, "seed", 0)))
+        for name, value in rolled.items():
+            events.emit("STARTUP_VARIABLE", name=name, value=value)
+        settings |= rolled
+    my.add_config(settings | (extra_config or {}))
     my.start()
     try:
         if not my.wait_ready():
@@ -394,6 +437,8 @@ def single_mysql(
 
         registry = _base_registry("mysql")
         ctx = MySqlContext(opts, my, dbname, registry, worker_setup)
+        if var_pool is not None:
+            ctx.use_variables(var_pool)
 
         setup_worker = ctx.make_worker("setup")
         if db_setup:

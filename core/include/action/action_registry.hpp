@@ -26,6 +26,9 @@ struct ActionFactory {
   action_build_t builder;
   std::size_t weight;
   ActionType type = ActionType::other;
+  // false: statement refuses to run in a transaction block (ALTER SYSTEM),
+  // transaction composites skip it
+  bool txn_safe = true;
 };
 
 class ActionRegistry {
