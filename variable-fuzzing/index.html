@@ -1,0 +1,962 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../transactions/">
+      
+      
+        <link rel="next" href="../stable-tests/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.17">
+    
+    
+      
+        <title>Variable fuzzing - StormWeaver Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.bcfcd587.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#variable-fuzzing" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="StormWeaver Documentation" class="md-header__button md-logo" aria-label="StormWeaver Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            StormWeaver Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Variable fuzzing
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="StormWeaver Documentation" class="md-nav__button md-logo" aria-label="StormWeaver Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    StormWeaver Documentation
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../building/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Building from source
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../writing-scenarios/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Writing scenarios
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../python-actions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Python actions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../transactions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Transactions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Variable fuzzing
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Variable fuzzing
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      Quick start
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mechanisms" class="md-nav__link">
+    <span class="md-ellipsis">
+      Mechanisms
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tiers-and-presets" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tiers and presets
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#programmatic-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      Programmatic API
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Programmatic API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#startup-rolls" class="md-nav__link">
+    <span class="md-ellipsis">
+      Startup rolls
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#caveats" class="md-nav__link">
+    <span class="md-ellipsis">
+      Caveats
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-catalog-entries" class="md-nav__link">
+    <span class="md-ellipsis">
+      Adding catalog entries
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../stable-tests/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Stable tests
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../determinism/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Determinism
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wrappers/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Server wrappers
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../randomized-testing-concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Randomized testing concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../config-parameters/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Config parameters
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_12" id="__nav_12_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Design notes
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12">
+            <span class="md-nav__icon md-icon"></span>
+            Design notes
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr-enhanced-statistics/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Enhanced statistics ADR
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      Quick start
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mechanisms" class="md-nav__link">
+    <span class="md-ellipsis">
+      Mechanisms
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tiers-and-presets" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tiers and presets
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#programmatic-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      Programmatic API
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Programmatic API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#startup-rolls" class="md-nav__link">
+    <span class="md-ellipsis">
+      Startup rolls
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#caveats" class="md-nav__link">
+    <span class="md-ellipsis">
+      Caveats
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-catalog-entries" class="md-nav__link">
+    <span class="md-ellipsis">
+      Adding catalog entries
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+<h1 id="variable-fuzzing">Variable fuzzing</h1>
+<p>Randomizes server configuration variables during a workload: session-level
+<code>SET</code>, MySQL <code>SET GLOBAL</code>, PostgreSQL <code>ALTER SYSTEM</code> + <code>pg_reload_conf()</code>, and
+seed-derived startup option rolls baked into the config file before the
+server ever starts.</p>
+<h2 id="quick-start">Quick start</h2>
+<p>Add <code>--var-fuzz safe --seed 42</code> to any scenario built on <code>scenario.single_pg</code>
+or <code>scenario.single_mysql</code> (<code>basic.py</code> already defaults to <code>--var-fuzz safe</code>;
+the flag is spelled out below for illustration, and <code>--seed</code> is what makes
+the startup rolls reproducible):</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv run stormweaver scenarios/ci/basic.py -i &quot;$STORMWEAVER_PG_DIR&quot; \
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    --var-fuzz safe --seed 42
+</span></code></pre></div>
+<p><code>--seed</code> is optional - without it (or with <code>--seed 0</code>) startup rolls and
+worker RNG streams are drawn from real entropy and are not reproducible
+between runs.</p>
+<p><code>single_pg</code>/<code>single_mysql</code> roll a startup variable set before <code>start()</code> and
+call <code>ctx.use_variables()</code> for you, so nothing else changes in the scenario
+script. What to look for:</p>
+<ul>
+<li>one <code>STARTUP_VARIABLE name=... value=...</code> event line per rolled startup
+  option, emitted before the server starts (<code>stormweaver.events</code> format, see
+  <a href="../writing-scenarios/#unified-logging">Writing scenarios</a>).</li>
+<li><code>SET ...</code> / <code>SET GLOBAL ...</code> / <code>ALTER SYSTEM SET ...</code> + <code>SELECT
+  pg_reload_conf()</code> statements interleaved in the per-connection SQL logs
+  (<code>logs/sql-conn-*.log</code>), same as any other action.</li>
+<li><code>set_session_variable</code>, <code>set_global_variable</code>, <code>reload_global_variable</code>
+  showing up in the per-worker action stats once their weight is non-zero.</li>
+</ul>
+<p><code>--var-fuzz off</code> (the default when a scenario does not override it) disables
+all of this; <code>scenarios/ci/basic.py</code> and <code>scenarios/ci/basic_mysql.py</code> set
+the default to <code>safe</code>.</p>
+<h2 id="mechanisms">Mechanisms</h2>
+<table>
+<thead>
+<tr>
+<th>mechanism</th>
+<th>what it does</th>
+<th>built-in action</th>
+<th>servers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>session</td>
+<td><code>SET x = v</code> (PG) / <code>SET SESSION x = v</code> (MySQL), scoped to the current connection</td>
+<td><code>set_session_variable</code></td>
+<td>both</td>
+</tr>
+<tr>
+<td>global</td>
+<td><code>SET GLOBAL x = v</code>, visible to new connections process-wide</td>
+<td><code>set_global_variable</code></td>
+<td>MySQL only</td>
+</tr>
+<tr>
+<td>reload</td>
+<td><code>ALTER SYSTEM SET x = v</code> then <code>SELECT pg_reload_conf()</code> - PostgreSQL's sighup-class parameters</td>
+<td><code>reload_global_variable</code></td>
+<td>PostgreSQL only</td>
+</tr>
+<tr>
+<td>startup</td>
+<td>baked into the config file before the server starts, needs a restart to change</td>
+<td>none (rolled once via <code>roll_startup</code>)</td>
+<td>both</td>
+</tr>
+</tbody>
+</table>
+<p>The three toggle actions are registered by <code>default_action_registry()</code> at
+weight 0 - dormant until a scenario supplies a variable pool and raises their
+weight (<code>ctx.use_variables()</code> / <code>Workload.action_config.variables</code>, see
+below). A variable only takes part in a given mechanism if its spec lists
+that mechanism; <code>set_global_variable</code> and <code>reload_global_variable</code> simply
+no-op (return success, no SQL sent) when nothing eligible is configured for
+the connected server flavor.</p>
+<h2 id="tiers-and-presets">Tiers and presets</h2>
+<p>Each <code>VariableSpec</code> carries a <code>Tier</code>:</p>
+<ul>
+<li><strong>safe</strong> - session-tuning and sighup-class knobs (<code>work_mem</code>,
+  <code>checkpoint_timeout</code>, <code>enable_seqscan</code>, ...). Changing them should not
+  change query results or crash-recovery behavior, only performance and
+  plan shape.</li>
+<li><strong>semantics</strong> - changes that can legitimately change what a statement
+  returns or whether it errors (<code>default_transaction_isolation</code>,
+  <code>statement_timeout</code>, <code>plan_cache_mode</code>, MySQL <code>sql_mode</code>, ...). Enabling
+  this tier means workloads should expect extra SQL errors that are not
+  bugs - a statement that times out or gets rejected under
+  <code>read_only</code>-adjacent settings is the fuzzing working as intended, not a
+  regression.</li>
+<li><strong>disruptive</strong> - changes that can affect durability or crash-safety
+  (<code>fsync</code>, <code>full_page_writes</code>, <code>synchronous_commit</code>, MySQL
+  <code>innodb_flush_log_at_trx_commit</code>, <code>sync_binlog</code>, <code>read_only</code>, ...).
+  Enabling this tier means a crash-recovery checksum/validation step can
+  legitimately fail (data genuinely lost because durability was turned off)</li>
+<li>that is an expected side effect of the tier, not proof of a bug, though
+  it is worth confirming the loss lines up with the toggled setting.</li>
+</ul>
+<p><code>variables.preset(flavor, max_tier=Tier.safe)</code> returns the curated
+<code>PG_VARIABLES</code>/<code>MYSQL_VARIABLES</code> catalog filtered to <code>tier &lt;= max_tier</code>.
+<code>--var-fuzz</code> maps directly to <code>max_tier</code> (<code>off</code> skips fuzzing entirely).</p>
+<h2 id="programmatic-api">Programmatic API</h2>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span> <span class="nn">stormweaver</span> <span class="kn">import</span> <span class="n">variables</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">pool</span> <span class="o">=</span> <span class="n">variables</span><span class="o">.</span><span class="n">preset</span><span class="p">(</span><span class="s2">&quot;postgres&quot;</span><span class="p">,</span> <span class="n">max_tier</span><span class="o">=</span><span class="n">variables</span><span class="o">.</span><span class="n">Tier</span><span class="o">.</span><span class="n">semantics</span><span class="p">)</span>
+</span></code></pre></div>
+<p><code>VariablePool</code> is composed with plain methods, each returning a new pool:</p>
+<ul>
+<li><code>pool.filter(flavor=, tier=, max_tier=, mechanism=)</code> - narrow down.</li>
+<li><code>pool.extend([...])</code> - add custom <code>VariableSpec</code>s.</li>
+<li><code>pool.remove(name)</code> - drop one variable by name (raises if absent).</li>
+<li><code>pool_a + pool_b</code> - concatenate (duplicate <code>(flavor, name)</code> pairs raise).</li>
+</ul>
+<p>Build custom specs the same way the built-in catalog does:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span> <span class="nn">stormweaver.variables</span> <span class="kn">import</span> <span class="n">VariableSpec</span><span class="p">,</span> <span class="n">Choices</span><span class="p">,</span> <span class="n">IntRange</span><span class="p">,</span> <span class="n">Bool</span><span class="p">,</span> <span class="n">Tier</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">my_spec</span> <span class="o">=</span> <span class="n">VariableSpec</span><span class="p">(</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;my_setting&quot;</span><span class="p">,</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">flavor</span><span class="o">=</span><span class="s2">&quot;postgres&quot;</span><span class="p">,</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">generator</span><span class="o">=</span><span class="n">Choices</span><span class="p">((</span><span class="s2">&quot;&#39;1MB&#39;&quot;</span><span class="p">,</span> <span class="s2">&quot;&#39;64MB&#39;&quot;</span><span class="p">)),</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">mechanisms</span><span class="o">=</span><span class="nb">frozenset</span><span class="p">({</span><span class="s2">&quot;session&quot;</span><span class="p">,</span> <span class="s2">&quot;startup&quot;</span><span class="p">}),</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="n">tier</span><span class="o">=</span><span class="n">Tier</span><span class="o">.</span><span class="n">safe</span><span class="p">,</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">weight</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="p">)</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="n">pool</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">my_spec</span><span class="p">])</span>
+</span></code></pre></div>
+<p>Attach a pool to a scenario context:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">with</span> <span class="n">scenario</span><span class="o">.</span><span class="n">single_pg</span><span class="p">(</span><span class="n">opts</span><span class="p">)</span> <span class="k">as</span> <span class="n">ctx</span><span class="p">:</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="n">ctx</span><span class="o">.</span><span class="n">use_variables</span><span class="p">(</span><span class="n">pool</span><span class="p">,</span> <span class="n">session_weight</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">global_weight</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">reload_weight</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="n">ctx</span><span class="o">.</span><span class="n">workload</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</span></code></pre></div>
+<p>The weight arguments set the registry weight for the three toggle actions,
+they default to 5 each. That is deliberately low next to the ~7000 combined
+weight of the default DDL/DML action set, so toggles are rare unless you ask
+for more - raise <code>session_weight</code>/<code>global_weight</code>/<code>reload_weight</code> (or set
+<code>registry.get("set_session_variable").weight = ...</code> directly) for a run that
+should hammer on variable changes specifically.</p>
+<p><code>single_pg</code>/<code>single_mysql</code> call <code>ctx.use_variables()</code> for you whenever
+<code>opts.var_fuzz != "off"</code>; call it yourself only when building a context by
+hand or when overriding the pool the CLI flag would have picked.</p>
+<h3 id="startup-rolls">Startup rolls</h3>
+<p>Startup-only values are not part of the runtime action pool - they are
+rolled once, up front, and written into the config file:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">pool</span> <span class="o">=</span> <span class="n">variables</span><span class="o">.</span><span class="n">preset</span><span class="p">(</span><span class="s2">&quot;postgres&quot;</span><span class="p">,</span> <span class="n">max_tier</span><span class="o">=</span><span class="n">variables</span><span class="o">.</span><span class="n">Tier</span><span class="o">.</span><span class="n">safe</span><span class="p">)</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">rolled</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">roll_startup</span><span class="p">(</span><span class="n">variables</span><span class="o">.</span><span class="n">startup_rng</span><span class="p">(</span><span class="n">opts</span><span class="o">.</span><span class="n">seed</span><span class="p">))</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1"># rolled: {&quot;shared_buffers&quot;: &quot;256MB&quot;, &quot;wal_buffers&quot;: &quot;1MB&quot;, ...}</span>
+</span></code></pre></div>
+<p><code>variables.startup_rng(seed, run=0)</code> derives a dedicated RNG stream from the
+workload seed (same FNV-1a derivation as per-worker streams, see
+<a href="../determinism/">Determinism</a>); <code>seed=0</code> falls back to real entropy, same
+convention as workers. Pass <code>rolled</code> through <code>extra_config=</code> on
+<code>single_pg</code>/<code>single_mysql</code>, or call <code>node.add_config(rolled)</code> and restart if
+you need to re-roll mid-scenario - re-rolling is an explicit verb a scenario
+calls, not something that happens automatically on restart.</p>
+<h2 id="caveats">Caveats</h2>
+<p><strong><code>ALTER SYSTEM</code> persists.</strong> Every <code>reload_global_variable</code> toggle that
+lands writes to <code>postgresql.auto.conf</code>, which survives a normal restart.
+<code>Postgres.reset_auto_conf()</code> deletes that file, but only do it while the
+server is stopped - it does not touch the running postmaster.</p>
+<p><strong>Cross-worker interleaving is not reproducible.</strong> Each worker's own
+decision to toggle a variable (and which value it picks) is seed-
+deterministic, same as any other action. But a <code>global</code>/<code>reload</code> toggle from
+one worker is visible to every other connection at a wall-clock-dependent
+moment, so the effect on other workers' statement outcomes is not
+reproducible run to run - the same caveat that already applies to
+shared-catalog DDL timing under concurrent workers, see
+<a href="../determinism/#what-replays-and-what-doesnt">Determinism</a>.
+<code>scenarios/ci/determinism.py</code> sidesteps this by enabling only
+<code>set_session_variable</code> (session mechanism, safe tier) over its comparison
+run: safe-tier session values do not change statement outcomes, so the
+recorded SQL sequence stays comparable.</p>
+<p><strong>One process, multiple nodes, same seed: identical startup rolls.</strong>
+<code>startup_rng(seed, run)</code> takes a <code>run</code> parameter meant to differentiate
+multiple nodes rolled in the same process (e.g. primary + replica), but
+nothing in the scenario helpers passes a non-zero <code>run</code> yet - two
+<code>single_pg</code>/<code>single_mysql</code> contexts opened with the same seed in one process
+currently roll the same startup values. Pass <code>run</code> explicitly if you need
+them to differ.</p>
+<p><strong>Startup rolls are not version- or build-gated beyond <code>min_version</code>/
+<code>max_version</code>.</strong> Those gates check the server's reported version, not what
+the specific binary was built with. <code>wal_compression</code>'s <code>lz4</code>/<code>zstd</code> choices
+are gated to <code>&gt;= 15</code> but still assume the binary was built with those
+codecs; a codec-less build will fail to start with those values rolled. If
+you are testing an exotic build, filter the pool (<code>pool.filter(...)</code> /
+<code>pool.remove(...)</code>) before rolling rather than relying on the version gate
+alone.</p>
+<h2 id="adding-catalog-entries">Adding catalog entries</h2>
+<p>Each catalog entry is one <code>_pg(...)</code> (postgres) or <code>_my(...)</code> (mysql) call
+in <code>python/stormweaver/variables.py</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">_pg</span><span class="p">(</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="n">name</span><span class="p">,</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="n">generator</span><span class="p">,</span>        <span class="c1"># Choices(...) | IntRange(min, max, step=, suffix=) | Bool()</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="n">mechanisms</span><span class="p">,</span>        <span class="c1"># subset of {&quot;session&quot;, &quot;global&quot;, &quot;reload&quot;, &quot;startup&quot;}</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="n">tier</span><span class="o">=</span><span class="n">Tier</span><span class="o">.</span><span class="n">safe</span><span class="p">,</span>    <span class="c1"># safe | semantics | disruptive</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="n">weight</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>         <span class="c1"># relative pick weight within its mechanism</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="n">min_version</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="n">max_version</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="p">)</span>
+</span></code></pre></div>
+<ul>
+<li><code>mechanisms</code> for <code>_my(...)</code> cannot include <code>"reload"</code> (PostgreSQL-only) and
+  <code>_pg(...)</code> cannot include <code>"global"</code> (MySQL-only) - the mechanism filter in
+  <code>variable_detail::eligible</code> also checks the connected server flavor, but
+  putting an impossible mechanism on a spec is just dead weight.</li>
+<li><strong>Quoting</strong>: PostgreSQL string/size values carry their SQL quotes directly
+  in the <code>Choices</code> tuple (e.g. <code>"'64MB'"</code>, <code>"'read committed'"</code>) because the
+  runtime path sends them straight into a <code>SET</code>/<code>ALTER SYSTEM</code> statement.
+  <code>render_value(..., startup=True)</code> strips a matching pair of leading/
+  trailing quotes automatically, since <code>add_config</code>'s config-file writer
+  quotes its own values (<code>k = 'v'</code>) - do not pre-strip quotes yourself for
+  the startup path. MySQL values are quoted only where the SQL grammar
+  needs it (e.g. <code>'index_merge=off'</code> for <code>optimizer_switch</code>, bare <code>ON</code>/<code>OFF</code>
+  elsewhere).</li>
+<li><strong>Version gates</strong>: PostgreSQL uses <code>server_version_num</code> style integers
+  (<code>150000</code> for 15.0, <code>140002</code> for 14.2). MySQL uses <code>X*10000 + Y*100 + Z</code>
+  (<code>80030</code> for 8.0.30). Leave <code>0</code> (the default) for no gate on that side.</li>
+<li>Put the new entry in the <code># safe</code> / <code># semantics</code> / <code># disruptive</code> block
+  matching its tier - the catalogs are grouped that way for readability, not
+  enforced by code.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.1e8ae164.min.js"></script>
+      
+    
+  </body>
+</html>

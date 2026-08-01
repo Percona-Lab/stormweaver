@@ -1,0 +1,936 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../building/">
+      
+      
+        <link rel="next" href="../python-actions/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.17">
+    
+    
+      
+        <title>Writing scenarios - StormWeaver Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.bcfcd587.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#writing-scenarios" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="StormWeaver Documentation" class="md-header__button md-logo" aria-label="StormWeaver Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            StormWeaver Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Writing scenarios
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="StormWeaver Documentation" class="md-nav__button md-logo" aria-label="StormWeaver Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    StormWeaver Documentation
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../building/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Building from source
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Writing scenarios
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Writing scenarios
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#running-a-scenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      Running a scenario
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#unified-logging" class="md-nav__link">
+    <span class="md-ellipsis">
+      Unified logging
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#add_arguments-scenarioadd_common_arguments-scenariofinalize" class="md-nav__link">
+    <span class="md-ellipsis">
+      add_arguments / scenario.add_common_arguments / scenario.finalize
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#single_pg-single_mysql" class="md-nav__link">
+    <span class="md-ellipsis">
+      single_pg / single_mysql
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#helpers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Helpers
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#minimal-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Minimal example
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backup-testing-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      Backup-testing patterns
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#going-fully-manual" class="md-nav__link">
+    <span class="md-ellipsis">
+      Going fully manual
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#further-reading" class="md-nav__link">
+    <span class="md-ellipsis">
+      Further reading
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../python-actions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Python actions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../transactions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Transactions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../variable-fuzzing/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Variable fuzzing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../stable-tests/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Stable tests
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../determinism/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Determinism
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wrappers/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Server wrappers
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../randomized-testing-concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Randomized testing concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../config-parameters/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Config parameters
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_12" id="__nav_12_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Design notes
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12">
+            <span class="md-nav__icon md-icon"></span>
+            Design notes
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr-enhanced-statistics/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Enhanced statistics ADR
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#running-a-scenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      Running a scenario
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#unified-logging" class="md-nav__link">
+    <span class="md-ellipsis">
+      Unified logging
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#add_arguments-scenarioadd_common_arguments-scenariofinalize" class="md-nav__link">
+    <span class="md-ellipsis">
+      add_arguments / scenario.add_common_arguments / scenario.finalize
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#single_pg-single_mysql" class="md-nav__link">
+    <span class="md-ellipsis">
+      single_pg / single_mysql
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#helpers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Helpers
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#minimal-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Minimal example
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backup-testing-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      Backup-testing patterns
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#going-fully-manual" class="md-nav__link">
+    <span class="md-ellipsis">
+      Going fully manual
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#further-reading" class="md-nav__link">
+    <span class="md-ellipsis">
+      Further reading
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+<h1 id="writing-scenarios">Writing scenarios</h1>
+<p>A scenario is a plain Python file with a <code>main(args)</code> function. <code>stormweaver &lt;scenario.py&gt; [-c config.toml] [-i /pg/install/dir]</code> loads the file and calls <code>main(args)</code> with the parsed CLI namespace (<code>args.config</code>, <code>args.install_dir</code>, plus any scenario-specific options). A scenario declares its own options with an optional <code>add_arguments(parser)</code> function: stormweaver imports the scenario, folds those options into its own argument parser, and only then parses the command line - so <code>stormweaver &lt;scenario.py&gt; --help</code> lists the scenario's options too, and a mistyped flag is rejected instead of silently ignored.</p>
+<p>Almost every scenario should start from <code>stormweaver.scenario</code>: <code>scenario.add_common_arguments()</code>/<code>scenario.finalize()</code> for the common CLI options, and <code>scenario.single_pg()</code>/<code>scenario.single_mysql()</code> for a ready-to-run server + workload. This page documents that framework. For raw access to the underlying pieces (<code>sw.Postgres</code>, <code>sw.Workload</code>, <code>sw.Worker</code>, ...), see <a href="../randomized-testing-concepts/">Randomized testing concepts</a>; the framework is built directly on top of them.</p>
+<h2 id="running-a-scenario">Running a scenario</h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>stormweaver<span class="w"> </span>&lt;scenario.py&gt;<span class="w"> </span>-c<span class="w"> </span>&lt;config&gt;<span class="w"> </span>-i<span class="w"> </span>&lt;install<span class="w"> </span>dir&gt;<span class="w"> </span><span class="o">[</span>common<span class="w"> </span>options<span class="o">]</span><span class="w"> </span><span class="o">[</span>scenario<span class="w"> </span>options<span class="o">]</span>
+</span></code></pre></div>
+<ul>
+<li><code>-c/--config</code> - TOML config file, default <code>config/stormweaver.toml</code> (see <a href="../config-parameters/">Config parameters</a>)</li>
+<li><code>-i/--install-dir</code> - database installation directory; falls back to <code>pgroot</code> in the config file</li>
+<li><code>-v/--verbose</code> / <code>-q/--quiet</code> - console verbosity (debug / warnings only)</li>
+<li><code>--log-mode</code>/<code>--log-splits</code> - log layout, see <a href="#unified-logging">Unified logging</a></li>
+<li>everything else is scenario-specific, declared by the scenario's <code>add_arguments</code> (see below)</li>
+</ul>
+<p>A run creates, relative to the current working directory: <code>datadirs/</code> (one subdirectory per server, via <code>Config.datadir()</code>) and <code>logs/&lt;timestamp&gt;-&lt;scenario name&gt;/</code>. In the default split mode that run directory holds the main log plus per-server, per-worker and per-connection SQL logs; in unified mode everything goes into a single <code>main.log</code> instead. Backup-testing scenarios additionally create <code>backups/</code> and <code>archive/</code> (see below).</p>
+<p><strong>Caveat: don't run from a deeply nested CWD.</strong> PostgreSQL puts its Unix domain socket in the data directory (<code>unix_socket_directories</code> points at <code>datadirs/datadir_&lt;name&gt;</code>), and the kernel's socket path limit is about 107 bytes. A long enough working directory path pushes the socket path over that limit and <code>pg_ctl start</code> fails with no obviously-related error. Run from somewhere shallow (e.g. the repo root).</p>
+<h2 id="unified-logging">Unified logging</h2>
+<p>Unified mode routes everything - scenario messages, server lifecycle, per-connection SQL statements - into one chronological <code>main.log</code>. Enable it with any of (highest precedence first): the <code>--log-mode unified</code> flag, <code>STORMWEAVER_LOG_MODE=unified</code> in the environment, or a <code>LOG_MODE = "unified"</code> module-level attribute in the scenario file. To also keep the split per-connection/worker files, add <code>--log-splits</code>, <code>STORMWEAVER_LOG_SPLITS=1</code>, or <code>LOG_SPLITS = True</code>. <code>-q</code> only quiets the console: the unified <code>main.log</code> always keeps full INFO detail.</p>
+<p>Notable moments appear as structured event lines of the shape <code>KIND key=value key="quoted value"</code>. The kinds are <code>RUN</code> (run header: scenario, argv, cwd, <code>STORMWEAVER_*</code> env), <code>STEP</code> (script phase begin/end), <code>ASSERT</code> (a check, <code>status=pass</code>/<code>status=fail</code> with expected/actual fields), <code>NODE</code> (server lifecycle: init/start/stop/kill/promote), <code>DUMP</code> (multi-line context such as a traceback or server log tail - the block lines that follow are prefixed with <code>|</code>), and <code>OUTCOME</code> (final result). Mark your own script phases with <code>stormweaver.events.step</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span> <span class="nn">stormweaver</span> <span class="kn">import</span> <span class="n">events</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">with</span> <span class="n">events</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="s2">&quot;restore from backup&quot;</span><span class="p">):</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="o">...</span>
+</span></code></pre></div>
+<h2 id="add_arguments-scenarioadd_common_arguments-scenariofinalize"><code>add_arguments</code> / <code>scenario.add_common_arguments</code> / <code>scenario.finalize</code></h2>
+<p>Options are declared in <code>add_arguments(parser)</code> (module-level, called by the CLI before parsing) and consumed in <code>main(args)</code> (called with the already-parsed namespace):</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">def</span> <span class="nf">add_arguments</span><span class="p">(</span><span class="n">parser</span><span class="p">):</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="n">scenario</span><span class="o">.</span><span class="n">add_common_arguments</span><span class="p">(</span><span class="n">parser</span><span class="p">)</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">opts</span> <span class="o">=</span> <span class="n">scenario</span><span class="o">.</span><span class="n">finalize</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="o">...</span>
+</span></code></pre></div>
+<p><code>scenario.add_common_arguments(parser)</code> registers the options every scenario shares:</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--duration</code></td>
+<td>10</td>
+<td>seconds per workload cycle</td>
+</tr>
+<tr>
+<td><code>--workers</code></td>
+<td>5</td>
+<td>concurrent workers per cycle</td>
+</tr>
+<tr>
+<td><code>--repeat</code></td>
+<td>5</td>
+<td>number of cycles the scenario should run (the scenario's own loop, <code>single_pg</code>/<code>single_mysql</code> don't loop for you)</td>
+</tr>
+<tr>
+<td><code>--tde</code></td>
+<td><code>off</code></td>
+<td><code>on</code> (per-database keys), <code>on_wal</code> (global keys + WAL encryption), or <code>off</code></td>
+</tr>
+<tr>
+<td><code>--pgsm</code></td>
+<td><code>off</code></td>
+<td>preload <code>pg_stat_monitor</code></td>
+</tr>
+<tr>
+<td><code>--clear-logs</code></td>
+<td>off</td>
+<td>delete old <code>logs/</code> subdirectories (never the current run's)</td>
+</tr>
+</tbody>
+</table>
+<p><code>scenario.finalize(args)</code> does the post-parse work: resolves <code>args.config</code> (<code>Config.load(args.config)</code>) and <code>args.install_dir</code> (<code>args.install_dir</code> or <code>config.pgroot</code>, raises if neither is set), builds the wrapper object, and clears old logs if asked. It returns the same namespace, ready to hand to <code>single_pg</code>/<code>single_mysql</code>.</p>
+<p>Add scenario-specific flags in <code>add_arguments</code> with <code>parser.add_argument(...)</code>, or override a common default with <code>parser.set_defaults(...)</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">def</span> <span class="nf">add_arguments</span><span class="p">(</span><span class="n">parser</span><span class="p">):</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="n">scenario</span><span class="o">.</span><span class="n">add_common_arguments</span><span class="p">(</span><span class="n">parser</span><span class="p">)</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="n">parser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">duration</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">workers</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">repeat</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</span></code></pre></div>
+<p><code>scenarios/demo/basic.py</code> uses <code>set_defaults</code> to change the default <code>tde</code> value; <code>scenarios/demo/test_pg_rewind_tde.py</code> shows a scenario that declares its own <code>--mode</code>/<code>--cipher</code>/<code>--keyring</code> and skips the common options entirely. A scenario with no options (e.g. <code>scenarios/ci/determinism.py</code>) omits <code>add_arguments</code> and just reads <code>args.config</code>/<code>args.install_dir</code> directly.</p>
+<h2 id="single_pg-single_mysql"><code>single_pg</code> / <code>single_mysql</code></h2>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">with</span> <span class="n">scenario</span><span class="o">.</span><span class="n">single_pg</span><span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="k">as</span> <span class="n">ctx</span><span class="p">:</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="o">...</span>
+</span></code></pre></div>
+<p>Sets up a fresh single server: wipes and recreates its data directory, starts it with sane defaults (<code>log_min_messages</code>, <code>max_connections</code>, <code>shared_buffers</code>, and <code>shared_preload_libraries</code> for <code>--tde</code>/<code>--pgsm</code>), waits for it to be ready, creates the test database, builds an action registry with the framework's standard actions (<code>checkpoint</code>, <code>vacuum_full_table</code>, <code>truncate_table</code>, <code>reindex_table</code>; partition actions removed - see <code>STANDARD_ACTIONS</code> in <code>scenario.py</code>), seeds it with initial tables, and returns a context with a workload ready to run. The server is stopped on exit even if the <code>with</code> block raises.</p>
+<p><code>single_pg(opts, *, archive=False, extra_config=None, conn_settings=None, db_setup=None, initial_tables=5, dbname="testdb", worker_setup=None, datadir_name="primary")</code>:</p>
+<ul>
+<li><code>archive</code> - turn on WAL archiving/summarization (<code>archive_mode</code>, <code>archive_command</code> into <code>archive/</code>, <code>summarize_wal</code>) and create <code>archive/</code>; needed for <code>pg_basebackup</code>/PITR-style scenarios</li>
+<li><code>extra_config</code> - dict merged into the server config, applied after the framework's own settings (can override them)</li>
+<li><code>conn_settings</code> - callable <code>(conn) -&gt; None</code>, run on every connection <code>ctx.connect()</code> opens, after the TDE access-method <code>SET</code></li>
+<li><code>db_setup</code> - callable <code>(worker) -&gt; None</code>, replaces the default <code>worker.create_random_tables(initial_tables)</code> seeding step</li>
+<li><code>initial_tables</code> - table count for the default seeding (ignored if <code>db_setup</code> is given)</li>
+<li><code>dbname</code> - test database name</li>
+<li><code>worker_setup</code> - callable <code>(worker, index) -&gt; None</code>, forwarded to <code>Workload</code> (customize a specific worker's action registry; see <code>scenarios/demo/basic.py</code>)</li>
+<li><code>datadir_name</code> - suffix for <code>Config.datadir()</code>, change it if a scenario runs more than one primary</li>
+</ul>
+<p>If <code>opts.tde != "off"</code>, <code>single_pg</code> also creates a keyring file next to the data directory and runs <code>init_tde_only_for_db</code>/<code>init_tde_globally</code> before seeding tables. Either way, <code>single_pg</code> restarts the server once after seeding (TDE init may use <code>ALTER SYSTEM</code>, which needs a restart to take effect) - the context is only handed to the caller after that restart succeeds.</p>
+<p><code>single_mysql(opts, *, extra_config=None, db_setup=None, initial_tables=5, dbname="testdb", worker_setup=None, datadir_name="primary_mysql")</code> - same shape, no <code>archive</code>/TDE (not supported for MySQL yet).</p>
+<p>Both are context managers yielding a <code>ScenarioContext</code> (<code>PgContext</code>/<code>MySqlContext</code>) with:</p>
+<ul>
+<li><code>ctx.db</code> - the backend instance (<code>Postgres</code>/<code>MySQL</code>); <code>ctx.pg</code>/<code>ctx.my</code> is the same object under a backend-specific name</li>
+<li><code>ctx.dbname</code>, <code>ctx.datadir</code> - the test database name and the server's data directory (as a string)</li>
+<li><code>ctx.keyring</code> - keyring path (<code>PgContext</code> only, <code>None</code> if TDE is off)</li>
+<li><code>ctx.metadata</code> - the shared <code>sw.Metadata()</code> for this server</li>
+<li><code>ctx.registry</code> - the action registry <code>ctx.workload</code> was built from</li>
+<li><code>ctx.workload</code> - a ready <code>sw.Workload</code> (<code>--workers</code>/<code>--duration</code> from <code>opts</code>); <strong>one cycle per <code>.run()</code>/<code>.start()</code>+<code>.wait()</code> call</strong> - scenarios own the <code>--repeat</code> loop themselves (see the example below). <code>.run()</code> blocks for the cycle; <code>.start()</code>/<code>.wait()</code> split that in two, with <code>.workers</code> exposing the live workers in between - use that to mutate a specific worker's action registry mid-run (see <code>scenarios/demo/basic.py</code>). <code>.print_report()</code>/<code>.worker_statistics()</code> cover the last <code>.run()</code> call (each <code>.run()</code> resets them); with the <code>.start()</code>/<code>.wait()</code> pattern they accumulate across cycles.</li>
+<li><code>ctx.connect(log_name="scenario")</code> - open a fresh connection the same way the workload does (TDE access method set, <code>conn_settings</code> applied)</li>
+<li><code>ctx.make_worker(name)</code> - a one-off <code>sw.Worker</code> with a unique name (for setup/verification/one-shot SQL outside the workload)</li>
+<li><code>ctx.restart_and_wait(timeout=10)</code> - <code>ctx.db.restart(timeout)</code> then <code>wait_ready()</code>, raises if the server doesn't come back</li>
+<li><code>ctx.validate_metadata_or_warn()</code> - runs <code>Worker.validate_metadata()</code>, logs a warning instead of failing (metadata can legitimately diverge under concurrent DDL - see <a href="../determinism/">Determinism</a>)</li>
+</ul>
+<h2 id="helpers">Helpers</h2>
+<ul>
+<li><code>scenario.fresh_dir(*paths)</code> - delete and recreate each path (warns if it existed); use for scenario-owned directories like <code>backups/</code>/<code>archive/</code> before reusing them across runs</li>
+<li><code>scenario.wait_for_log(path, pattern, timeout, offset=0)</code> - poll a log file for a substring, <code>True</code>/<code>False</code> on timeout; <code>offset</code> skips old content (e.g. from a previous restart of the same log file)</li>
+<li><code>scenario.compare_checksums(actual, expected, what)</code> - compare two checksum files (as produced by <code>Worker.calculate_database_checksums()</code>), raise <code>RuntimeError</code> with a unified diff on mismatch</li>
+</ul>
+<h2 id="minimal-example">Minimal example</h2>
+<p>The full contents of <code>scenarios/ci/basic.py</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Basic CI scenario: randomized workload cycles against a single postgres</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># primary with per-cycle restarts.</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="kn">import</span> <span class="nn">logging</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="kn">from</span> <span class="nn">stormweaver</span> <span class="kn">import</span> <span class="n">scenario</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;scenario.basic&quot;</span><span class="p">)</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="k">def</span> <span class="nf">add_arguments</span><span class="p">(</span><span class="n">parser</span><span class="p">):</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>    <span class="n">scenario</span><span class="o">.</span><span class="n">add_common_arguments</span><span class="p">(</span><span class="n">parser</span><span class="p">)</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>    <span class="n">parser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">duration</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">workers</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">repeat</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>    <span class="n">opts</span> <span class="o">=</span> <span class="n">scenario</span><span class="o">.</span><span class="n">finalize</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>    <span class="k">with</span> <span class="n">scenario</span><span class="o">.</span><span class="n">single_pg</span><span class="p">(</span><span class="n">opts</span><span class="p">)</span> <span class="k">as</span> <span class="n">ctx</span><span class="p">:</span>
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>        <span class="k">for</span> <span class="n">cycle</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">opts</span><span class="o">.</span><span class="n">repeat</span><span class="p">):</span>
+</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>            <span class="n">ctx</span><span class="o">.</span><span class="n">workload</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>            <span class="n">ctx</span><span class="o">.</span><span class="n">restart_and_wait</span><span class="p">()</span>
+</span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a>            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;cycle </span><span class="si">%d</span><span class="s2">/</span><span class="si">%d</span><span class="s2"> done&quot;</span><span class="p">,</span> <span class="n">cycle</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">opts</span><span class="o">.</span><span class="n">repeat</span><span class="p">)</span>
+</span><span id="__span-5-24"><a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a>
+</span><span id="__span-5-25"><a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a>        <span class="n">ctx</span><span class="o">.</span><span class="n">validate_metadata_or_warn</span><span class="p">()</span>
+</span><span id="__span-5-26"><a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a>
+</span><span id="__span-5-27"><a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Scenario completed successfully&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Run it with <code>stormweaver scenarios/ci/basic.py -i /path/to/pg/install</code>.</p>
+<p>For a guided tour of the rest of the feature set - custom actions, per-worker registries, mid-run registry changes, restarts, pg_tde encryption verification, all with explanatory comments - read <code>scenarios/demo/basic.py</code> (needs a pg_tde-enabled build; run with <code>--workers 4 --tde on</code>).</p>
+<h2 id="backup-testing-patterns">Backup-testing patterns</h2>
+<p><code>scenarios/ci/pitr.py</code> and <code>scenarios/ci/incremental.py</code> share a shape worth knowing before writing another backup scenario:</p>
+<ol>
+<li><code>scenario.fresh_dir("backups", "archive")</code> up front</li>
+<li><code>single_pg(opts, archive=True)</code>, then <code>ctx.pg.basebackup(...)</code> for the base backup (<code>extra_args=["-c", "fast"]</code> to skip the checkpoint wait)</li>
+<li>run workload cycles, and after each one that needs verifying, checksum with <code>ctx.make_worker(...).calculate_database_checksums(path)</code></li>
+<li>restore: stop the server (<code>ctx.pg.stop()</code>), replace the data directory (<code>shutil.rmtree</code> + <code>shutil.copytree</code>, or <code>ctx.pg.combinebackup(chain, ctx.datadir)</code> for incremental chains), start it again, and for PITR wait for the recovery pause with <code>scenario.wait_for_log(...)</code> before calling <code>pg_wal_replay_resume()</code></li>
+<li>after restore: a fresh worker's <code>reset_metadata()</code> + <code>discover_existing_schema()</code> re-syncs in-memory metadata with the restored schema, then checksum again and <code>scenario.compare_checksums(restored, expected, what)</code></li>
+</ol>
+<p><code>pitr.py</code> additionally copies <code>archive/</code> to <code>archive-copy/</code> before the first restore, because recovery writes new timeline history into the archive and would poison it for the next restore iteration.</p>
+<h2 id="going-fully-manual">Going fully manual</h2>
+<p><code>single_pg</code>/<code>single_mysql</code> cover a fixed server topology (one server, standard actions, one workload). Reach for the underlying pieces directly - <code>sw.Postgres</code>, <code>sw.Workload</code>, <code>sw.Worker</code>, <code>stormweaver.log.init_logging</code> - when a scenario doesn't fit that shape: multiple independent servers/processes, non-standard directory layout, or comparing across subprocess runs.</p>
+<p><code>scenarios/ci/determinism.py</code> is the example: it runs two seeded workloads in separate subprocesses (each needs its own spdlog logger registry - see the comment at the top of that file for why) and diffs their SQL logs. It builds its own <code>Postgres</code>/<code>Workload</code>/<code>Worker</code> instead of going through <code>scenario.finalize</code>/<code>single_pg</code>, because the subprocess boundary and log comparison logic don't fit the framework's assumptions.</p>
+<h2 id="further-reading">Further reading</h2>
+<ul>
+<li><a href="../randomized-testing-concepts/">Randomized testing concepts</a> - <code>Workload</code>/<code>Worker</code>/<code>Action</code>/<code>ActionRegistry</code>, the pieces <code>scenario.py</code> builds on</li>
+<li><a href="../python-actions/">Python actions</a> - registering custom actions</li>
+<li><a href="../determinism/">Determinism</a> - what replays and what doesn't, and the metadata-validation limitation <code>validate_metadata_or_warn()</code> works around</li>
+<li><a href="../config-parameters/">Config parameters</a> - the TOML config file and CLI flags</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.1e8ae164.min.js"></script>
+      
+    
+  </body>
+</html>
