@@ -84,3 +84,18 @@ def test_cli_without_binary_raises(tmp_path):
     )
     with pytest.raises(RuntimeError, match="CLI not available"):
         k.cli("status")
+
+
+def test_cli_scrubs_inherited_namespace(tmp_path, monkeypatch):
+    monkeypatch.setenv("VAULT_NAMESPACE", "leaked")
+    tok = tmp_path / "token"
+    tok.write_text("root")
+    k = vault.VaultKeyring(
+        url="https://h:1",
+        mount_path="m",
+        token_file=tok,
+        ca_cert=tmp_path / "ca",
+        binary="/usr/bin/env",
+    )
+    cp = k.cli("sh", "-c", 'echo "[$VAULT_NAMESPACE]"')
+    assert cp.stdout.strip() == "[]"

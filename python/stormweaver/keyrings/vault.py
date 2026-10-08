@@ -50,6 +50,8 @@ class VaultKeyring(Keyring):
         }
         if self.namespace:
             env["VAULT_NAMESPACE"] = self.namespace
+        else:
+            env.pop("VAULT_NAMESPACE", None)
         cp = subprocess.run(
             [self.binary, *args], capture_output=True, text=True, env=env
         )
