@@ -2,6 +2,7 @@ import os
 import stat
 from pathlib import Path
 
+import pytest
 from stormweaver import pginstall
 
 
@@ -79,3 +80,34 @@ def test_resolve_none_when_nothing(tmp_path, monkeypatch):
 def test_fallback_globs_include_rpm_layout():
     assert "/usr/pgsql-*" in pginstall.FALLBACK_GLOBS
     assert "/usr/lib/postgresql/*" in pginstall.FALLBACK_GLOBS
+
+
+def test_resolve_explicit_bad_pg_config_raises(tmp_path, monkeypatch):
+    monkeypatch.delenv("STORMWEAVER_PG_CONFIG", raising=False)
+    with pytest.raises(RuntimeError, match="unusable"):
+        pginstall.resolve(str(tmp_path / "missing"))
+
+
+def test_resolve_explicit_failing_pg_config_raises(tmp_path):
+    bad = tmp_path / "pg_config"
+    bad.write_text("#!/bin/sh\necho boom >&2\nexit 1\n")
+    bad.chmod(0o755)
+    with pytest.raises(RuntimeError, match=r"unusable.*boom"):
+        pginstall.resolve(str(bad))
+
+
+def test_fallback_dir_with_broken_pg_config_keeps_scanning(tmp_path, monkeypatch):
+    monkeypatch.delenv("STORMWEAVER_PG_CONFIG", raising=False)
+    monkeypatch.delenv("STORMWEAVER_PG_DIR", raising=False)
+    d = tmp_path / "pg"
+    (d / "bin").mkdir(parents=True)
+    (d / "bin" / "initdb").touch()
+    broken = d / "bin" / "pg_config"
+    broken.write_text("#!/bin/sh\nexit 1\n")
+    broken.chmod(0o755)
+    monkeypatch.setattr(pginstall, "_fallback_dirs", lambda: [d])
+    pi = pginstall.resolve(None)
+    assert pi is not None
+    assert pi.pg_config is None
+    assert pi.major is None
+    assert pi.bindir == d / "bin"

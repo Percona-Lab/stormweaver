@@ -1,7 +1,5 @@
 """PostgreSQL installation discovery: pg_config first, directory guessing second."""
 
-from __future__ import annotations
-
 import glob
 import os
 import re
@@ -61,7 +59,10 @@ class PgInstall:
         install_dir = Path(install_dir)
         pg_config = install_dir / "bin" / "pg_config"
         if os.access(pg_config, os.X_OK):
-            return cls.from_pg_config(pg_config)
+            try:
+                return cls.from_pg_config(pg_config)
+            except OSError, subprocess.CalledProcessError:
+                pass
         return cls(
             pg_config=None,
             install_dir=install_dir,
@@ -76,7 +77,15 @@ def resolve(explicit_pg_config: str | None) -> PgInstall | None:
     """--pg-config, STORMWEAVER_PG_CONFIG, STORMWEAVER_PG_DIR, then known dirs."""
     cand = explicit_pg_config or os.environ.get("STORMWEAVER_PG_CONFIG")
     if cand:
-        return PgInstall.from_pg_config(cand)
+        try:
+            return PgInstall.from_pg_config(cand)
+        except (OSError, subprocess.CalledProcessError) as e:
+            detail = (
+                f"{e}: {e.stderr.strip()}"
+                if isinstance(e, subprocess.CalledProcessError) and e.stderr
+                else str(e)
+            )
+            raise RuntimeError(f"pg_config {cand!r} unusable: {detail}") from e
     env_dir = os.environ.get("STORMWEAVER_PG_DIR")
     if env_dir:
         return PgInstall.from_install_dir(env_dir)
