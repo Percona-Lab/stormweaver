@@ -1,5 +1,11 @@
 import os
+import re
+import struct
 from pathlib import Path
+
+_PRINTABLE = re.compile(rb"[\x20-\x7e]{4,}")
+PAGE_SIZE = 8192
+PD_CHECKSUM_OFFSET = 8
 
 
 def read_file_bytes(path: str | Path) -> bytes:
@@ -37,3 +43,24 @@ def check_mode_recursive(
                 continue
             check(p, file_mode)
     return violations
+
+
+def wal_strings(wal_dir: str | Path, pattern: str = "0000000100000000000000??") -> str:
+    """Printable runs (>= 4 bytes) of WAL segments matching pattern, like strings(1)."""
+    out: list[str] = []
+    for seg in sorted(Path(wal_dir).glob(pattern)):
+        if not seg.is_file():
+            continue
+        for m in _PRINTABLE.finditer(seg.read_bytes()):
+            out.append(m.group().decode("ascii"))
+    return "\n".join(out)
+
+
+def corrupt_page_checksum(path: str | Path, block: int) -> None:
+    """Flip the pd_checksum of one block; mirrors Cluster.pm corrupt_page_checksum."""
+    p = Path(path)
+    with open(p, "r+b") as f:
+        f.seek(block * PAGE_SIZE + PD_CHECKSUM_OFFSET)
+        (old,) = struct.unpack("<H", f.read(2))
+        f.seek(block * PAGE_SIZE + PD_CHECKSUM_OFFSET)
+        f.write(struct.pack("<H", old ^ 0xFFFF))

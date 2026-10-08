@@ -63,3 +63,30 @@ def command_fails(
         raise AssertionError(
             f"{what} stderr {cp.stderr!r} does not match {stderr_re!r}"
         )
+
+
+def program_help_ok(install_dir: str | Path, name: str) -> None:
+    for flag in ("--help", "-?"):
+        cp = run_bin(install_dir, name, flag)
+        command_ok(cp, f"{name} {flag}")
+        assert "Usage" in cp.stdout, f"{name} {flag}: no usage text in {cp.stdout!r}"
+        assert cp.stderr == "", f"{name} {flag}: unexpected stderr {cp.stderr!r}"
+
+
+def program_version_ok(install_dir: str | Path, name: str) -> None:
+    for flag in ("--version", "-V"):
+        cp = run_bin(install_dir, name, flag)
+        command_ok(cp, f"{name} {flag}")
+        assert re.match(rf"{re.escape(name)} \(PostgreSQL\) ", cp.stdout), (
+            f"{name} {flag}: unexpected version output {cp.stdout!r}"
+        )
+
+
+def program_options_handling_ok(install_dir: str | Path, name: str) -> None:
+    cp = run_bin(install_dir, name, "--not-a-real-option")
+    command_fails(
+        cp,
+        stderr_re=rf'Try "{re.escape(name)} --help" for more information',
+        msg=f"{name} --not-a-real-option",
+    )
+    assert cp.returncode == 1, f"{name}: expected rc 1, got {cp.returncode}"

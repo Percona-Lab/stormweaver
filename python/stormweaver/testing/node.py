@@ -452,8 +452,13 @@ class PgTestNode(TestNode):
             cls, backup_dir, primary, name=name, port=port
         )
 
-    def basebackup(self, dest: str | Path | None = None) -> Path:
-        return cluster.take_basebackup(self, dest)
+    def basebackup(
+        self,
+        dest: str | Path | None = None,
+        extra_args: list[str] | None = None,
+        tablespace_map: dict[str, str] | None = None,
+    ) -> Path:
+        return cluster.take_basebackup(self, dest, extra_args, tablespace_map)
 
     def promote(self) -> None:
         self.db.promote()
@@ -501,6 +506,7 @@ class PgTestNode(TestNode):
         file: str | Path | None = None,
         db: str | None = None,
         on_error_stop: bool = True,
+        user: str | None = None,
     ) -> subprocess.CompletedProcess[str]:
         if sql is not None and file is not None:
             raise ValueError("pass sql or file, not both")
@@ -509,9 +515,15 @@ class PgTestNode(TestNode):
             args += ["-v", "ON_ERROR_STOP=1"]
         if db:
             args += ["-d", db]
+        if user:
+            args += ["-U", user]
         if file is not None:
             args += ["-f", file]
         return self.run_bin("psql", *args, input=sql)
+
+    @property
+    def pg_major(self) -> int:
+        return self.server_version_num // 10000
 
     @property
     def server_version_num(self) -> int:

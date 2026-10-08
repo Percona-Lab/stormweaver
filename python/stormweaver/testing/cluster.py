@@ -14,11 +14,19 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def take_basebackup(node: PgTestNode, dest: str | Path | None = None) -> Path:
+def take_basebackup(
+    node: PgTestNode,
+    dest: str | Path | None = None,
+    extra_args: list[str] | None = None,
+    tablespace_map: dict[str, str] | None = None,
+) -> Path:
     if dest is None:
         dest = Path(tempfile.mkdtemp(prefix="sw-backup-", dir="/tmp")) / "data"
     dest = Path(dest)
-    node.db.basebackup(dest, extra_args=["-X", "stream"])
+    args = list(extra_args) if extra_args is not None else ["-X", "stream"]
+    for old, new in (tablespace_map or {}).items():
+        args.append(f"--tablespace-mapping={old}={new}")
+    node.db.basebackup(dest, extra_args=args)
     return dest
 
 

@@ -58,3 +58,30 @@ def test_check_mode_recursive_skips_fifo(tmp_path):
     # a non-regular entry with a mode that would be flagged if not skipped
     os.mkfifo(d / "fifo", 0o644)
     assert st.check_mode_recursive(d) == []
+
+
+def test_wal_strings_extracts_printable_runs(tmp_path):
+    wal = tmp_path / "pg_wal"
+    wal.mkdir()
+    (wal / "000000010000000000000001").write_bytes(
+        b"\x00\x01foobar_plain\x02\x03ab\x00"
+    )
+    (wal / "000000010000000000000002").write_bytes(
+        b"zzzz" + b"\xff" * 10 + b"foobar_enc"
+    )
+    (wal / "archive_status").mkdir()
+    out = st.wal_strings(wal)
+    assert "foobar_plain" in out
+    assert "foobar_enc" in out
+    assert "zzzz" in out
+    assert "ab" not in out.split()
+
+
+def test_corrupt_page_checksum(tmp_path):
+    rel = tmp_path / "16384"
+    rel.write_bytes(b"\x00" * 8192 * 2)
+    st.corrupt_page_checksum(rel, 1)
+    data = rel.read_bytes()
+    assert data[: 8192 + 8] == b"\x00" * (8192 + 8)
+    assert data[8192 + 8 : 8192 + 10] == b"\xff\xff"
+    assert data[8192 + 10 :] == b"\x00" * (8192 - 10)
