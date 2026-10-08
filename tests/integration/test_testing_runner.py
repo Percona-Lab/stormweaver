@@ -52,14 +52,15 @@ def test_standalone_runner_fail(tmp_path):
 
 def test_discovery_helpers(monkeypatch, tmp_path):
     assert callable(st.mysql_install_dir)
-    # env var wins verbatim: _detect_pg_dir does not validate its contents
+    # env var wins verbatim: discovery does not validate its contents
+    monkeypatch.delenv("STORMWEAVER_PG_CONFIG", raising=False)
     monkeypatch.setenv("STORMWEAVER_PG_DIR", str(tmp_path))
     assert st.pg_install_dir() == str(tmp_path)
 
 
 def test_pg_install_dir_not_found(monkeypatch):
-    import stormweaver.pytest_plugin as plugin
+    from stormweaver import pginstall
 
-    monkeypatch.setattr(plugin, "_detect_pg_dir", lambda: None)
+    monkeypatch.setattr(pginstall, "resolve", lambda explicit: None)
     with pytest.raises(RuntimeError, match="STORMWEAVER_PG_DIR"):
         st.pg_install_dir()
