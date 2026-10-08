@@ -49,6 +49,27 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
 
 
+_BASETEMP = pytest.StashKey[Path]()
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_configure(config: pytest.Config) -> None:
+    # pytest's default basetemp keeps only the last few numbered dirs per user,
+    # so concurrent sessions (meson runs test files in parallel) prune each
+    # other's live tmp_path. give every session its own root instead.
+    if config.option.basetemp is None:
+        d = Path(tempfile.mkdtemp(prefix="sw-pytest-tmp-", dir="/tmp"))
+        config.option.basetemp = str(d)
+        config.stash[_BASETEMP] = d
+
+
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
+    # keep the dir for inspection when anything failed
+    d = session.config.stash.get(_BASETEMP, None)
+    if d is not None and exitstatus == 0:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def pytest_sessionstart(session: pytest.Session) -> None:
     matrix.validate(session.config)
 
