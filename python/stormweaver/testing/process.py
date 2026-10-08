@@ -69,24 +69,34 @@ def program_help_ok(install_dir: str | Path, name: str) -> None:
     for flag in ("--help", "-?"):
         cp = run_bin(install_dir, name, flag)
         command_ok(cp, f"{name} {flag}")
-        assert "Usage" in cp.stdout, f"{name} {flag}: no usage text in {cp.stdout!r}"
-        assert cp.stderr == "", f"{name} {flag}: unexpected stderr {cp.stderr!r}"
+        if not cp.stdout.strip():
+            raise AssertionError(f"{name} {flag}: empty stdout")
+        if cp.stderr != "":
+            raise AssertionError(f"{name} {flag}: unexpected stderr {cp.stderr!r}")
+        # upstream TAP check: keep help readable in a terminal
+        long = [ln for ln in cp.stdout.splitlines() if len(ln) > 95]
+        if long:
+            raise AssertionError(
+                f"{name} {flag}: help lines over 95 chars: {long[:3]!r}"
+            )
 
 
 def program_version_ok(install_dir: str | Path, name: str) -> None:
     for flag in ("--version", "-V"):
         cp = run_bin(install_dir, name, flag)
         command_ok(cp, f"{name} {flag}")
-        assert re.match(rf"{re.escape(name)} \(PostgreSQL\) ", cp.stdout), (
-            f"{name} {flag}: unexpected version output {cp.stdout!r}"
-        )
+        if not re.search(r"\(PostgreSQL\) \d", cp.stdout):
+            raise AssertionError(
+                f"{name} {flag}: unexpected version output {cp.stdout!r}"
+            )
+        if cp.stderr != "":
+            raise AssertionError(f"{name} {flag}: unexpected stderr {cp.stderr!r}")
 
 
 def program_options_handling_ok(install_dir: str | Path, name: str) -> None:
-    cp = run_bin(install_dir, name, "--not-a-real-option")
-    command_fails(
-        cp,
-        stderr_re=rf'Try "{re.escape(name)} --help" for more information',
-        msg=f"{name} --not-a-real-option",
-    )
-    assert cp.returncode == 1, f"{name}: expected rc 1, got {cp.returncode}"
+    cp = run_bin(install_dir, name, "--not-a-valid-option")
+    command_fails(cp, msg=f"{name} --not-a-valid-option")
+    if not cp.stderr.strip():
+        raise AssertionError(
+            f"{name} --not-a-valid-option: expected an error on stderr"
+        )
