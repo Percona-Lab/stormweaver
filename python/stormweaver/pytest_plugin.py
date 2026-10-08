@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 import stormweaver as sw
-from stormweaver import events
+from stormweaver import events, pginstall
 from stormweaver import log as swlog
 
 # reserved port bands (keep disjoint): scenarios 15432-15531, these session/
@@ -28,31 +28,32 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "stormweaver run-log layout: unified or split",
         default="unified",
     )
+    parser.addoption(
+        "--pg-config",
+        default=None,
+        help="pg_config of the PostgreSQL installation under test "
+        "(default: $STORMWEAVER_PG_CONFIG, $STORMWEAVER_PG_DIR, known dirs)",
+    )
 
 
 def _detect_pg_dir() -> str | None:
-    env = os.environ.get("STORMWEAVER_PG_DIR")
-    if env:
-        return env
-    candidates = [
-        Path.home() / ".local/share/stormweaver-pg18",
-        Path("/usr/lib/postgresql18"),
-    ]
-    base = Path("/usr/lib/postgresql")
-    if base.exists():
-        candidates += sorted(base.iterdir(), key=lambda p: p.name, reverse=True)
-    for c in candidates:
-        if (c / "bin" / "initdb").exists():
-            return str(c)
-    return None
+    pi = pginstall.resolve(None)
+    return None if pi is None else str(pi.install_dir)
 
 
 @pytest.fixture(scope="session")
-def pg_install_dir() -> str:
-    d = _detect_pg_dir()
-    if d is None:
-        pytest.skip("no postgres installation (set STORMWEAVER_PG_DIR)")
-    return d
+def pg_install(pytestconfig: pytest.Config) -> pginstall.PgInstall:
+    pi = pginstall.resolve(pytestconfig.getoption("--pg-config"))
+    if pi is None:
+        pytest.skip(
+            "no postgres installation (set --pg-config or STORMWEAVER_PG_CONFIG)"
+        )
+    return pi
+
+
+@pytest.fixture(scope="session")
+def pg_install_dir(pg_install: pginstall.PgInstall) -> str:
+    return str(pg_install.install_dir)
 
 
 def _server(pg_install_dir: str) -> Iterator[sw.Postgres]:

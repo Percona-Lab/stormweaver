@@ -12,13 +12,15 @@ def ensure_logging(name: str = "testing", mode: str = "unified") -> None:
 
 
 def pg_install_dir() -> str:
-    # local import: pytest_plugin pulls in pytest, keep package import light
-    from stormweaver.pytest_plugin import _detect_pg_dir
+    from stormweaver import pginstall
 
-    d = _detect_pg_dir()
-    if d is None:
-        raise RuntimeError("no postgres installation found, set STORMWEAVER_PG_DIR")
-    return d
+    pi = pginstall.resolve(None)
+    if pi is None:
+        raise RuntimeError(
+            "no postgres installation found, "
+            "set STORMWEAVER_PG_CONFIG or STORMWEAVER_PG_DIR"
+        )
+    return str(pi.install_dir)
 
 
 def mysql_install_dir() -> str:
