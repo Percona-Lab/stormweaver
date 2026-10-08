@@ -414,7 +414,7 @@ PG_VARIABLES = VariablePool(
             ("session",),
             tier=Tier.semantics,
         ),
-        # single choice on purpose: tde scenarios extend the list with tde_heap
+        # single choice on purpose: scenarios extend it with their own AMs
         _pg(
             "default_table_access_method",
             Choices(("heap",)),

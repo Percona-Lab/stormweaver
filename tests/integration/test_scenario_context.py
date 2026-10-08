@@ -4,9 +4,8 @@ from pathlib import Path
 
 import pytest
 import stormweaver as sw
-from conftest import PG_DIR, PG_TDE_DIR, requires_pg, requires_pg_tde
+from conftest import PG_DIR, requires_pg
 from stormweaver import scenario
-from stormweaver.entropy import db_files_entropy
 
 MYSQL_DIR = Path(
     os.environ.get(
@@ -73,32 +72,6 @@ def test_single_pg_archive_config(tmp_path, monkeypatch):
         w = ctx.make_worker("verification")
         w.calculate_database_checksums(str(tmp_path / "t.checksum"))
         assert (tmp_path / "t.checksum").exists()
-
-
-@requires_pg_tde
-def test_single_pg_tde_on_wal(tmp_path):
-    opts = make_opts(
-        tmp_path,
-        "--duration",
-        "2",
-        "--workers",
-        "2",
-        "--tde",
-        "on_wal",
-        install_dir=str(PG_TDE_DIR),
-    )
-    with scenario.single_pg(opts, initial_tables=2) as ctx:
-        conn = ctx.connect("tde-check")
-        res = conn.execute("SHOW default_table_access_method;")
-        assert res.success()
-        assert res.rows()[0][0] == "tde_heap"
-        res = conn.execute("SHOW pg_tde.wal_encrypt;")
-        assert res.success()
-        assert res.rows()[0][0] == "on"
-        assert ctx.keyring.exists()
-        ctx.workload.run()
-        db_files_entropy(ctx.connect("entropy"), ctx.datadir)
-    assert not ctx.pg.is_running()
 
 
 @requires_mysql

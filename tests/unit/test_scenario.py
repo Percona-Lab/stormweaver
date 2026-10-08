@@ -24,7 +24,6 @@ def test_parse_defaults(tmp_path):
     assert opts.duration == 10
     assert opts.workers == 5
     assert opts.repeat == 5
-    assert opts.tde == "off"
     assert opts.pgsm == "off"
     assert opts.install_dir == "/opt/pg"
 
@@ -32,10 +31,10 @@ def test_parse_defaults(tmp_path):
 def test_parse_options(tmp_path):
     opts = make_opts(
         tmp_path,
-        extra=["--duration", "3", "--workers", "2", "--repeat", "7", "--tde", "on"],
+        extra=["--duration", "3", "--workers", "2", "--repeat", "7"],
         install_dir="/opt/pg",
     )
-    assert (opts.duration, opts.workers, opts.repeat, opts.tde) == (3, 2, 7, "on")
+    assert (opts.duration, opts.workers, opts.repeat) == (3, 2, 7)
 
 
 def test_parse_install_dir_from_config(tmp_path):
@@ -167,3 +166,13 @@ def test_parse_wrapper_rr(tmp_path, monkeypatch):
     assert isinstance(opts.wrapper, RRWrapper)
     assert opts.wrapper.extra_args == ["--chaos"]
     assert opts.wrapper.keep_all is True
+
+
+def test_pgcontext_access_methods_default_and_override(tmp_path):
+    opts = make_opts(tmp_path, install_dir="/opt/pg")
+    ctx = scenario.PgContext.__new__(scenario.PgContext)
+    ctx.opts = opts
+    ctx.access_methods = None
+    assert ctx._access_methods() == ["heap"]
+    ctx.access_methods = ["tde_heap", "heap"]
+    assert ctx._access_methods() == ["tde_heap", "heap"]

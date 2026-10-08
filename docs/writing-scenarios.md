@@ -53,7 +53,6 @@ def main(args):
 | `--duration` | 10 | seconds per workload cycle |
 | `--workers` | 5 | concurrent workers per cycle |
 | `--repeat` | 5 | number of cycles the scenario should run (the scenario's own loop, `single_pg`/`single_mysql` don't loop for you) |
-| `--tde` | `off` | `on` (per-database keys), `on_wal` (global keys + WAL encryption), or `off` |
 | `--pgsm` | `off` | preload `pg_stat_monitor` |
 | `--clear-logs` | off | delete old `logs/` subdirectories (never the current run's) |
 
@@ -67,7 +66,7 @@ def add_arguments(parser):
     parser.set_defaults(duration=30, workers=4, repeat=2)
 ```
 
-`scenarios/demo/basic.py` uses `set_defaults` to change the default `tde` value; `scenarios/demo/test_pg_rewind_tde.py` shows a scenario that declares its own `--mode`/`--cipher`/`--keyring` and skips the common options entirely. A scenario with no options (e.g. `scenarios/ci/determinism.py`) omits `add_arguments` and just reads `args.config`/`args.install_dir` directly.
+`set_defaults` (above) changes option defaults; a scenario can also that declares its own `--mode`/`--cipher`/`--keyring` and skips the common options entirely. A scenario with no options (e.g. `scenarios/ci/determinism.py`) omits `add_arguments` and just reads `args.config`/`args.install_dir` directly.
 
 ## `single_pg` / `single_mysql`
 
@@ -76,32 +75,33 @@ with scenario.single_pg(opts, **kwargs) as ctx:
     ...
 ```
 
-Sets up a fresh single server: wipes and recreates its data directory, starts it with sane defaults (`log_min_messages`, `max_connections`, `shared_buffers`, and `shared_preload_libraries` for `--tde`/`--pgsm`), waits for it to be ready, creates the test database, builds an action registry with the framework's standard actions (`checkpoint`, `vacuum_full_table`, `truncate_table`, `reindex_table`; partition actions removed - see `STANDARD_ACTIONS` in `scenario.py`), seeds it with initial tables, and returns a context with a workload ready to run. The server is stopped on exit even if the `with` block raises.
+Sets up a fresh single server: wipes and recreates its data directory, starts it with sane defaults (`log_min_messages`, `max_connections`, `shared_buffers`, and `shared_preload_libraries` for `--pgsm`), waits for it to be ready, creates the test database, builds an action registry with the framework's standard actions (`checkpoint`, `vacuum_full_table`, `truncate_table`, `reindex_table`; partition actions removed - see `STANDARD_ACTIONS` in `scenario.py`), seeds it with initial tables, and returns a context with a workload ready to run. The server is stopped on exit even if the `with` block raises.
 
-`single_pg(opts, *, archive=False, extra_config=None, conn_settings=None, db_setup=None, initial_tables=5, dbname="testdb", worker_setup=None, datadir_name="primary")`:
+`single_pg(opts, *, archive=False, extra_config=None, conn_settings=None, db_setup=None, access_methods=None, db_init=None, initial_tables=5, dbname="testdb", worker_setup=None, datadir_name="primary")`:
 
 * `archive` - turn on WAL archiving/summarization (`archive_mode`, `archive_command` into `archive/`, `summarize_wal`) and create `archive/`; needed for `pg_basebackup`/PITR-style scenarios
 * `extra_config` - dict merged into the server config, applied after the framework's own settings (can override them)
-* `conn_settings` - callable `(conn) -> None`, run on every connection `ctx.connect()` opens, after the TDE access-method `SET`
+* `conn_settings` - callable `(conn) -> None`, run on every connection `ctx.connect()` opens, after the access-method `SET`
+* `access_methods` - list of access method names; the first one becomes `default_table_access_method` for every `ctx.connect()` (unless it is `heap`), and `ctx._access_methods()` returns the list (default `["heap"]`)
+* `db_init` - callable `(conn) -> None`, called once with a fresh connection after the database is created and before seeding
 * `db_setup` - callable `(worker) -> None`, replaces the default `worker.create_random_tables(initial_tables)` seeding step
 * `initial_tables` - table count for the default seeding (ignored if `db_setup` is given)
 * `dbname` - test database name
 * `worker_setup` - callable `(worker, index) -> None`, forwarded to `Workload` (customize a specific worker's action registry; see `scenarios/demo/basic.py`)
 * `datadir_name` - suffix for `Config.datadir()`, change it if a scenario runs more than one primary
 
-If `opts.tde != "off"`, `single_pg` also creates a keyring file next to the data directory and runs `init_tde_only_for_db`/`init_tde_globally` before seeding tables. Either way, `single_pg` restarts the server once after seeding (TDE init may use `ALTER SYSTEM`, which needs a restart to take effect) - the context is only handed to the caller after that restart succeeds.
+`single_pg` restarts the server once after seeding (`db_init` may use `ALTER SYSTEM`, which needs a restart to take effect) - the context is only handed to the caller after that restart succeeds.
 
-`single_mysql(opts, *, extra_config=None, db_setup=None, initial_tables=5, dbname="testdb", worker_setup=None, datadir_name="primary_mysql")` - same shape, no `archive`/TDE (not supported for MySQL yet).
+`single_mysql(opts, *, extra_config=None, db_setup=None, initial_tables=5, dbname="testdb", worker_setup=None, datadir_name="primary_mysql")` - same shape, no `archive`/`access_methods` (not supported for MySQL yet).
 
 Both are context managers yielding a `ScenarioContext` (`PgContext`/`MySqlContext`) with:
 
 * `ctx.db` - the backend instance (`Postgres`/`MySQL`); `ctx.pg`/`ctx.my` is the same object under a backend-specific name
 * `ctx.dbname`, `ctx.datadir` - the test database name and the server's data directory (as a string)
-* `ctx.keyring` - keyring path (`PgContext` only, `None` if TDE is off)
 * `ctx.metadata` - the shared `sw.Metadata()` for this server
 * `ctx.registry` - the action registry `ctx.workload` was built from
 * `ctx.workload` - a ready `sw.Workload` (`--workers`/`--duration` from `opts`); **one cycle per `.run()`/`.start()`+`.wait()` call** - scenarios own the `--repeat` loop themselves (see the example below). `.run()` blocks for the cycle; `.start()`/`.wait()` split that in two, with `.workers` exposing the live workers in between - use that to mutate a specific worker's action registry mid-run (see `scenarios/demo/basic.py`). `.print_report()`/`.worker_statistics()` cover the last `.run()` call (each `.run()` resets them); with the `.start()`/`.wait()` pattern they accumulate across cycles.
-* `ctx.connect(log_name="scenario")` - open a fresh connection the same way the workload does (TDE access method set, `conn_settings` applied)
+* `ctx.connect(log_name="scenario")` - open a fresh connection the same way the workload does (access method set, `conn_settings` applied)
 * `ctx.make_worker(name)` - a one-off `sw.Worker` with a unique name (for setup/verification/one-shot SQL outside the workload)
 * `ctx.restart_and_wait(timeout=10)` - `ctx.db.restart(timeout)` then `wait_ready()`, raises if the server doesn't come back
 * `ctx.validate_metadata_or_warn()` - runs `Worker.validate_metadata()`, logs a warning instead of failing (metadata can legitimately diverge under concurrent DDL - see [Determinism](determinism.md))
@@ -148,7 +148,7 @@ def main(args):
 
 Run it with `stormweaver scenarios/ci/basic.py -i /path/to/pg/install`.
 
-For a guided tour of the rest of the feature set - custom actions, per-worker registries, mid-run registry changes, restarts, pg_tde encryption verification, all with explanatory comments - read `scenarios/demo/basic.py` (needs a pg_tde-enabled build; run with `--workers 4 --tde on`).
+For a guided tour of the rest of the feature set - custom actions, per-worker registries, mid-run registry changes, restarts - see the demo that moved to the pg_tde repository (`tests/stress/basic_tde.py`); `scenarios/ci/basic.py` is a plain example.
 
 ## Backup-testing patterns
 

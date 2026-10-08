@@ -18,7 +18,6 @@ from stormweaver.backends.base import DatabaseBackend
 from stormweaver.backends.mysql import MySQL
 from stormweaver.backends.postgres import Postgres
 from stormweaver.config import Config
-from stormweaver.tde import init_tde_globally, init_tde_only_for_db
 from stormweaver.workload import Workload
 from stormweaver.wrappers import ServerWrapper, make_wrapper
 
@@ -38,7 +37,6 @@ def add_common_arguments(parser: argparse._ActionsContainer) -> None:
         default="off",
         help="server variable fuzzing up to the given tier",
     )
-    group.add_argument("--tde", choices=["on", "on_wal", "off"], default="off")
     group.add_argument("--pgsm", choices=["on", "off"], default="off")
     group.add_argument("--clear-logs", action="store_true")
     wrap = group.add_mutually_exclusive_group()
@@ -250,11 +248,11 @@ class PgContext(ScenarioContext):
         db: Postgres,
         dbname: str,
         registry: Any,
-        keyring: Path | None,
         conn_settings: Callable[[Any], None] | None,
         worker_setup: Callable[[Any, int], None] | None,
+        access_methods: list[str] | None = None,
     ) -> None:
-        self.keyring = keyring
+        self.access_methods = list(access_methods) if access_methods else None
         self._conn_settings = conn_settings
         self._user = os.environ.get("PGUSER") or getpass.getuser()
         super().__init__(opts, db, dbname, registry, worker_setup)
@@ -264,9 +262,7 @@ class PgContext(ScenarioContext):
         return self.db
 
     def _access_methods(self) -> list[str]:
-        if self.opts.tde != "off":
-            return ["tde_heap", "heap"]
-        return ["heap"]
+        return list(self.access_methods) if self.access_methods else ["heap"]
 
     def connect(self, log_name: str = "scenario") -> Any:
         conn = _sw.connect_pg(
@@ -276,8 +272,9 @@ class PgContext(ScenarioContext):
             user=self._user,
             log_name=log_name,
         )
-        if self.opts.tde != "off":
-            conn.execute("SET default_table_access_method = tde_heap;")
+        ams = self._access_methods()
+        if ams[0] != "heap":
+            conn.execute(f"SET default_table_access_method = {ams[0]};")
         if self._conn_settings:
             self._conn_settings(conn)
         return conn
@@ -291,6 +288,8 @@ def single_pg(
     extra_config: dict[str, str] | None = None,
     conn_settings: Callable[[Any], None] | None = None,
     db_setup: Callable[[Any], None] | None = None,
+    access_methods: list[str] | None = None,
+    db_init: Callable[[Any], None] | None = None,
     initial_tables: int = 5,
     dbname: str = "testdb",
     worker_setup: Callable[[Any, int], None] | None = None,
@@ -301,16 +300,7 @@ def single_pg(
     datadir = opts.config.datadir(datadir_name)
     shutil.rmtree(datadir, ignore_errors=True)
 
-    keyring = None
-    if opts.tde != "off":
-        # postgres chdir's into the datadir, keyring path must be absolute
-        keyring = Path(datadir).resolve().parent / f"{datadir_name}_keyring.per"
-        keyring.parent.mkdir(parents=True, exist_ok=True)
-        keyring.unlink(missing_ok=True)
-
     preload = []
-    if opts.tde != "off":
-        preload.append("pg_tde")
     if opts.pgsm == "on":
         preload.append("pg_stat_monitor")
 
@@ -354,15 +344,13 @@ def single_pg(
 
         registry = _base_registry("pg", standard_actions=True)
         ctx = PgContext(
-            opts, pg, dbname, registry, keyring, conn_settings, worker_setup
+            opts, pg, dbname, registry, conn_settings, worker_setup, access_methods
         )
         if var_pool is not None:
             ctx.use_variables(var_pool)
 
-        if opts.tde == "on":
-            init_tde_only_for_db(ctx.connect("tde-init"), str(keyring))
-        elif opts.tde == "on_wal":
-            init_tde_globally(ctx.connect("tde-init"), str(keyring))
+        if db_init:
+            db_init(ctx.connect("db-init"))
 
         setup_worker = ctx.make_worker("setup")
         if db_setup:
@@ -370,7 +358,7 @@ def single_pg(
         else:
             setup_worker.create_random_tables(initial_tables)
 
-        # init may have used ALTER SYSTEM (e.g. wal_encrypt), apply it
+        # db_init may have used ALTER SYSTEM, apply it
         ctx.restart_and_wait()
 
         yield ctx
