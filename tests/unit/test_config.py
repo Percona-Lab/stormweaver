@@ -130,3 +130,27 @@ def test_load_defaults_without_any_file(tmp_path, monkeypatch):
 def test_load_explicit_missing_raises(tmp_path):
     with pytest.raises(FileNotFoundError):
         sw.Config.load(str(tmp_path / "missing.toml"))
+
+
+def test_alloc_port_reserves_with_lock(tmp_path, monkeypatch):
+    import os
+
+    from stormweaver import config
+
+    monkeypatch.setattr(config, "PORT_LOCK_DIR", tmp_path)
+    port = config.alloc_port(26600, 26700)
+    lock = tmp_path / str(port)
+    assert lock.read_text() == str(os.getpid())
+    # a live reservation is skipped by a second caller
+    assert config._reserve(port) is None
+    config._release_ports()
+    assert not lock.exists()
+
+
+def test_alloc_port_takes_over_stale_lock(tmp_path, monkeypatch):
+    from stormweaver import config
+
+    monkeypatch.setattr(config, "PORT_LOCK_DIR", tmp_path)
+    (tmp_path / "26650").write_text("999999999")  # no such pid
+    assert config._reserve(26650) is not None
+    config._release_ports()

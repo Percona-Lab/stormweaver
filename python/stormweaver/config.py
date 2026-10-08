@@ -1,3 +1,4 @@
+import atexit
 import errno
 import os
 import random
@@ -20,12 +21,65 @@ def _bindable(port: int) -> bool:
     return True
 
 
-def alloc_port(low: int = 26600, high: int = 27000) -> int:
-    """Random free port; random start avoids collisions between parallel runs."""
-    for _ in range(200):
+# ports are reserved host-wide with lock files, like PostgreSQL::Test::Cluster's
+# get_free_port: a bind probe alone races with other sessions, and a server that
+# is stopped and restarted later must keep its port meanwhile
+PORT_LOCK_DIR = Path(
+    os.environ.get("STORMWEAVER_PORT_LOCK_DIR", "/tmp/stormweaver-ports")
+)
+_held_locks: list[Path] = []
+
+
+def _release_ports() -> None:
+    for lock in _held_locks:
+        lock.unlink(missing_ok=True)
+    _held_locks.clear()
+
+
+atexit.register(_release_ports)
+
+
+def _pid_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _reserve(port: int) -> Path | None:
+    PORT_LOCK_DIR.mkdir(parents=True, exist_ok=True)
+    lock = PORT_LOCK_DIR / str(port)
+    try:
+        fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+    except FileExistsError:
+        try:
+            owner = int(lock.read_text().strip() or 0)
+        except OSError, ValueError:
+            return None
+        if owner and _pid_alive(owner):
+            return None
+        # stale lock from a dead process: take it over
+        lock.unlink(missing_ok=True)
+        return _reserve(port)
+    with os.fdopen(fd, "w") as f:
+        f.write(str(os.getpid()))
+    return lock
+
+
+def alloc_port(low: int = 26600, high: int = 28000) -> int:
+    """Random free port, reserved for this process until exit."""
+    for _ in range(400):
         port = random.randrange(low, high)
+        lock = _reserve(port)
+        if lock is None:
+            continue
         if _bindable(port):
+            _held_locks.append(lock)
             return port
+        lock.unlink(missing_ok=True)
     raise RuntimeError(f"no free port in range {low}-{high}")
 
 
