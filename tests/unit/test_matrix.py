@@ -136,3 +136,17 @@ def test_available_resolved_once(pytester, args, calls):
     pytester.runpytest("-q", *args)
     got = counter.read_text() if counter.exists() else ""
     assert len(got) == calls
+
+
+def test_direct_parametrize_wins_over_dimension(suite):
+    suite.makepyfile(
+        test_direct="""
+import pytest
+
+@pytest.mark.parametrize(("mode", "flavor"), [("a", "x"), ("b", "y")])
+def test_direct(mode, flavor):
+    assert (mode, flavor) in {("a", "x"), ("b", "y")}
+"""
+    )
+    r = suite.runpytest("-q", "--full", "test_direct.py")
+    r.assert_outcomes(passed=2)

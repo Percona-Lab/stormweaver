@@ -78,8 +78,20 @@ def validate(config: pytest.Config) -> None:
         dim.values(config)
 
 
+def _direct_params(metafunc: pytest.Metafunc) -> set[str]:
+    # names the test parametrizes itself win over same-named dimensions
+    out: set[str] = set()
+    for mark in metafunc.definition.iter_markers("parametrize"):
+        names = mark.args[0] if mark.args else mark.kwargs.get("argnames", "")
+        if isinstance(names, str):
+            names = [n.strip() for n in names.split(",")]
+        out.update(names)
+    return out
+
+
 def generate(metafunc: pytest.Metafunc) -> None:
+    direct = _direct_params(metafunc)
     for name, dim in dimensions(metafunc.config).items():
-        if name in metafunc.fixturenames:
+        if name in metafunc.fixturenames and name not in direct:
             values = dim.values(metafunc.config)
             metafunc.parametrize(name, values, ids=[f"{name}-{v}" for v in values])
