@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 import stormweaver as sw
-from stormweaver import events, pginstall
+from stormweaver import events, matrix, pginstall
 from stormweaver import log as swlog
 
 # reserved port bands (keep disjoint): scenarios 15432-15531, these session/
@@ -34,6 +34,27 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="pg_config of the PostgreSQL installation under test "
         "(default: $STORMWEAVER_PG_CONFIG, $STORMWEAVER_PG_DIR, known dirs)",
     )
+    parser.addoption(
+        "--matrix",
+        action="append",
+        default=[],
+        metavar="NAME=V1,V2",
+        help="run tests using matrix dimension NAME with these values (repeatable)",
+    )
+    parser.addoption(
+        "--full",
+        action="store_true",
+        default=False,
+        help="every registered matrix dimension at every available value",
+    )
+
+
+def pytest_sessionstart(session: pytest.Session) -> None:
+    matrix.validate(session.config)
+
+
+def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
+    matrix.generate(metafunc)
 
 
 def _detect_pg_dir() -> str | None:
