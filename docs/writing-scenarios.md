@@ -77,15 +77,16 @@ with scenario.single_pg(opts, **kwargs) as ctx:
 
 Sets up a fresh single server: wipes and recreates its data directory, starts it with sane defaults (`log_min_messages`, `max_connections`, `shared_buffers`, and `shared_preload_libraries` for `--pgsm`), waits for it to be ready, creates the test database, builds an action registry with the framework's standard actions (`checkpoint`, `vacuum_full_table`, `truncate_table`, `reindex_table`; partition actions removed - see `STANDARD_ACTIONS` in `scenario.py`), seeds it with initial tables, and returns a context with a workload ready to run. The server is stopped on exit even if the `with` block raises.
 
-`single_pg(opts, *, archive=False, extra_config=None, conn_settings=None, db_setup=None, access_methods=None, db_init=None, initial_tables=5, dbname="testdb", worker_setup=None, datadir_name="primary")`:
+`single_pg(opts, *, archive=False, extra_config=None, conn_settings=None, db_setup=None, access_methods=None, db_init=None, initial_tables=5, preload=None, dbname="testdb", worker_setup=None, datadir_name="primary")`:
 
 * `archive` - turn on WAL archiving/summarization (`archive_mode`, `archive_command` into `archive/`, `summarize_wal`) and create `archive/`; needed for `pg_basebackup`/PITR-style scenarios
 * `extra_config` - dict merged into the server config, applied after the framework's own settings (can override them)
 * `conn_settings` - callable `(conn) -> None`, run on every connection `ctx.connect()` opens, after the access-method `SET`
-* `access_methods` - list of access method names; the first one becomes `default_table_access_method` for every `ctx.connect()` (unless it is `heap`), and `ctx._access_methods()` returns the list (default `["heap"]`)
-* `db_init` - callable `(conn) -> None`, called once with a fresh connection after the database is created and before seeding
+* `access_methods` - list of access method names; the first one becomes `default_table_access_method` for every `ctx.connect()` (unless it is `heap`), and `ctx.access_methods` is the list (default `["heap"]`); a failing `SET` makes `ctx.connect()` raise `RuntimeError`
+* `db_init` - callable `(conn) -> None`, called once with a fresh connection after the database is created and before seeding; this connection does not get the access-method `SET` (the extension providing it may not exist yet)
 * `db_setup` - callable `(worker) -> None`, replaces the default `worker.create_random_tables(initial_tables)` seeding step
 * `initial_tables` - table count for the default seeding (ignored if `db_setup` is given)
+* `preload` - extra `shared_preload_libraries` entries, merged with `--pgsm`
 * `dbname` - test database name
 * `worker_setup` - callable `(worker, index) -> None`, forwarded to `Workload` (customize a specific worker's action registry; see `scenarios/demo/basic.py`)
 * `datadir_name` - suffix for `Config.datadir()`, change it if a scenario runs more than one primary

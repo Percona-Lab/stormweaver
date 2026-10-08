@@ -87,3 +87,42 @@ def test_single_mysql_runs_workload(tmp_path):
         res = conn.execute("SELECT 1;")
         assert res.success()
     assert not ctx.db.is_running()
+
+
+@requires_pg
+def test_single_pg_hooks(tmp_path):
+    opts = make_opts(tmp_path, "--duration", "2", "--workers", "2")
+    calls = []
+
+    def db_init(conn):
+        calls.append("db_init")
+        r = conn.execute(
+            "CREATE ACCESS METHOD heap2 TYPE TABLE HANDLER heap_tableam_handler;"
+        )
+        assert r.success(), r.error_message
+        r = conn.execute("ALTER SYSTEM SET work_mem = '7MB';")
+        assert r.success(), r.error_message
+
+    with scenario.single_pg(
+        opts, initial_tables=1, access_methods=["heap2", "heap"], db_init=db_init
+    ) as ctx:
+        assert calls == ["db_init"]
+        conn = ctx.connect("c")
+        assert conn.execute("SHOW default_table_access_method;").rows()[0][0] == "heap2"
+        assert conn.execute("SHOW work_mem;").rows()[0][0] == "7MB"
+        res = conn.execute(
+            "SELECT count(*) FROM pg_tables WHERE schemaname = 'public';"
+        )
+        assert int(res.rows()[0][0]) > 0
+
+
+@requires_pg
+def test_single_pg_bad_access_method_is_loud(tmp_path):
+    opts = make_opts(tmp_path, "--duration", "2", "--workers", "2")
+    with (
+        pytest.raises(RuntimeError, match="cannot set default access method"),
+        scenario.single_pg(
+            opts, initial_tables=1, access_methods=["nonexistent_am"]
+        ) as ctx,
+    ):
+        ctx.connect("x")

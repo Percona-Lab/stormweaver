@@ -239,6 +239,10 @@ class ScenarioContext:
             self.registry.get(name).weight = weight
 
 
+def _normalise_access_methods(ams: list[str] | None) -> list[str]:
+    return list(ams) if ams else ["heap"]
+
+
 class PgContext(ScenarioContext):
     db: Postgres
 
@@ -252,7 +256,7 @@ class PgContext(ScenarioContext):
         worker_setup: Callable[[Any, int], None] | None,
         access_methods: list[str] | None = None,
     ) -> None:
-        self.access_methods = list(access_methods) if access_methods else None
+        self.access_methods = _normalise_access_methods(access_methods)
         self._conn_settings = conn_settings
         self._user = os.environ.get("PGUSER") or getpass.getuser()
         super().__init__(opts, db, dbname, registry, worker_setup)
@@ -262,9 +266,12 @@ class PgContext(ScenarioContext):
         return self.db
 
     def _access_methods(self) -> list[str]:
-        return list(self.access_methods) if self.access_methods else ["heap"]
+        return self.access_methods
 
     def connect(self, log_name: str = "scenario") -> Any:
+        return self._connect(log_name, apply_access_method=True)
+
+    def _connect(self, log_name: str, apply_access_method: bool) -> Any:
         conn = _sw.connect_pg(
             host="localhost",
             port=self.db.port,
@@ -273,8 +280,12 @@ class PgContext(ScenarioContext):
             log_name=log_name,
         )
         ams = self._access_methods()
-        if ams[0] != "heap":
-            conn.execute(f"SET default_table_access_method = {ams[0]};")
+        if apply_access_method and ams[0] != "heap":
+            res = conn.execute(f"SET default_table_access_method = {ams[0]};")
+            if not res.success():
+                raise RuntimeError(
+                    f"cannot set default access method {ams[0]!r}: {res.error_message}"
+                )
         if self._conn_settings:
             self._conn_settings(conn)
         return conn
@@ -291,6 +302,7 @@ def single_pg(
     access_methods: list[str] | None = None,
     db_init: Callable[[Any], None] | None = None,
     initial_tables: int = 5,
+    preload: list[str] | None = None,
     dbname: str = "testdb",
     worker_setup: Callable[[Any, int], None] | None = None,
     datadir_name: str = "primary",
@@ -300,7 +312,7 @@ def single_pg(
     datadir = opts.config.datadir(datadir_name)
     shutil.rmtree(datadir, ignore_errors=True)
 
-    preload = []
+    preload = list(preload or [])
     if opts.pgsm == "on":
         preload.append("pg_stat_monitor")
 
@@ -350,7 +362,7 @@ def single_pg(
             ctx.use_variables(var_pool)
 
         if db_init:
-            db_init(ctx.connect("db-init"))
+            db_init(ctx._connect("db-init", apply_access_method=False))
 
         setup_worker = ctx.make_worker("setup")
         if db_setup:

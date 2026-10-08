@@ -168,11 +168,10 @@ def test_parse_wrapper_rr(tmp_path, monkeypatch):
     assert opts.wrapper.keep_all is True
 
 
-def test_pgcontext_access_methods_default_and_override(tmp_path):
-    opts = make_opts(tmp_path, install_dir="/opt/pg")
-    ctx = scenario.PgContext.__new__(scenario.PgContext)
-    ctx.opts = opts
-    ctx.access_methods = None
-    assert ctx._access_methods() == ["heap"]
-    ctx.access_methods = ["tde_heap", "heap"]
-    assert ctx._access_methods() == ["tde_heap", "heap"]
+def test_normalise_access_methods_default_and_override():
+    assert scenario._normalise_access_methods(None) == ["heap"]
+    assert scenario._normalise_access_methods([]) == ["heap"]
+    assert scenario._normalise_access_methods(["tde_heap", "heap"]) == [
+        "tde_heap",
+        "heap",
+    ]
