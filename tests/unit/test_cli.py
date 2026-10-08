@@ -1,4 +1,5 @@
 import logging
+import sys
 from pathlib import Path
 
 import pytest
@@ -284,3 +285,26 @@ def test_test_subcommand_returns_pytest_rc(monkeypatch):
 
     monkeypatch.setattr(_pytest, "main", lambda args, plugins=None: 5)
     assert main(["test"]) == 5
+
+
+def test_test_subcommand_missing_pytest(monkeypatch, capsys):
+    monkeypatch.setitem(sys.modules, "pytest", None)
+    assert main(["test"]) == 1
+    assert "pytest is not installed" in capsys.readouterr().err
+
+
+def test_test_subcommand_plugin_fallback(monkeypatch):
+    import importlib.metadata as md
+
+    import pytest as _pytest
+
+    seen = {}
+
+    def fake_pytest_main(args, plugins=None):
+        seen["args"] = list(args)
+        return 0
+
+    monkeypatch.setattr(_pytest, "main", fake_pytest_main)
+    monkeypatch.setattr(md, "entry_points", lambda **kw: [])
+    assert main(["test", "x"]) == 0
+    assert seen["args"][:2] == ["-p", "stormweaver.pytest_plugin"]

@@ -101,7 +101,15 @@ def _run_pytest(args: list[str]) -> int:
     """`stormweaver test ...`: pytest from our interpreter, all args passed through."""
     import importlib.metadata as md
 
-    import pytest
+    try:
+        import pytest
+    except ImportError:
+        print(
+            "stormweaver test: pytest is not installed "
+            "(pip install 'stormweaver[test]')",
+            file=sys.stderr,
+        )
+        return 1
 
     argv = list(args)
     if not list(md.entry_points(group="pytest11", name="stormweaver")):
