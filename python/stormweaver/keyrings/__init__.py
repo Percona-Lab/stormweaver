@@ -6,7 +6,7 @@ from typing import Any
 from stormweaver.config import Config, resolve_config_path
 from stormweaver.keyrings import kmip as _kmip
 from stormweaver.keyrings import vault as _vault
-from stormweaver.keyrings.base import Keyring, Scope
+from stormweaver.keyrings.base import Keyring
 from stormweaver.keyrings.file import FileKeyring
 from stormweaver.keyrings.kmip import KmipKeyring
 from stormweaver.keyrings.provision import detect_runtime
@@ -20,7 +20,6 @@ __all__ = [
     "FileKeyring",
     "Keyring",
     "KmipKeyring",
-    "Scope",
     "VaultKeyring",
     "available_keyrings",
     "load_keyring_config",

@@ -2,9 +2,7 @@ import shutil
 from abc import ABC, abstractmethod
 from pathlib import Path
 from types import TracebackType
-from typing import ClassVar, Literal, Self
-
-Scope = Literal["global", "database"]
+from typing import ClassVar, Self
 
 
 class RunningService(ABC):

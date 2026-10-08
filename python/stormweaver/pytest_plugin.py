@@ -13,7 +13,7 @@ from stormweaver import log as swlog
 
 # reserved port bands (keep disjoint): scenarios 15432-15531, these session/
 # function fixtures 25500+, test_config.py hardcodes 26200-26500, TestNode
-# alloc_port 26600-27000. a session server holds its port the whole run, so it
+# alloc_port 26600-28000. a session server holds its port the whole run, so it
 # must not sit on a port a later test binds directly (was 26400, collided with
 # test_free_port_skips_occupied).
 # not xdist-safe: every xdist worker process restarts this counter; offset by

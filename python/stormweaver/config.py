@@ -1,4 +1,5 @@
 import atexit
+import contextlib
 import errno
 import os
 import random
@@ -49,11 +50,21 @@ def _pid_alive(pid: int) -> bool:
     return True
 
 
+def _lock_dir() -> Path:
+    # shared between users on one host, like /tmp itself
+    if not PORT_LOCK_DIR.exists():
+        PORT_LOCK_DIR.mkdir(parents=True, exist_ok=True)
+        with contextlib.suppress(OSError):
+            PORT_LOCK_DIR.chmod(0o1777)
+    return PORT_LOCK_DIR
+
+
 def _reserve(port: int) -> Path | None:
-    PORT_LOCK_DIR.mkdir(parents=True, exist_ok=True)
-    lock = PORT_LOCK_DIR / str(port)
+    lock = _lock_dir() / str(port)
     try:
         fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+    except PermissionError:
+        return None
     except FileExistsError:
         try:
             owner = int(lock.read_text().strip() or 0)
