@@ -107,10 +107,11 @@ class Postgres(DatabaseBackend):
     def set_signal(self, kind: str) -> None:
         if kind not in ("recovery", "standby"):
             raise ValueError(f"unknown signal kind: {kind}")
-        # PGDATA files are 0600; touch() would honor umask (0644)
+        # PGDATA files are 0600 (0640 with initdb -g); touch() honors umask
         sig = self.datadir / f"{kind}.signal"
         sig.touch()
-        sig.chmod(0o600)
+        group = self.datadir.stat().st_mode & 0o050
+        sig.chmod(0o640 if group else 0o600)
 
     def enable_restoring(
         self, source: Postgres | str | Path, signal: str | None = None
