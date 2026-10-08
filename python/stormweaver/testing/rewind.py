@@ -14,6 +14,7 @@ class RewindDriver:
     """
 
     rewind_bin = "pg_rewind"
+    node_cls: type[PgTestNode] = PgTestNode
 
     def __init__(self, install_dir: str | Path, *, debug: bool = False) -> None:
         self.install_dir = install_dir
@@ -55,7 +56,7 @@ class RewindDriver:
     # lifecycle
 
     def setup_primary(self) -> PgTestNode:
-        primary = PgTestNode.fresh(
+        primary = self.node_cls.fresh(
             self.install_dir,
             name="rwprimary",
             config=self.primary_config(),
@@ -65,10 +66,14 @@ class RewindDriver:
         self.primary = primary
         return primary
 
+    def backup_primary(self) -> Path:
+        assert self.primary is not None
+        return self.primary.basebackup()
+
     def create_standby(self) -> PgTestNode:
         assert self.primary is not None
-        backup = self.primary.basebackup()
-        self.standby = PgTestNode.from_backup(backup, self.primary, name="rwstandby")
+        backup = self.backup_primary()
+        self.standby = self.node_cls.from_backup(backup, self.primary, name="rwstandby")
         return self.standby
 
     def promote_standby(self) -> None:
