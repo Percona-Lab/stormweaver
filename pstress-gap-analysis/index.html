@@ -1,0 +1,683 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.17">
+    
+    
+      
+        <title>pstress -> StormWeaver gap analysis - StormWeaver Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.bcfcd587.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#pstress-stormweaver-gap-analysis" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="StormWeaver Documentation" class="md-header__button md-logo" aria-label="StormWeaver Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            StormWeaver Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              pstress -> StormWeaver gap analysis
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="StormWeaver Documentation" class="md-nav__button md-logo" aria-label="StormWeaver Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    StormWeaver Documentation
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../building/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Building from source
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../writing-scenarios/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Writing scenarios
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../python-actions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Python actions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../transactions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Transactions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../variable-fuzzing/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Variable fuzzing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../stable-tests/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Stable tests
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../determinism/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Determinism
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wrappers/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Server wrappers
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../randomized-testing-concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Randomized testing concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../config-parameters/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Config parameters
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_12" id="__nav_12_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Design notes
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12">
+            <span class="md-nav__icon md-icon"></span>
+            Design notes
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr-enhanced-statistics/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Enhanced statistics ADR
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#high-priority-core-bug-finding-value" class="md-nav__link">
+    <span class="md-ellipsis">
+      High priority -- core bug-finding value
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#medium-priority-useful-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Medium priority -- useful coverage
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#low-priority-probably-out-of-scope-defer" class="md-nav__link">
+    <span class="md-ellipsis">
+      Low priority -- probably out of scope / defer
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#not-gaps" class="md-nav__link">
+    <span class="md-ellipsis">
+      Not gaps
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+<h1 id="pstress-stormweaver-gap-analysis">pstress -&gt; StormWeaver gap analysis</h1>
+<p>Features present in pstress (the original inspiration) that StormWeaver currently lacks,
+grouped by usefulness/priority. Snapshot as of the <code>newpython</code> branch with MySQL support
+(commit <code>a442de0</code>).</p>
+<h2 id="high-priority-core-bug-finding-value">High priority -- core bug-finding value</h2>
+<ul>
+<li><strong>Transactions + savepoints</strong> -- pstress wraps statements in transactions
+  (<code>--trx-prob-k</code>, <code>--trx-size</code>, <code>--commit-prob</code>, <code>--savepoint-prob-k</code>,
+  <code>ROLLBACK TO SAVEPOINT</code>). StormWeaver runs pure autocommit; crash-recovery testing
+  without in-flight/rolled-back transactions misses a whole bug class. Fits as a
+  composite action plus worker-level transaction state.</li>
+<li><strong>SELECT workload</strong> -- no built-in read action. pstress generates point lookups,
+  range, <code>IN</code>, <code>BETWEEN</code>, <code>LIKE</code>, full scans, and partition-pruned selects. Reads are
+  needed for MVCC/locking/index-corruption bugs. Cheap to add via the existing
+  random-row machinery.</li>
+<li><strong>MySQL encryption/keyring testing</strong> -- pstress's core Percona value:
+  <code>ALTER TABLE/TABLESPACE/DATABASE ENCRYPTION</code>, master key rotation, Percona
+  system-key rotation, <code>RELOAD KEYRING</code>, redo-log enable/disable, keyring
+  file/Vault/KMIP setup. StormWeaver MySQL has zero encryption support (PG has pg_tde,
+  but no key-rotation action either -- same shape of gap).</li>
+<li><strong>ALTER ALGORITHM/LOCK variants</strong> -- pstress cycles INPLACE/COPY/INSTANT x
+  NONE/SHARED/EXCLUSIVE with a compatibility matrix. Historically a rich MySQL bug
+  source. Natural dialect-layer addition.</li>
+<li><strong>Crash-loop harness features</strong> -- the pstress driver script provides: signal choice
+  (SIGKILL/SIGTERM/SIGILL-core), trial saving (datadir + logs + binary for repro),
+  error-log scanning with known-bug exclude patterns, core-file detection, datadir
+  reinit on failed start. StormWeaver has kill/restart primitives but no unattended
+  trial loop with triage. Scenario-level Python work, not core.</li>
+<li><strong>Richer column/DDL variety</strong> -- generated (stored/virtual) column action (metadata
+  scaffolding already exists), rename column/index, real MODIFY COLUMN variety
+  (StormWeaver: numeric-&gt;VARCHAR(32) only), NOT NULL/defaults, FLOAT/DOUBLE, blob
+  subtypes.</li>
+</ul>
+<h2 id="medium-priority-useful-coverage">Medium priority -- useful coverage</h2>
+<ul>
+<li><strong>Temporary tables</strong> -- <code>Table::Type::temporary</code> enum exists, no action. Needs
+  per-worker (per-session) metadata visibility.</li>
+<li><strong>HASH/LIST/KEY partitioning + partition ops</strong> -- StormWeaver is RANGE-only; pstress
+  also does REORGANIZE, COALESCE, TRUNCATE PARTITION, drop/add LIST values. Discovery
+  enums already recognize hash/list.</li>
+<li><strong>Tablespaces</strong> -- general + undo tablespaces, ALTER TABLESPACE rename/encryption,
+  DISCARD TABLESPACE, per-table assignment, KEY_BLOCK_SIZE/ROW_FORMAT/compression.
+  Mostly MySQL-side; metadata field exists but no action touches it.</li>
+<li><strong>OPTIMIZE/ANALYZE/CHECK TABLE actions</strong> -- the demo scenario has ad-hoc custom SQL
+  for vacuum/reindex; pstress has these as weighted built-ins plus a pre-workload
+  CHECK sweep (<code>--check-preload</code>) with failure counting. CHECK TABLE post-crash
+  complements checksums.</li>
+<li><strong>Runtime server-variable fuzzing</strong> -- <code>SET GLOBAL/SESSION</code> from a weighted option
+  pool during load (<code>--mso</code>/<code>--sof</code>), plus random mysqld startup options per trial.
+  Strong bug-finder; easy as a Python action + backend config hook.
+  Implemented: <code>--var-fuzz {safe,semantics,disruptive}</code> + <code>--seed</code>, session/global/
+  reload toggle actions, and seed-derived startup option rolls. See
+  <a href="../variable-fuzzing/">variable fuzzing</a>.</li>
+<li><strong>FK variety</strong> -- pstress randomizes ON UPDATE/ON DELETE
+  (RESTRICT/CASCADE/SET NULL/NO ACTION); StormWeaver hardcodes ON DELETE CASCADE,
+  single FK per table.</li>
+<li><strong>Grammar/template SQL</strong> -- pstress grammar-file with <code>T1</code>/<code>T1_INT_1</code>-style
+  placeholders including multi-table joins; StormWeaver's <code>make_custom_table_sql</code>
+  supports only <code>{table}</code>. Extend substitution to columns + multiple tables.</li>
+<li><strong>SQL replay/reduction mode</strong> -- pquery mode (execute SQL file sequential/shuffled)
+  plus the replay_test.sh repro workflow. StormWeaver already logs every statement per
+  connection -- replay tooling is the missing half of a repro story.</li>
+<li><strong>Statement-count budget</strong> -- pstress <code>--queries-per-thread</code>; StormWeaver only has
+  wall-clock duration. Trivial, helps determinism.</li>
+</ul>
+<h2 id="low-priority-probably-out-of-scope-defer">Low priority -- probably out of scope / defer</h2>
+<ul>
+<li><strong>PXC / Group Replication cluster orchestration</strong> -- 3-node bootstrap, SST methods,
+  wsrep option fuzzing, GCache key rotation. Big; only if cluster testing becomes a
+  goal.</li>
+<li><strong>RocksDB / engine variety</strong> -- engine option pool, per-engine feature gating.
+  <code>changeAccessMethod</code> groundwork exists.</li>
+<li><strong>rr/gdb server wrapping</strong> -- trivial to do in the Python backend when needed.</li>
+<li><strong>REPLACE + bulk multi-row insert action</strong> -- minor DML variants.</li>
+<li><strong>Version/fork gating</strong> -- pstress gates features by server version/fork;
+  StormWeaver's <code>ServerInfo</code> predicates are wired but the PG side is stubbed (flavor
+  hardcoded, version 0). More debt than feature; prerequisite for the encryption work
+  above.</li>
+<li><strong>Metadata persistence between runs</strong> -- pstress serializes step JSON; StormWeaver
+  rebuilds via schema discovery -- a better design, no need to copy. But discovery gaps
+  worth fixing: UNIQUE/CHECK constraints discovered then dropped, engine not stored
+  back, MySQL tablespace always empty.</li>
+</ul>
+<h2 id="not-gaps">Not gaps</h2>
+<p>StormWeaver already beats pstress on validation (row checksums, entropy verification,
+discovery-based metadata compare -- pstress has none of these internally), statistics,
+seed determinism, and scenario flexibility.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.1e8ae164.min.js"></script>
+      
+    
+  </body>
+</html>
