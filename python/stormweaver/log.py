@@ -99,11 +99,18 @@ def init_run_logging(
 ) -> Path:
     stamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     base = Path(base_dir)
+    base.mkdir(parents=True, exist_ok=True)
     candidate = base / f"{stamp}-{scenario_name}"
     n = 2
-    while candidate.exists():
-        candidate = base / f"{stamp}-{scenario_name}-{n}"
-        n += 1
+    # exist_ok=False makes the claim atomic: concurrent runs started in the
+    # same second must not share a run dir
+    while True:
+        try:
+            candidate.mkdir()
+            break
+        except FileExistsError:
+            candidate = base / f"{stamp}-{scenario_name}-{n}"
+            n += 1
     return init_logging(candidate, level, mode=mode, splits=splits)
 
 
