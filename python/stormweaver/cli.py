@@ -27,7 +27,10 @@ def build_parser(
     parser.add_argument(
         "scenario",
         nargs=None if scenario_required else "?",
-        help="Scenario file to execute",
+        help=(
+            "Scenario file to execute, "
+            "or 'test' to run pytest with the stormweaver plugin"
+        ),
     )
     parser.add_argument(
         "-c",
@@ -94,8 +97,23 @@ def _load_scenario(path: str) -> tuple[ModuleType | None, str | None]:
     return module, None
 
 
+def _run_pytest(args: list[str]) -> int:
+    """`stormweaver test ...`: pytest from our interpreter, all args passed through."""
+    import importlib.metadata as md
+
+    import pytest
+
+    argv = list(args)
+    if not list(md.entry_points(group="pytest11", name="stormweaver")):
+        argv = ["-p", "stormweaver.pytest_plugin", *argv]
+    return int(pytest.main(argv))
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
+
+    if argv and argv[0] == "test":
+        return _run_pytest(argv[1:])
 
     # phase 1: grab the scenario path without triggering --help or choking on
     # scenario-specific flags, so we can import the scenario and let it add its

@@ -262,3 +262,25 @@ def test_run_header_first_event(tmp_path, monkeypatch, _restore_log_state):
     assert "RUN " in first
     assert "scenario=scen" in first
     assert "mode=split" in first
+
+
+def test_test_subcommand_passes_args_through(monkeypatch):
+    import pytest as _pytest
+
+    seen = {}
+
+    def fake_pytest_main(args, plugins=None):
+        seen["args"] = list(args)
+        return 0
+
+    monkeypatch.setattr(_pytest, "main", fake_pytest_main)
+    assert main(["test", "tests/x", "-k", "foo", "--pg-config", "/p/pg_config"]) == 0
+    # "-p stormweaver.pytest_plugin" prefix allowed if no entry point registered
+    assert seen["args"][-5:] == ["tests/x", "-k", "foo", "--pg-config", "/p/pg_config"]
+
+
+def test_test_subcommand_returns_pytest_rc(monkeypatch):
+    import pytest as _pytest
+
+    monkeypatch.setattr(_pytest, "main", lambda args, plugins=None: 5)
+    assert main(["test"]) == 5
