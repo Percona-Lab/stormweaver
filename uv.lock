@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.14"
 resolution-markers = [
     "python_full_version >= '3.15'",
@@ -329,6 +329,11 @@ wheels = [
 name = "stormweaver"
 source = { editable = "." }
 
+[package.optional-dependencies]
+test = [
+    { name = "pytest" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "mypy" },
@@ -338,6 +343,8 @@ dev = [
 ]
 
 [package.metadata]
+requires-dist = [{ name = "pytest", marker = "extra == 'test'", specifier = ">=8" }]
+provides-extras = ["test"]
 
 [package.metadata.requires-dev]
 dev = [
