@@ -11,6 +11,8 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       # v4.1 builds cp314t by default, config lives in pyproject.toml [tool.cibuildwheel]
       - uses: pypa/cibuildwheel@v4.1
       - uses: actions/upload-artifact@v4
@@ -36,6 +38,9 @@ jobs:
           [ "$GITHUB_REF_NAME" = "$VERSION" ] && VERSION="0.0.0-dev"
           mapfile -t W < <(ls wheelhouse/*.whl)
           [ "${#W[@]}" -eq 1 ] || { echo "expected exactly 1 wheel, got ${#W[@]}"; exit 1; }
+          if [ "$VERSION" != "0.0.0-dev" ] && [ "$VERSION" != "$(cat VERSION)" ]; then
+            echo "tag $GITHUB_REF_NAME does not match VERSION $(cat VERSION)"; exit 1
+          fi
           packaging/build-bundle.sh "${W[0]}" "$VERSION"
       - run: |
           mkdir -p /tmp/swb && tar -xzf dist/stormweaver-*.tar.gz -C /tmp/swb

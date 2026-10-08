@@ -68,4 +68,4 @@ to tune it, `registry.remove("transaction")` to disable it.
 
 ## Build-time configuration
 
-See [Building from source](building.md) for CMake presets (`debug`, `asan-ubsan`, `tsan`) and the Conan `cppstd=gnu23` profile requirement.
+See [Building from source](building.md) for CMake presets (`debug`, `asan-ubsan`, `tsan`).

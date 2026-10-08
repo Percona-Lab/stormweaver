@@ -32,8 +32,10 @@ def build_parser(
     parser.add_argument(
         "-c",
         "--config",
-        default="config/stormweaver.toml",
-        help="Configuration file",
+        default=None,
+        help="Configuration file (default: $STORMWEAVER_CONFIG, "
+        "./config/stormweaver.toml, /etc/stormweaver/stormweaver.toml, "
+        "then built-in defaults)",
     )
     parser.add_argument(
         "-i", "--install-dir", default="", help="database installation directory"

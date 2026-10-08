@@ -3,7 +3,7 @@
 
 #include "sql_variant/generic.hpp"
 
-struct MYSQL;
+#include <mysql.h>
 
 namespace sql_variant {
 

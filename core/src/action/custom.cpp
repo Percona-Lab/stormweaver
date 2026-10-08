@@ -2,7 +2,7 @@
 #include "action/custom.hpp"
 #include "action/helper.hpp"
 
-#include <boost/algorithm/string.hpp>
+#include <string_view>
 #include <utility>
 
 namespace action {
@@ -20,15 +20,22 @@ CustomSql::CustomSql(CustomConfig const & /*unused*/, std::string sqlStatement,
   }
 }
 
+namespace {
+void replace_all(std::string &s, std::string_view from, std::string_view to) {
+  for (std::size_t pos = s.find(from); pos != std::string::npos;
+       pos = s.find(from, pos + to.size())) {
+    s.replace(pos, from.size(), to);
+  }
+}
+} // namespace
+
 void CustomSql::execute(metadata::Context &metaCtx, ps_random &rand,
                         sql_variant::LoggedSQL *connection) const {
   std::string statementCopy = sqlStatement;
 
   for (auto const &inject : injectParameters) {
-    // TODO: fmt::format doesn't support dynamic parameters, should switch to
-    // fmt
-    boost::replace_all(statementCopy, "{" + inject + "}",
-                       doInject(metaCtx, rand, inject));
+    replace_all(statementCopy, "{" + inject + "}",
+                doInject(metaCtx, rand, inject));
   }
 
   connection->executeQuery(statementCopy).maybeThrow();

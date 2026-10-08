@@ -7,7 +7,6 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
-        "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": "${sourceDir}/cmake/conan_setup.cmake",
         "WITH_PYTHON": "OFF"
       }
     },

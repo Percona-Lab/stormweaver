@@ -3,7 +3,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-from stormweaver.config import Config
+from stormweaver.config import Config, resolve_config_path
 from stormweaver.keyrings import kmip as _kmip
 from stormweaver.keyrings import vault as _vault
 from stormweaver.keyrings.base import Keyring, Scope
@@ -31,8 +31,8 @@ __all__ = [
 
 
 def load_keyring_config(path: str | Path | None = None) -> dict[str, Any]:
-    p = Path(path or os.environ.get("STORMWEAVER_CONFIG") or "config/stormweaver.toml")
-    if not p.is_file():
+    p = resolve_config_path(path)
+    if p is None or not p.is_file():
         return {}
     return Config.load(p).keyrings
 

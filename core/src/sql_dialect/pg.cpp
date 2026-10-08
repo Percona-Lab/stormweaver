@@ -1,7 +1,7 @@
 #include "sql_dialect/dialect.hpp"
 
-#include <boost/algorithm/string/join.hpp>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 #include <limits>
 #include <rfl.hpp>
 
@@ -49,7 +49,7 @@ public:
 
     if (!pk_columns.empty()) {
       defs.push_back(fmt::format("PRIMARY KEY ({})",
-                                 boost::algorithm::join(pk_columns, ", ")));
+                                 fmt::join(pk_columns, ", ")));
     }
 
     std::string partitionClause;
@@ -61,7 +61,7 @@ public:
     // spacing quirks (") ;" / "))  PARTITION") are intentional: output must
     // stay byte-identical to the legacy action-layer format strings
     return fmt::format("CREATE TABLE {} ({}) {};", table.name,
-                       boost::algorithm::join(defs, ",\n"), partitionClause);
+                       fmt::join(defs, ",\n"), partitionClause);
   }
 
   [[nodiscard]] std::string addPartition(Table const &table,
@@ -96,7 +96,7 @@ public:
     // empty optional keywords leave double spaces; intentional, see above
     return fmt::format("CREATE {} INDEX {} {} ON {} {} ({});", unique,
                        concurrently, index.name, only, table.name,
-                       boost::algorithm::join(indexColumns, ", "));
+                       fmt::join(indexColumns, ", "));
   }
 
   [[nodiscard]] std::string

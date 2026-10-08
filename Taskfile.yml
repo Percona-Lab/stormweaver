@@ -9,6 +9,7 @@ tasks:
   setup:
     desc: One-time dev setup
     cmds:
+      - git submodule update --init --recursive
       - uv python install 3.14t
       - uv venv --allow-existing
       - uv pip install -e . --group dev
@@ -87,10 +88,8 @@ tasks:
     cmds:
       # bindings/module.cpp is only built by the pip/scikit-build path (WITH_PYTHON),
       # not by the cpp:build preset (WITH_PYTHON=OFF), so the preset build dir's
-      # compile_commands.json has no entry for it and clang-tidy can't resolve its
-      # includes (nanobind headers, module flags). Scoped to core/src only.
-      # mysql.cpp is also excluded - not in LIBRARY_SOURCES yet (mysql.h not vendored),
-      # same compile-db problem.
+      # compile_commands.json has no entry for it. Scoped to core/src only.
+      # mysql.cpp is excluded: it has open clang-tidy findings, not cleaned up yet.
       # -p uses the same PRESET expression as the cpp:build dep so they can't mismatch
       - find core/src -name '*.cpp' -not -name 'mysql.cpp' | xargs clang-tidy -p build/{{.PRESET | default "debug"}} --warnings-as-errors='*'
 

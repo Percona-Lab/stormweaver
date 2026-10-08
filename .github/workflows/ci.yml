@@ -2,11 +2,8 @@ name: CI
 
 on:
   push:
-    branches: [main, newpython]
+    branches: [main, newpython, obs-packaging]
   pull_request:
-
-env:
-  CONAN_HOME: ${{ github.workspace }}/.conan2
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -18,12 +15,14 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: astral-sh/setup-uv@v5
       - run: uv python install 3.14t && uv venv
       # no editable install here on purpose:
       # mypy has ignore_missing_imports for stormweaver._stormweaver and typechecks
       # python/stormweaver by path, so it never needs the compiled extension. Doing
-      # `uv pip install -e .` would drag in conan+cmake just for this job, so we
+      # `uv pip install -e .` would drag in cmake just for this job, so we
       # install the lint tools directly and always pass --no-sync to uv run so it
       # never tries to build/sync the stormweaver project itself.
       # pytest itself needed too - pytest_plugin.py imports it, mypy needs the
@@ -46,13 +45,9 @@ jobs:
         preset: [debug, asan-ubsan, tsan]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
         with:
-          path: ${{ env.CONAN_HOME }}
-          key: conan-${{ matrix.preset }}-${{ hashFiles('conanfile.txt') }}
-      - run: sudo apt-get update && sudo apt-get install -y ninja-build postgresql-16
-      - run: pipx install conan
-      - run: conan profile detect --exist-ok
+          submodules: recursive
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build postgresql-16 libpq-dev libmariadb-dev libcrypto++-dev
       - run: cmake --preset ${{ matrix.preset }} -DTEST_PG_DIR=/usr/lib/postgresql/16 -DTEST_MYSQL_DIR=/usr
       - run: cmake --build --preset ${{ matrix.preset }}
       # ubuntu confines /usr/sbin/mysqld with apparmor to /var/lib/mysql, which
@@ -79,18 +74,15 @@ jobs:
       CXX: clang++-22
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
         with:
-          path: ${{ env.CONAN_HOME }}
-          key: conan-clang-${{ hashFiles('conanfile.txt') }}
+          submodules: recursive
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build postgresql-16 libpq-dev libmariadb-dev libcrypto++-dev
       - run: |
           wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 22
           sudo apt-get install -y clang-tidy-22 ninja-build
-      - run: pipx install conan
-      - run: conan profile detect --exist-ok
       - run: cmake --preset debug
       - run: cmake --build --preset debug
-      # mysql.cpp is not built, no compile command for it
+      # mysql.cpp has open clang-tidy findings, not cleaned up yet
       - run: |
           find core/src -name '*.cpp' -not -name 'mysql.cpp' \
             | xargs clang-tidy-22 -p build/debug --warnings-as-errors='*'
@@ -100,14 +92,10 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - uses: actions/cache@v4
         with:
-          path: ${{ env.CONAN_HOME }}
-          key: conan-py-${{ hashFiles('conanfile.txt') }}
-      - run: sudo apt-get update && sudo apt-get install -y ninja-build postgresql-16
-      - run: pipx install conan
-      - run: conan profile detect --exist-ok
+          submodules: recursive
+      - uses: astral-sh/setup-uv@v5
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build postgresql-16 libpq-dev libmariadb-dev libcrypto++-dev
       - run: uv python install 3.14t && uv venv && uv pip install -e . pytest
       # --no-sync: don't let uv resync/rebuild the project before running, the
       # editable install above already built it, resync would just redo it slower
@@ -120,14 +108,10 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - uses: actions/cache@v4
         with:
-          path: ${{ env.CONAN_HOME }}
-          key: conan-py-${{ hashFiles('conanfile.txt') }}
-      - run: sudo apt-get update && sudo apt-get install -y ninja-build postgresql-16
-      - run: pipx install conan
-      - run: conan profile detect --exist-ok
+          submodules: recursive
+      - uses: astral-sh/setup-uv@v5
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build postgresql-16 libpq-dev libmariadb-dev libcrypto++-dev
       - run: uv python install 3.14t && uv venv && uv pip install -e . pytest
       - run: uv run --no-sync stormweaver scenarios/ci/basic.py -i /usr/lib/postgresql/16
       - run: uv run --no-sync stormweaver scenarios/ci/basic.py -i /usr/lib/postgresql/16 --wrapper-cmd env --duration 3 --repeat 1
@@ -137,14 +121,10 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - uses: actions/cache@v4
         with:
-          path: ${{ env.CONAN_HOME }}
-          key: conan-py-${{ hashFiles('conanfile.txt') }}
-      - run: sudo apt-get update && sudo apt-get install -y ninja-build postgresql-16
-      - run: pipx install conan
-      - run: conan profile detect --exist-ok
+          submodules: recursive
+      - uses: astral-sh/setup-uv@v5
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build postgresql-16 libpq-dev libmariadb-dev libcrypto++-dev
       - run: uv python install 3.14t && uv venv && uv pip install -e . pytest
       # same apparmor/service dance as the sql-test mysql leg, see cpp-tests job
       - run: sudo aa-remove-unknown || true; sudo ln -sf /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/ 2>/dev/null || true; sudo apparmor_parser -R /etc/apparmor.d/usr.sbin.mysqld 2>/dev/null || true
@@ -157,14 +137,10 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - uses: actions/cache@v4
         with:
-          path: ${{ env.CONAN_HOME }}
-          key: conan-py-asan-${{ hashFiles('conanfile.txt') }}
-      - run: sudo apt-get update && sudo apt-get install -y ninja-build postgresql-16
-      - run: pipx install conan
-      - run: conan profile detect --exist-ok
+          submodules: recursive
+      - uses: astral-sh/setup-uv@v5
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build postgresql-16 libpq-dev libmariadb-dev libcrypto++-dev
       - run: uv python install 3.14t && uv venv
       - run: CMAKE_ARGS="-DWITH_ASAN=ON -DWITH_UBSAN=ON" uv pip install -e .
       # --no-sync here matters more than it looks: scikit-build-core's editable
@@ -186,13 +162,9 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - uses: actions/cache@v4
         with:
-          path: ${{ env.CONAN_HOME }}
-          key: conan-py-${{ hashFiles('conanfile.txt') }}
-      - run: sudo apt-get update && sudo apt-get install -y ninja-build postgresql-16
-      - run: pipx install conan
-      - run: conan profile detect --exist-ok
+          submodules: recursive
+      - uses: astral-sh/setup-uv@v5
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build postgresql-16 libpq-dev libmariadb-dev libcrypto++-dev
       - run: uv python install 3.14t && uv venv && uv pip install -e . pytest
       - run: uv run --no-sync stormweaver scenarios/ci/determinism.py -i /usr/lib/postgresql/16

@@ -3,7 +3,13 @@
 
 #include "action/action.hpp"
 
-#include <boost/container/flat_set.hpp>
+#include <string>
+#include <version>
+#ifdef __cpp_lib_flat_set
+#include <flat_set>
+#else
+#include <set>
+#endif
 
 namespace action {
 
@@ -13,7 +19,11 @@ class CustomSql : public Action {
 public:
   // Parameters stored as a string so we can implement dynamic dictionaries
   // later
-  using inject_t = boost::container::flat_set<std::string>;
+#ifdef __cpp_lib_flat_set
+  using inject_t = std::flat_set<std::string>;
+#else
+  using inject_t = std::set<std::string>;
+#endif
 
   CustomSql(CustomConfig const &config, std::string sqlStatement,
             const inject_t &injectParameters);

@@ -4,8 +4,8 @@
 #include "sql_dialect/dialect.hpp"
 
 #include <algorithm>
-#include <boost/algorithm/string/join.hpp>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 #include <numeric>
 #include <rfl.hpp>
 #include <utility>
@@ -376,7 +376,7 @@ void AlterTable::execute(Context &metaCtx, ps_random &rand,
   connection
       ->executeQuery(
           fmt::format("ALTER TABLE {} \n {};", snap->name,
-                      boost::algorithm::join(alterSubcommands, ",\n")))
+                      fmt::join(alterSubcommands, ",\n")))
       .maybeThrow();
 
   const bool wholeIndexDrop = dialect.dropColumnRemovesWholeIndex();

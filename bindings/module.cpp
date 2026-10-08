@@ -103,7 +103,7 @@ static std::vector<Param> to_params(nb::handle seq) {
 static PyObject *sql_error_type = nullptr;
 
 NB_MODULE(_stormweaver, m) {
-  m.attr("__version__") = "0.1.0";
+  m.attr("__version__") = STORMWEAVER_VERSION;
 
   // --- Logging ---
 

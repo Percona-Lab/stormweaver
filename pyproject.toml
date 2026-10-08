@@ -1,10 +1,10 @@
 [build-system]
-requires = ["scikit-build-core>=0.11", "nanobind>=2.7"]
+requires = ["scikit-build-core>=0.11"]
 build-backend = "scikit_build_core.build"
 
 [project]
 name = "stormweaver"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Concurrent database testing tool"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -18,11 +18,13 @@ stormweaver = "stormweaver.pytest_plugin"
 
 [tool.scikit-build]
 minimum-version = "build-system.requires"
-cmake.version = ">=3.30"
+cmake.version = ">=3.22"
 wheel.packages = ["python/stormweaver"]
 
-[tool.scikit-build.cmake.define]
-CMAKE_PROJECT_TOP_LEVEL_INCLUDES = "cmake/conan_setup.cmake"
+[tool.scikit-build.metadata.version]
+provider = "scikit_build_core.metadata.regex"
+input = "VERSION"
+regex = "^(?P<value>[0-9][^\\s]*)"
 
 [dependency-groups]
 dev = [
@@ -58,17 +60,10 @@ build-frontend = "build[uv]"
 test-command = "python -c 'import stormweaver; print(stormweaver.__version__)'"
 
 [tool.cibuildwheel.linux]
-# runs as sh -c inside the container, no CONAN_HOME set there so conan lands
-# under $HOME/.conan2. cppstd/cflags fix now lives in conan/host.profile,
-# wired in via cmake/conan_setup.cmake - just need conan installed and a
-# default profile to compose against.
-# ninja: not installed here on purpose - scikit-build-core pulls the ninja
-# wheel from PyPI into the build venv when no system ninja is found, and
-# that venv's bin dir is on PATH for the rest of the build (conan included).
-# set -e is load-bearing: sh -c only reports the LAST command's status, so
-# without it a failed step in the middle would be silently swallowed.
+# manylinux_2_28 is AlmaLinux 8: libpq from AppStream, cryptopp from EPEL.
+# auditwheel bundles libpq/libmariadb/libcryptopp into the wheel.
 before-all = """
 set -e
-pipx install conan || pip install conan
-conan profile detect --exist-ok
+dnf install -y epel-release
+dnf install -y libpq-devel mariadb-connector-c-devel cryptopp-devel
 """

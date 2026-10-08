@@ -1,0 +1,28 @@
+[submodule "third_party/small_vector"]
+	path = third_party/small_vector
+	url = https://github.com/gharveymn/small_vector
+	shallow = true
+[submodule "third_party/fmt"]
+	path = third_party/fmt
+	url = https://github.com/fmtlib/fmt
+	shallow = true
+[submodule "third_party/spdlog"]
+	path = third_party/spdlog
+	url = https://github.com/gabime/spdlog
+	shallow = true
+[submodule "third_party/libpqxx"]
+	path = third_party/libpqxx
+	url = https://github.com/jtv/libpqxx
+	shallow = true
+[submodule "third_party/reflect-cpp"]
+	path = third_party/reflect-cpp
+	url = https://github.com/getml/reflect-cpp
+	shallow = true
+[submodule "third_party/Catch2"]
+	path = third_party/Catch2
+	url = https://github.com/catchorg/Catch2
+	shallow = true
+[submodule "third_party/nanobind"]
+	path = third_party/nanobind
+	url = https://github.com/wjakob/nanobind
+	shallow = true

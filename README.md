@@ -4,7 +4,7 @@ StormWeaver is a concurrent database testing tool inspired by [PStress](https://
 
 ### Quickstart
 
-First time on a machine: install [Conan 2](https://docs.conan.io/2/installation.html) and run `conan profile detect` (details: [building docs](docs/building.md#conan-profile)). Then:
+Installing builds the C++ extension; libpq and a MySQL client library must be installed (details: [building docs](docs/building.md#prerequisites)). Then:
 
 ```bash
 uv python install 3.14t

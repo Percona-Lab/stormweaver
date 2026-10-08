@@ -1,8 +1,8 @@
 #include "sql_dialect/dialect.hpp"
 
 #include <algorithm>
-#include <boost/algorithm/string/join.hpp>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 #include <rfl.hpp>
 
 using namespace metadata;
@@ -50,7 +50,7 @@ public:
 
     if (!pk_columns.empty()) {
       defs.push_back(fmt::format("PRIMARY KEY ({})",
-                                 boost::algorithm::join(pk_columns, ", ")));
+                                 fmt::join(pk_columns, ", ")));
     }
 
     for (auto const &idx : table.indexes) {
@@ -62,7 +62,7 @@ public:
       }
       defs.push_back(fmt::format("{}KEY {} ({})", idx.unique ? "UNIQUE " : "",
                                  idx.name,
-                                 boost::algorithm::join(idxColumns, ", ")));
+                                 fmt::join(idxColumns, ", ")));
     }
 
     if (!fkTargetName.empty() && table.columns.size() > 1) {
@@ -81,12 +81,12 @@ public:
       }
       partitionClause =
           fmt::format(" PARTITION BY RANGE ({}) ({})", table.columns[0].name,
-                      boost::algorithm::join(parts, ", "));
+                      fmt::join(parts, ", "));
     }
 
     // same outer spacing quirks as pg, kept byte-identical on purpose
     return fmt::format("CREATE TABLE {} ({}) {};", table.name,
-                       boost::algorithm::join(defs, ",\n"), partitionClause);
+                       fmt::join(defs, ",\n"), partitionClause);
   }
 
   [[nodiscard]] std::string addPartition(Table const &table,
@@ -128,7 +128,7 @@ public:
 
     // empty unique token leaves a double space; intentional, matches pg
     return fmt::format("CREATE {} INDEX {} ON {} ({});", unique, index.name,
-                       table.name, boost::algorithm::join(indexColumns, ", "));
+                       table.name, fmt::join(indexColumns, ", "));
   }
 
   [[nodiscard]] std::string

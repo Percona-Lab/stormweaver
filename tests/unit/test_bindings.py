@@ -2,8 +2,10 @@ import pytest
 import stormweaver as sw
 
 
-def test_version():
-    assert sw.__version__ == "0.1.0"
+def test_version_matches_metadata():
+    import importlib.metadata
+
+    assert sw.__version__ == importlib.metadata.version("stormweaver")
 
 
 def test_metadata_empty():

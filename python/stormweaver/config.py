@@ -1,4 +1,5 @@
 import errno
+import os
 import random
 import socket
 import tomllib
@@ -28,6 +29,25 @@ def alloc_port(low: int = 26600, high: int = 27000) -> int:
     raise RuntimeError(f"no free port in range {low}-{high}")
 
 
+DEFAULT_CONFIG_PATHS = (
+    Path("config/stormweaver.toml"),
+    Path("/etc/stormweaver/stormweaver.toml"),
+)
+
+
+def resolve_config_path(explicit: str | Path | None) -> Path | None:
+    """-c, then STORMWEAVER_CONFIG, then the first existing default; None if nothing."""
+    if explicit:
+        return Path(explicit)
+    env = os.environ.get("STORMWEAVER_CONFIG")
+    if env:
+        return Path(env)
+    for candidate in DEFAULT_CONFIG_PATHS:
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 class Config:
     def __init__(self, data: dict[str, Any]) -> None:
         self._data = data
@@ -40,8 +60,11 @@ class Config:
         self.keyrings: dict[str, Any] = data.get("keyring", {})
 
     @classmethod
-    def load(cls, path: str | Path) -> Config:
-        with open(path, "rb") as f:
+    def load(cls, path: str | Path | None) -> Config:
+        resolved = resolve_config_path(path)
+        if resolved is None:
+            return cls({})
+        with open(resolved, "rb") as f:
             return cls(tomllib.load(f))
 
     def datadir(self, name: str) -> str:

@@ -1,5 +1,11 @@
-cmake_minimum_required(VERSION 3.30)
-project(StormWeaver LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.22)
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" STORMWEAVER_VERSION LIMIT_COUNT 1)
+if(NOT STORMWEAVER_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+")
+  message(FATAL_ERROR "VERSION file empty or malformed: '${STORMWEAVER_VERSION}'")
+endif()
+string(REGEX MATCH "^[0-9]+(\\.[0-9]+)*" _sw_cmake_version "${STORMWEAVER_VERSION}")
+project(StormWeaver VERSION ${_sw_cmake_version} LANGUAGES CXX)
+message(STATUS "StormWeaver ${STORMWEAVER_VERSION}")
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 set(CMAKE_CXX_STANDARD 23)
@@ -39,15 +45,7 @@ if(LIBCPP)
 endif()
 
 find_package(Threads REQUIRED)
-find_package(libpqxx REQUIRED)
-find_package(libmysqlclient REQUIRED)
-find_package(cryptopp REQUIRED)
-find_package(Catch2 REQUIRED)
-find_package(Boost REQUIRED)
-find_package(reflectcpp REQUIRED)
-find_package(spdlog REQUIRED)
-find_package(nlohmann_json REQUIRED)
-find_package(magic_enum REQUIRED)
+include(deps)
 
 set(TEST_PG_DIR "" CACHE STRING "Postgres installation directory used for testing")
 if("${TEST_PG_DIR}" STREQUAL "")
@@ -70,10 +68,7 @@ add_subdirectory(core)
 
 if(WITH_PYTHON)
   find_package(Python 3.14 REQUIRED COMPONENTS Interpreter Development.Module)
-  execute_process(
-    COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
-    OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE nanobind_ROOT)
-  find_package(nanobind CONFIG REQUIRED)
+  add_subdirectory(third_party/nanobind EXCLUDE_FROM_ALL)
   add_subdirectory(bindings)
 endif()
 

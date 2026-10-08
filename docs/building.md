@@ -1,8 +1,31 @@
 # Building from source
 
-## Python package (the normal path)
+## Prerequisites
 
-StormWeaver ships as a Python extension module built with `scikit-build-core` + `nanobind`, using Conan 2 to fetch C++ dependencies. Everything needed is driven through `uv`:
+The C++ libraries StormWeaver compiles in-tree are git submodules under `third_party/`:
+
+```bash
+git clone --recursive https://github.com/Percona-Lab/stormweaver.git
+# or, in an existing checkout
+git submodule update --init --recursive
+```
+
+Two client libraries come from your system and are picked through their config tools:
+
+| Library | Found through | Override |
+| --- | --- | --- |
+| libpq | `pg_config` on `PATH` (or `pkg-config libpq`) | `-DPG_CONFIG=/path/to/pg_config` |
+| MySQL client (MariaDB Connector/C or libmysqlclient) | `mariadb_config` / `mysql_config` on `PATH` | `-DMYSQL_CONFIG=/path/to/mariadb_config` |
+
+Crypto++ also comes from the system (`libcrypto++-dev`, `cryptopp-devel`, `libcryptopp-devel`).
+
+Testing a libpq change from a PostgreSQL work tree is just pointing at that tree's install:
+
+```bash
+CMAKE_ARGS="-DPG_CONFIG=$HOME/pginst/bin/pg_config" uv pip install -e .
+```
+
+## Python package (the normal path)
 
 ```bash
 uv python install 3.14t
@@ -10,17 +33,19 @@ uv venv
 uv pip install -e . --group dev
 ```
 
-`uv pip install -e .` invokes CMake/Conan under the hood and rebuilds the extension whenever sources change. `task setup` runs the same steps plus `pre-commit install`. `task build` re-runs just the editable install.
+`uv pip install -e .` drives CMake through `scikit-build-core` and rebuilds the extension whenever sources change. `task setup` runs the same steps plus the submodule init and `pre-commit install`. Extra CMake options go through `CMAKE_ARGS`.
 
-### Conan profile
-
-The first build needs a Conan profile:
+## Plain CMake install (what the distro packages do)
 
 ```bash
-conan profile detect --exist-ok
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DPython_EXECUTABLE=/opt/percona-python3.14t/bin/python3.14t \
+  -DSTORMWEAVER_PYTHON_INSTALL_DIR=/opt/percona-python3.14t/lib/python3.14t/site-packages
+cmake --build build
+cmake --install build
 ```
 
-StormWeaver requires C++23, and gcc >= 15 defaults its C compiler to C23 (which breaks libpq's `typedef bool`). Both are handled by `conan/host.profile`, checked into the repo and wired in automatically by `cmake/conan_setup.cmake` - no manual profile editing needed, on any machine.
+This installs the extension, the Python package and a `dist-info` into that site-packages, no pip involved.
 
 ## Pure C++ builds (no Python)
 
@@ -40,7 +65,7 @@ Available presets: `debug`, `asan-ubsan` (address + undefined behavior sanitizer
 
 | Task | What it does |
 | --- | --- |
-| `task setup` | uv python install + venv + editable install + pre-commit hooks |
+| `task setup` | submodule init + uv python install + venv + editable install + pre-commit hooks |
 | `task build` | Rebuild the extension + package |
 | `task cpp:build` | Pure C++ build (`PRESET=debug\|asan-ubsan\|tsan`) |
 | `task cpp:test` | ctest for the pure C++ build |

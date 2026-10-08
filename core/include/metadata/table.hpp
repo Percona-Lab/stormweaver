@@ -1,7 +1,7 @@
 #pragma once
 
 #include <algorithm>
-#include <boost/container/small_vector.hpp>
+#include <gch/small_vector.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -65,9 +65,7 @@ struct Index {
 
   bool unique = false;
 
-  boost::container::small_vector<IndexColumn,
-                                 limits::optimized_index_column_count>
-      fields;
+  gch::small_vector<IndexColumn, limits::optimized_index_column_count> fields;
 
   friend bool operator==(const Index &lhs, const Index &rhs) {
     return lhs.name == rhs.name && lhs.unique == rhs.unique &&
@@ -97,9 +95,9 @@ struct Table : ObjectBase {
 
   std::optional<RangePartitioning> partitioning;
 
-  boost::container::small_vector<Column, limits::optimized_column_count>
+  gch::small_vector<Column, limits::optimized_column_count>
       columns;
-  boost::container::small_vector<Index, limits::optimized_index_count> indexes;
+  gch::small_vector<Index, limits::optimized_index_count> indexes;
 
   [[nodiscard]] bool hasReferenceTo(ObjectId target) const;
   // true if any reference was removed

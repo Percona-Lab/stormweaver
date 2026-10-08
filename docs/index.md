@@ -11,7 +11,7 @@ The core engine (metadata, actions, workers, SQL) is C++23, driven from Python 3
 
 ## Installation
 
-Installing builds the C++ extension, so the first time on a machine you need a [Conan 2](https://docs.conan.io/2/installation.html) profile: `conan profile detect` - see [Conan profile](building.md#conan-profile). Then:
+Installing builds the C++ extension; libpq and a MySQL client library must be installed, see [Building from source](building.md#prerequisites). Then:
 
 ```bash
 uv python install 3.14t

@@ -35,9 +35,10 @@ target_compile_options(stormweaver_core PRIVATE
 target_link_libraries(stormweaver_core PUBLIC
     Threads::Threads
     libpqxx::pqxx
-    libmysqlclient::libmysqlclient
-    boost::boost
+    MySQLClient::MySQLClient
+    gch::small_vector
     reflectcpp::reflectcpp
     spdlog::spdlog
-    cryptopp::cryptopp
+    fmt::fmt
+    CryptoPP::CryptoPP
 )

@@ -1,6 +1,7 @@
 
 #include "sql_variant/mysql.hpp"
 
+#include <errmsg.h>
 #include <limits>
 #include <mutex>
 #include <mysql.h>

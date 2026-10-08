@@ -1,4 +1,5 @@
 import socket
+from pathlib import Path
 
 import pytest
 import stormweaver as sw
@@ -84,3 +85,48 @@ def test_config_keyrings_section(tmp_path):
 def test_config_keyrings_default_empty(tmp_path):
     cfg = _config(tmp_path, "[default]\n")
     assert cfg.keyrings == {}
+
+
+def test_resolve_explicit_wins(tmp_path, monkeypatch):
+    monkeypatch.setenv("STORMWEAVER_CONFIG", str(tmp_path / "env.toml"))
+    assert sw.config.resolve_config_path("x.toml") == Path("x.toml")
+
+
+def test_resolve_env_before_cwd(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config" / "stormweaver.toml").write_text("")
+    monkeypatch.setenv("STORMWEAVER_CONFIG", "/nonexistent/env.toml")
+    assert sw.config.resolve_config_path(None) == Path("/nonexistent/env.toml")
+
+
+def test_resolve_cwd_before_etc(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("STORMWEAVER_CONFIG", raising=False)
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config" / "stormweaver.toml").write_text("")
+    assert sw.config.resolve_config_path(None) == Path("config/stormweaver.toml")
+
+
+def test_resolve_etc_fallback(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("STORMWEAVER_CONFIG", raising=False)
+    etc = tmp_path / "etc.toml"
+    etc.write_text("")
+    monkeypatch.setattr(
+        sw.config, "DEFAULT_CONFIG_PATHS", (Path("config/stormweaver.toml"), etc)
+    )
+    assert sw.config.resolve_config_path(None) == etc
+
+
+def test_load_defaults_without_any_file(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("STORMWEAVER_CONFIG", raising=False)
+    monkeypatch.setattr(sw.config, "DEFAULT_CONFIG_PATHS", (tmp_path / "none.toml",))
+    cfg = sw.Config.load(None)
+    assert cfg.port_start == 15432
+
+
+def test_load_explicit_missing_raises(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        sw.Config.load(str(tmp_path / "missing.toml"))
