@@ -88,7 +88,7 @@ Sets up a fresh single server: wipes and recreates its data directory, starts it
 * `initial_tables` - table count for the default seeding (ignored if `db_setup` is given)
 * `preload` - extra `shared_preload_libraries` entries, merged with `--pgsm`
 * `dbname` - test database name
-* `worker_setup` - callable `(worker, index) -> None`, forwarded to `Workload` (customize a specific worker's action registry; see `scenarios/demo/basic.py`)
+* `worker_setup` - callable `(worker, index) -> None`, forwarded to `Workload` (customize a specific worker's action registry)
 * `datadir_name` - suffix for `Config.datadir()`, change it if a scenario runs more than one primary
 
 `single_pg` restarts the server once after seeding (`db_init` may use `ALTER SYSTEM`, which needs a restart to take effect) - the context is only handed to the caller after that restart succeeds.
@@ -101,7 +101,7 @@ Both are context managers yielding a `ScenarioContext` (`PgContext`/`MySqlContex
 * `ctx.dbname`, `ctx.datadir` - the test database name and the server's data directory (as a string)
 * `ctx.metadata` - the shared `sw.Metadata()` for this server
 * `ctx.registry` - the action registry `ctx.workload` was built from
-* `ctx.workload` - a ready `sw.Workload` (`--workers`/`--duration` from `opts`); **one cycle per `.run()`/`.start()`+`.wait()` call** - scenarios own the `--repeat` loop themselves (see the example below). `.run()` blocks for the cycle; `.start()`/`.wait()` split that in two, with `.workers` exposing the live workers in between - use that to mutate a specific worker's action registry mid-run (see `scenarios/demo/basic.py`). `.print_report()`/`.worker_statistics()` cover the last `.run()` call (each `.run()` resets them); with the `.start()`/`.wait()` pattern they accumulate across cycles.
+* `ctx.workload` - a ready `sw.Workload` (`--workers`/`--duration` from `opts`); **one cycle per `.run()`/`.start()`+`.wait()` call** - scenarios own the `--repeat` loop themselves (see the example below). `.run()` blocks for the cycle; `.start()`/`.wait()` split that in two, with `.workers` exposing the live workers in between - use that to mutate a specific worker's action registry mid-run. `.print_report()`/`.worker_statistics()` cover the last `.run()` call (each `.run()` resets them); with the `.start()`/`.wait()` pattern they accumulate across cycles.
 * `ctx.connect(log_name="scenario")` - open a fresh connection the same way the workload does (access method set, `conn_settings` applied)
 * `ctx.make_worker(name)` - a one-off `sw.Worker` with a unique name (for setup/verification/one-shot SQL outside the workload)
 * `ctx.restart_and_wait(timeout=10)` - `ctx.db.restart(timeout)` then `wait_ready()`, raises if the server doesn't come back
@@ -149,7 +149,7 @@ def main(args):
 
 Run it with `stormweaver scenarios/ci/basic.py -i /path/to/pg/install`.
 
-For a guided tour of the rest of the feature set - custom actions, per-worker registries, mid-run registry changes, restarts - see the demo that moved to the pg_tde repository (`tests/stress/basic_tde.py`); `scenarios/ci/basic.py` is a plain example.
+`scenarios/ci/basic.py` is a plain example.
 
 ## Backup-testing patterns
 

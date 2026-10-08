@@ -35,8 +35,8 @@ def test_program_version_mismatch(tmp_path):
 
 
 def test_program_version_accepts_upstream_name(tmp_path):
-    inst = _fake_tool(tmp_path, name="pg_tde_fake")
-    process.program_version_ok(inst, "pg_tde_fake")
+    inst = _fake_tool(tmp_path, name="pg_fake")
+    process.program_version_ok(inst, "pg_fake")
 
 
 def _bare_tool(tmp_path, body):

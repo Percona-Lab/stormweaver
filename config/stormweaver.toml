@@ -5,7 +5,7 @@ datadir_root = "datadirs"
 port_start = 15432
 port_end = 15531
 
-# keyring service provisioning for pg_tde tests; sections optional.
+# keyring service provisioning for tests; sections optional.
 # provision: auto | executable | container | external
 # auto picks: binary on PATH -> container runtime -> unavailable.
 # external is never auto-picked and needs the endpoint fields below.

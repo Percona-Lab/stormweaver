@@ -8,14 +8,13 @@ from collections.abc import Sequence
 from pathlib import Path
 from types import ModuleType
 
-from stormweaver.entropy import EncryptionMismatchError
 from stormweaver.events import emit_run_header
 from stormweaver.log import init_run_logging, record_outcome
 
 logger = logging.getLogger(__name__)
 
 # scenario-facing failures raised on purpose, message is enough for these
-EXPECTED_ERRORS = (RuntimeError, ValueError, EncryptionMismatchError)
+EXPECTED_ERRORS = (RuntimeError, ValueError)
 
 
 def build_parser(

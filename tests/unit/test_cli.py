@@ -138,10 +138,10 @@ def test_cli_systemexit_message_logged_and_recorded(
 ):
     monkeypatch.chdir(tmp_path)
     scen = tmp_path / "scen.py"
-    scen.write_text("def main(args):\n    raise SystemExit('need --tde on')\n")
+    scen.write_text("def main(args):\n    raise SystemExit('need --mode on')\n")
     assert main([str(scen)]) == 1
     log = _main_log()
-    assert "scenario failed: need --tde on" in log
+    assert "scenario failed: need --mode on" in log
     assert "Traceback" not in log
     outcomes = list(Path("logs").glob("*/outcome"))
     assert "scenario result=failed" in outcomes[0].read_text()

@@ -5,7 +5,7 @@ from stormweaver.keyrings.base import Keyring
 
 
 class FileKeyring(Keyring):
-    """pg_tde file provider; no backing service."""
+    """File-based keyring; no backing service."""
 
     kind: ClassVar[str] = "file"
     has_service: ClassVar[bool] = False

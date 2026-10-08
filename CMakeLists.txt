@@ -76,6 +76,5 @@ endif()
 # WITH_PYTHON (this tree builds the C++ lib; the venv already has the module).
 include(StormweaverPytest)
 stormweaver_add_pytest(scenarios/demo/test_mysql_smoke.py)
-stormweaver_add_pytest(scenarios/demo/test_tde_basic.py)
 stormweaver_add_pytest(scenarios/demo/test_pg_rewind.py)
 stormweaver_add_pytest(scenarios/demo/test_hybrid_workload.py)

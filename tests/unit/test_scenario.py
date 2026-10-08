@@ -171,7 +171,7 @@ def test_parse_wrapper_rr(tmp_path, monkeypatch):
 def test_normalise_access_methods_default_and_override():
     assert scenario._normalise_access_methods(None) == ["heap"]
     assert scenario._normalise_access_methods([]) == ["heap"]
-    assert scenario._normalise_access_methods(["tde_heap", "heap"]) == [
-        "tde_heap",
+    assert scenario._normalise_access_methods(["custom_am", "heap"]) == [
+        "custom_am",
         "heap",
     ]
