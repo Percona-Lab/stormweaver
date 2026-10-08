@@ -1,3 +1,4 @@
+import pytest
 import stormweaver.testing as st
 
 
@@ -85,3 +86,10 @@ def test_corrupt_page_checksum(tmp_path):
     assert data[: 8192 + 8] == b"\x00" * (8192 + 8)
     assert data[8192 + 8 : 8192 + 10] == b"\xff\xff"
     assert data[8192 + 10 :] == b"\x00" * (8192 - 10)
+
+
+def test_corrupt_page_checksum_beyond_eof(tmp_path):
+    rel = tmp_path / "16384"
+    rel.write_bytes(b"\x00" * 8192)
+    with pytest.raises(ValueError):
+        st.corrupt_page_checksum(rel, 1)

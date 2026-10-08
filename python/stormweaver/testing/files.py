@@ -1,6 +1,5 @@
 import os
 import re
-import struct
 from pathlib import Path
 
 _PRINTABLE = re.compile(rb"[\x20-\x7e]{4,}")
@@ -57,10 +56,11 @@ def wal_strings(wal_dir: str | Path, pattern: str = "0000000100000000000000??") 
 
 
 def corrupt_page_checksum(path: str | Path, block: int) -> None:
-    """Flip the pd_checksum of one block; mirrors Cluster.pm corrupt_page_checksum."""
-    p = Path(path)
-    with open(p, "r+b") as f:
+    """Flip the pd_checksum of one block, like Cluster.pm corrupt_page_checksum."""
+    with open(path, "r+b") as f:
         f.seek(block * PAGE_SIZE + PD_CHECKSUM_OFFSET)
-        (old,) = struct.unpack("<H", f.read(2))
-        f.seek(block * PAGE_SIZE + PD_CHECKSUM_OFFSET)
-        f.write(struct.pack("<H", old ^ 0xFFFF))
+        old = f.read(2)
+        if len(old) != 2:
+            raise ValueError(f"{path}: block {block} is beyond end of file")
+        f.seek(-2, 1)
+        f.write(bytes(b ^ 0xFF for b in old))
