@@ -41,3 +41,46 @@ def test_open_external_ok(tmp_path):
     assert k.namespace == "ns1"
     assert not k.managed
     k.close()
+
+
+def test_cli_sets_env_and_runs(tmp_path):
+    tok = tmp_path / "token"
+    tok.write_text("root\n")
+    k = vault.VaultKeyring(
+        url="https://127.0.0.1:1",
+        mount_path="secret",
+        token_file=tok,
+        ca_cert=tmp_path / "ca.pem",
+        namespace="pgns",
+        binary="/usr/bin/env",
+    )
+    cp = k.cli(
+        "sh", "-c", 'echo "$VAULT_ADDR|$VAULT_CACERT|$VAULT_TOKEN|$VAULT_NAMESPACE"'
+    )
+    assert cp.returncode == 0
+    assert cp.stdout.strip() == f"https://127.0.0.1:1|{tmp_path / 'ca.pem'}|root|pgns"
+
+
+def test_cli_failure_raises(tmp_path):
+    tok = tmp_path / "token"
+    tok.write_text("root")
+    k = vault.VaultKeyring(
+        url="https://h:1",
+        mount_path="m",
+        token_file=tok,
+        ca_cert=tmp_path / "ca",
+        binary="/bin/false",
+    )
+    with pytest.raises(RuntimeError, match="failed"):
+        k.cli("anything")
+
+
+def test_cli_without_binary_raises(tmp_path):
+    k = vault.VaultKeyring(
+        url="https://h:1",
+        mount_path="m",
+        token_file=tmp_path / "t",
+        ca_cert=tmp_path / "ca",
+    )
+    with pytest.raises(RuntimeError, match="CLI not available"):
+        k.cli("status")

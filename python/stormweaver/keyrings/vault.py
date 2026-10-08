@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import subprocess
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -26,6 +27,7 @@ class VaultKeyring(Keyring):
         token_file: Path,
         ca_cert: Path,
         namespace: str = "",
+        binary: str | None = None,
         service: RunningService | None = None,
     ) -> None:
         super().__init__(service)
@@ -34,6 +36,26 @@ class VaultKeyring(Keyring):
         self.token_file = token_file
         self.ca_cert = ca_cert
         self.namespace = namespace
+        self.binary = binary
+
+    def cli(self, *args: str) -> subprocess.CompletedProcess[str]:
+        if self.binary is None:
+            raise RuntimeError(
+                "vault CLI not available for external/container keyrings"
+            )
+        env = os.environ | {
+            "VAULT_ADDR": self.url,
+            "VAULT_CACERT": str(self.ca_cert),
+            "VAULT_TOKEN": self.token_file.read_text().strip(),
+        }
+        if self.namespace:
+            env["VAULT_NAMESPACE"] = self.namespace
+        cp = subprocess.run(
+            [self.binary, *args], capture_output=True, text=True, env=env
+        )
+        if cp.returncode != 0:
+            raise RuntimeError(f"{self.binary} {' '.join(args)} failed: {cp.stderr}")
+        return cp
 
 
 def find_binary(cfg: dict[str, Any]) -> str | None:
@@ -75,6 +97,7 @@ def open_executable(cfg: dict[str, Any], workdir: Path) -> VaultKeyring:
         mount_path="secret",
         token_file=token_file,
         ca_cert=Path(str(info["ca_cert_path"])),
+        binary=binary,
         service=svc,
     )
 
