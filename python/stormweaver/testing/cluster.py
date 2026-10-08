@@ -24,6 +24,9 @@ def take_basebackup(
         dest = Path(tempfile.mkdtemp(prefix="sw-backup-", dir="/tmp")) / "data"
     dest = Path(dest)
     args = list(extra_args) if extra_args is not None else ["-X", "stream"]
+    if not any(a == "-c" or a.startswith("--checkpoint") for a in args):
+        # like PostgreSQL::Test::Cluster backup(): do not wait for a timed checkpoint
+        args.append("--checkpoint=fast")
     for old, new in (tablespace_map or {}).items():
         args.append(f"--tablespace-mapping={old}={new}")
     node.db.basebackup(dest, extra_args=args)
