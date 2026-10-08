@@ -60,6 +60,18 @@ Test ids are `name-value`, e.g. `test_uses[flavor-spicy]`, so `-k flavor-spicy` 
 
 Each session gets a private `--basetemp` under `/tmp/sw-pytest-tmp-*`, so concurrent sessions (e.g. meson running test files in parallel) cannot prune each other's `tmp_path`. It is removed when the session passes and kept when anything fails, for inspection. An explicit `--basetemp` is honoured and never removed.
 
+## Testing helpers
+
+`stormweaver.testing` is the TAP-style toolkit the fixtures above are built on; product test suites (pg_tde's is the first) use it directly:
+
+* `PgTestNode.fresh(install_dir, name=, config=, initdb_args=, ...)` - a started server with `safe_sql`, `sql_value`, `expect_error`, `poll_until`, `wait_for_log`, `kill`/`poll_start`, `basebackup(dest, extra_args, tablespace_map)` (`--checkpoint=fast` unless you pass a checkpoint option), `from_backup`, `wait_for_catchup`, `psql(sql, user=)`, `pg_major`.
+* `RewindDriver` - the pg_rewind test cycle (setup, standby, promote, rewind in local/remote/archive mode). Subclasses override `primary_config`, `initdb_args`, `configure_primary`, `rewind_user`, `node_cls` and `backup_primary()` to swap the node class or the backup tool.
+* Frontend tool checks: `program_help_ok`, `program_version_ok`, `program_options_handling_ok` (same semantics as PostgreSQL::Test::Utils), `run_bin`, `command_ok`, `command_fails(cp, stderr_re=)`.
+* Files: `wal_strings(pg_wal_dir)` (like `strings` over the WAL segments), `corrupt_page_checksum(path, block)`, `check_mode_recursive(path, dir_mode, file_mode)`, `read_file_bytes`.
+* Keyring services: `stormweaver.keyrings.open_keyring(kind, workdir)` provisions OpenBao or Cosmian KMS (executable, container or external, see `config/stormweaver.toml`); `VaultKeyring.cli(*args)` runs the `bao` CLI against a provisioned dev server with the right environment; `keyring.restart_service(fresh=True)` wipes and restarts it.
+* Ports: `alloc_port()` picks a free port and reserves it for the process with a lock file under `/tmp/stormweaver-ports` (`STORMWEAVER_PORT_LOCK_DIR`), so parallel sessions on one host do not collide, also while a server is stopped.
+* `Postgres.set_signal()` writes `standby.signal`/`recovery.signal` with group read access when the data directory was created with `initdb -g`.
+
 ## Example
 
 ```python
