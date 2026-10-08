@@ -42,7 +42,7 @@ This will:
 
 * [Writing scenarios](writing-scenarios.md) - scenario anatomy and the `sw` API
 * [Python actions](python-actions.md) - registering custom actions
-* [Stable tests](stable-tests.md) - the pytest plugin for deterministic CI tests
+* [Stable tests](stable-tests.md) - the pytest plugin for deterministic CI tests, run with `stormweaver test`
 * [Determinism](determinism.md) - what replays and what doesn't
 * [Randomized testing concepts](randomized-testing-concepts.md) - Workload/Worker/Action/ActionRegistry
 * [Config parameters](config-parameters.md) - the TOML config file and CLI flags

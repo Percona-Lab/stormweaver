@@ -6,12 +6,59 @@ Besides randomized stress testing, StormWeaver ships a pytest plugin (`stormweav
 
 | Fixture | Scope | Use for |
 | --- | --- | --- |
-| `pg_install_dir` | session | The PostgreSQL install dir; auto-detected (`STORMWEAVER_PG_DIR` env var, then `~/.local/share/stormweaver-pg18`, `/usr/lib/postgresql18`, `/usr/lib/postgresql/*`), skips the test if none found |
+| `pg_install` | session | A `PgInstall` describing the PostgreSQL under test, with `install_dir`, `bindir`, `pkglibdir`, `sharedir` and `major` (the last three are `None` when only a plain directory is known). Skips the test if no installation is found |
+| `pg_install_dir` | session | The install dir as a string (`pg_install.install_dir`). Resolution order: `--pg-config`, `STORMWEAVER_PG_CONFIG`, `STORMWEAVER_PG_DIR`, then known directories (`~/.local/share/stormweaver-pg*`, `/usr/lib/postgresql*`, `/usr/lib/postgresql/*`, `/usr/pgsql-*`; newest first). A `pg_config` that cannot be run is an error, not a skip; only "nothing found" skips |
 | `postgres_server` | function | A fresh server + fresh data directory per test - use when a test needs a pristine instance (e.g. mutates cluster-wide state) |
 | `postgres_server_session` | session | One server shared by the whole test session - use when per-test `createdb()` isolation is enough; much cheaper than a fresh cluster per test |
 | `sw_connect` | function | Connection factory bound to `postgres_server_session`, with a unique per-connection SQL log name |
+| `sw_log_dir` | session | The run's log directory (see [Logging](#logging)); the server fixtures depend on it, so logging is initialised before the first server starts |
+
+MySQL has the same shape: `mysql_install_dir` (`STORMWEAVER_MYSQL_DIR`, then `~/.local/share/stormweaver-mysql`, then `/usr`), `mysql_server`, `mysql_server_session` and `sw_connect_mysql`.
 
 Prefer `postgres_server_session` + `sw_connect` unless the test genuinely needs its own server (e.g. testing restart/crash behavior).
+
+## Running
+
+```
+stormweaver test tests/ --pg-config /path/to/install/bin/pg_config
+```
+
+`stormweaver test` runs pytest from StormWeaver's own interpreter and passes every argument through, so `-k`, `-x`, `-q`, paths and node ids all work as usual. It needs pytest; for an install without the dev group, use `pip install 'stormweaver[test]'`. Plain `pytest` works too, as the plugin is auto-registered.
+
+Options added by the plugin:
+
+* `--pg-config PATH` - the `pg_config` of the installation under test. Falls back to `STORMWEAVER_PG_CONFIG`, `STORMWEAVER_PG_DIR` and the known directories (see the fixture table).
+* `--matrix NAME=a,b` - run tests that use matrix dimension `NAME` with these values. Repeatable, but only one spec per dimension.
+* `--full` - every registered dimension, at every available value.
+
+`pg_config` reports its own location, so for a meson or other out-of-tree build pass the `pg_config` from the installed tree (under the install prefix), not one from the build directory.
+
+## Matrix dimensions
+
+A dimension is an opt-in parameter that a test requests by fixture name. By default it has a single value, so a normal run is not multiplied. Register it in a conftest:
+
+```python
+from stormweaver.matrix import register_dimension
+
+def pytest_configure(config):
+    register_dimension(config, "flavor", default="plain",
+                       available=lambda: ["plain", "spicy", "sweet"])
+```
+
+```python
+def test_uses(flavor):
+    ...
+```
+
+Test ids are `name-value`, e.g. `test_uses[flavor-spicy]`, so `-k flavor-spicy` selects one value. The default run uses only `default`; `--matrix flavor=spicy,sweet` runs exactly those; `--full` runs all of `available()`.
+
+* Registration has to happen in a root or initial conftest (`pytest_configure`), because `--matrix` is validated at session start. An unknown dimension, an unknown value, a malformed spec, or the same dimension given twice is a usage error. Duplicate values within a spec are dropped.
+* `available()` is called lazily, at most once per session, and never in the default run - it can be expensive (probing installs, listing providers).
+* A test that parametrizes the same name itself with `@pytest.mark.parametrize` keeps its own values; the dimension is left alone for that test.
+
+## Temporary directories
+
+Each session gets a private `--basetemp` under `/tmp/sw-pytest-tmp-*`, so concurrent sessions (e.g. meson running test files in parallel) cannot prune each other's `tmp_path`. It is removed when the session passes and kept when anything fails, for inspection. An explicit `--basetemp` is honoured and never removed.
 
 ## Example
 
