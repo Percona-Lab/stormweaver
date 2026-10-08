@@ -1,7 +1,7 @@
 """Opt-in test matrix dimensions, parametrized by fixture name."""
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import pytest
 
@@ -13,20 +13,23 @@ class Dimension:
     name: str
     default: str
     available: Callable[[], list[str]]
+    _values: list[str] | None = field(default=None, init=False, repr=False)
 
-    def check(self, values: list[str]) -> None:
-        avail = self.available()
-        unknown = [v for v in values if v not in avail]
-        if unknown:
-            raise pytest.UsageError(
-                f"--matrix: unknown value(s) {', '.join(unknown)} for dimension "
-                f"{self.name!r}; available: {', '.join(avail)}"
-            )
+    def values(self, config: pytest.Config) -> list[str]:
+        if self._values is None:
+            self._values = self._resolve(config)
+        return self._values
 
-    def selected(self, config: pytest.Config) -> list[str]:
+    def _resolve(self, config: pytest.Config) -> list[str]:
         explicit = _parse_matrix_option(config).get(self.name)
         if explicit is not None:
-            self.check(explicit)
+            avail = self.available()
+            unknown = [v for v in explicit if v not in avail]
+            if unknown:
+                raise pytest.UsageError(
+                    f"--matrix: unknown value(s) {', '.join(unknown)} for dimension "
+                    f"{self.name!r}; available: {', '.join(avail)}"
+                )
             return explicit
         if config.getoption("--full"):
             return self.available()
@@ -38,8 +41,14 @@ def _parse_matrix_option(config: pytest.Config) -> dict[str, list[str]]:
     for spec in config.getoption("--matrix") or []:
         if "=" not in spec:
             raise pytest.UsageError(f"--matrix expects name=v1,v2, got {spec!r}")
-        name, values = spec.split("=", 1)
-        out[name.strip()] = [v.strip() for v in values.split(",") if v.strip()]
+        name, raw = spec.split("=", 1)
+        name = name.strip()
+        values = list(dict.fromkeys(v.strip() for v in raw.split(",") if v.strip()))
+        if not values:
+            raise pytest.UsageError(f"--matrix: no values for dimension {name!r}")
+        if name in out:
+            raise pytest.UsageError(f"--matrix: dimension {name!r} given twice")
+        out[name] = values
     return out
 
 
@@ -59,17 +68,18 @@ def register_dimension(
 
 def validate(config: pytest.Config) -> None:
     dims = dimensions(config)
-    for name, values in _parse_matrix_option(config).items():
+    for name in _parse_matrix_option(config):
         if name not in dims:
             raise pytest.UsageError(
                 f"--matrix: unknown dimension {name!r}; "
                 f"registered: {', '.join(dims) or 'none'}"
             )
-        dims[name].check(values)
+    for dim in dims.values():
+        dim.values(config)
 
 
 def generate(metafunc: pytest.Metafunc) -> None:
     for name, dim in dimensions(metafunc.config).items():
         if name in metafunc.fixturenames:
-            values = dim.selected(metafunc.config)
-            metafunc.parametrize(name, values, ids=[f"{name}={v}" for v in values])
+            values = dim.values(metafunc.config)
+            metafunc.parametrize(name, values, ids=[f"{name}-{v}" for v in values])
