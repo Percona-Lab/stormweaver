@@ -66,7 +66,7 @@ def add_arguments(parser):
     parser.set_defaults(duration=30, workers=4, repeat=2)
 ```
 
-`set_defaults` (above) changes option defaults; a scenario can also that declares its own `--mode`/`--cipher`/`--keyring` and skips the common options entirely. A scenario with no options (e.g. `scenarios/ci/determinism.py`) omits `add_arguments` and just reads `args.config`/`args.install_dir` directly.
+`set_defaults` (above) changes option defaults; a scenario can also declare only its own options and skip `add_common_arguments` entirely. A scenario with no options (e.g. `scenarios/ci/determinism.py`) omits `add_arguments` and just reads `args.config`/`args.install_dir` directly.
 
 ## `single_pg` / `single_mysql`
 
