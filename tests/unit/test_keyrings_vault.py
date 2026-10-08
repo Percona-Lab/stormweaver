@@ -86,8 +86,10 @@ def test_cli_without_binary_raises(tmp_path):
         k.cli("status")
 
 
-def test_cli_scrubs_inherited_namespace(tmp_path, monkeypatch):
+def test_cli_scrubs_inherited_vault_and_bao_env(tmp_path, monkeypatch):
+    monkeypatch.setenv("BAO_ADDR", "leaked")
     monkeypatch.setenv("VAULT_NAMESPACE", "leaked")
+    monkeypatch.setenv("VAULT_SKIP_VERIFY", "1")
     tok = tmp_path / "token"
     tok.write_text("root")
     k = vault.VaultKeyring(
@@ -97,5 +99,10 @@ def test_cli_scrubs_inherited_namespace(tmp_path, monkeypatch):
         ca_cert=tmp_path / "ca",
         binary="/usr/bin/env",
     )
-    cp = k.cli("sh", "-c", 'echo "[$VAULT_NAMESPACE]"')
-    assert cp.stdout.strip() == "[]"
+    cp = k.cli(
+        "sh",
+        "-c",
+        'echo "$BAO_ADDR|$VAULT_ADDR|[$VAULT_NAMESPACE]|[$BAO_NAMESPACE]'
+        '|[$VAULT_SKIP_VERIFY]"',
+    )
+    assert cp.stdout.strip() == "https://h:1|https://h:1|[]|[]|[]"

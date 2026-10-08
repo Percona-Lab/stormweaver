@@ -43,15 +43,17 @@ class VaultKeyring(Keyring):
             raise RuntimeError(
                 "vault CLI not available for external/container keyrings"
             )
-        env = os.environ | {
-            "VAULT_ADDR": self.url,
-            "VAULT_CACERT": str(self.ca_cert),
-            "VAULT_TOKEN": self.token_file.read_text().strip(),
+        # openbao reads BAO_* first, VAULT_* as fallback
+        env = {
+            k: v for k, v in os.environ.items() if not k.startswith(("VAULT_", "BAO_"))
         }
-        if self.namespace:
-            env["VAULT_NAMESPACE"] = self.namespace
-        else:
-            env.pop("VAULT_NAMESPACE", None)
+        token = self.token_file.read_text().strip()
+        for prefix in ("VAULT", "BAO"):
+            env[f"{prefix}_ADDR"] = self.url
+            env[f"{prefix}_CACERT"] = str(self.ca_cert)
+            env[f"{prefix}_TOKEN"] = token
+            if self.namespace:
+                env[f"{prefix}_NAMESPACE"] = self.namespace
         cp = subprocess.run(
             [self.binary, *args], capture_output=True, text=True, env=env
         )
