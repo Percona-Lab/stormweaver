@@ -29,7 +29,8 @@ Options added by the plugin:
 
 * `--pg-config PATH` - the `pg_config` of the installation under test. Falls back to `STORMWEAVER_PG_CONFIG`, `STORMWEAVER_PG_DIR` and the known directories (see the fixture table).
 * `--matrix NAME=a,b` - run tests that use matrix dimension `NAME` with these values. Repeatable, but only one spec per dimension.
-* `--full` - every registered dimension, at every available value.
+* `--all-values` - every value of every registered dimension runs at least once: one dimension varies at a time, the others stay at their default. Cost is additive.
+* `--all-combinations` - the cartesian product of all values of all dimensions. Cost multiplies, meant for manual runs.
 
 `pg_config` reports its own location, so for a meson or other out-of-tree build pass the `pg_config` from the installed tree (under the install prefix), not one from the build directory.
 
@@ -50,7 +51,7 @@ def test_uses(flavor):
     ...
 ```
 
-Test ids are `name-value`, e.g. `test_uses[flavor-spicy]`, so `-k flavor-spicy` selects one value. The default run uses only `default`; `--matrix flavor=spicy,sweet` runs exactly those; `--full` runs all of `available()`.
+Test ids are `name-value`, e.g. `test_uses[flavor-spicy]`, so `-k flavor-spicy` selects one value. The default run uses only `default`; `--matrix flavor=spicy,sweet` runs exactly those; `--all-values` / `--all-combinations` run all of `available()` (`--all-values` also always includes each dimension's default, even if `available()` lacks it; `--all-combinations` uses only `available()`). Dimensions named in `--matrix` are always combined cartesian among themselves, the remaining ones follow `--all-values` / `--all-combinations`, or stay at their default.
 
 * Registration has to happen in a root or initial conftest (`pytest_configure`), because `--matrix` is validated at session start. An unknown dimension, an unknown value, a malformed spec, or the same dimension given twice is a usage error. Duplicate values within a spec are dropped.
 * `available()` is called lazily, at most once per session, and never in the default run - it can be expensive (probing installs, listing providers).

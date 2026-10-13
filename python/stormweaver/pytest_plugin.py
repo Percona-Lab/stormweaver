@@ -42,10 +42,17 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="run tests using matrix dimension NAME with these values (repeatable)",
     )
     parser.addoption(
-        "--full",
+        "--all-values",
         action="store_true",
         default=False,
-        help="every registered matrix dimension at every available value",
+        help="every value of every matrix dimension at least once, "
+        "one dimension varied at a time",
+    )
+    parser.addoption(
+        "--all-combinations",
+        action="store_true",
+        default=False,
+        help="cartesian product of all values of all matrix dimensions",
     )
 
 

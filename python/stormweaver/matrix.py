@@ -1,5 +1,6 @@
 """Opt-in test matrix dimensions, parametrized by fixture name."""
 
+import itertools
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -31,9 +32,23 @@ class Dimension:
                     f"{self.name!r}; available: {', '.join(avail)}"
                 )
             return explicit
-        if config.getoption("--full"):
+        if _mode(config) is not None:
             return self.available()
         return [self.default]
+
+
+def _mode(config: pytest.Config) -> str | None:
+    values = config.getoption("--all-values")
+    combos = config.getoption("--all-combinations")
+    if values and combos:
+        raise pytest.UsageError(
+            "--all-values and --all-combinations are mutually exclusive"
+        )
+    if values:
+        return "values"
+    if combos:
+        return "combinations"
+    return None
 
 
 def _parse_matrix_option(config: pytest.Config) -> dict[str, list[str]]:
@@ -67,6 +82,7 @@ def register_dimension(
 
 
 def validate(config: pytest.Config) -> None:
+    _mode(config)
     dims = dimensions(config)
     for name in _parse_matrix_option(config):
         if name not in dims:
@@ -89,9 +105,43 @@ def _direct_params(metafunc: pytest.Metafunc) -> set[str]:
     return out
 
 
+def combinations(config: pytest.Config, names: list[str]) -> list[tuple[str, ...]]:
+    dims = dimensions(config)
+    if _mode(config) != "values":
+        return list(itertools.product(*(dims[n].values(config) for n in names)))
+    # explicit --matrix dimensions stay cartesian, the others vary one at a time
+    explicit = _parse_matrix_option(config)
+    fixed = [n for n in names if n in explicit]
+    free = [n for n in names if n not in explicit]
+    out: list[tuple[str, ...]] = []
+    for combo in itertools.product(*(dims[n].values(config) for n in fixed)):
+        base = dict(zip(fixed, combo, strict=True)) | {n: dims[n].default for n in free}
+        variants = [base]
+        variants += [
+            base | {n: v}
+            for n in free
+            for v in dims[n].values(config)
+            if v != dims[n].default
+        ]
+        for var in variants:
+            t = tuple(var[n] for n in names)
+            if t not in out:
+                out.append(t)
+    return out
+
+
 def generate(metafunc: pytest.Metafunc) -> None:
     direct = _direct_params(metafunc)
-    for name, dim in dimensions(metafunc.config).items():
-        if name in metafunc.fixturenames and name not in direct:
-            values = dim.values(metafunc.config)
-            metafunc.parametrize(name, values, ids=[f"{name}-{v}" for v in values])
+    names = [
+        n
+        for n in dimensions(metafunc.config)
+        if n in metafunc.fixturenames and n not in direct
+    ]
+    if not names:
+        return
+    combos = combinations(metafunc.config, names)
+    ids = ["-".join(f"{n}-{v}" for n, v in zip(names, t, strict=True)) for t in combos]
+    if len(names) == 1:
+        metafunc.parametrize(names[0], [t[0] for t in combos], ids=ids)
+    else:
+        metafunc.parametrize(names, combos, ids=ids)
